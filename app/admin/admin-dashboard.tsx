@@ -1,0 +1,521 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  Users,
+  Award,
+  Activity,
+  TrendingUp,
+  Calendar,
+  FileText,
+  Star,
+  Target,
+  BookOpen,
+  MessageSquare,
+  Settings,
+  LogOut,
+  Menu,
+  X,
+  Flag,
+  Heart,
+  Home,
+  UserCheck,
+  Trophy,
+  Clock,
+  PieChart,
+  BarChart3
+} from 'lucide-react';
+
+// Import components quản lý đoàn viên
+import MemberManagement from '@/components/admin/member-management';
+import UnitManagement from '@/components/admin/unit-management';
+import ActivityManagement from '@/components/admin/activity-management';
+import RatingManagement from '@/components/admin/rating-management';
+import { PointsManagement } from '@/components/admin/points-management';
+import { DocumentManagement } from '@/components/admin/document-management';
+import { ExamManagement } from '@/components/admin/exam-management';
+import SuggestionManagement from '@/components/admin/suggestion-management';
+import ReportsManagement from '@/components/admin/reports-management';
+
+// Interface cho dashboard stats
+interface DashboardStats {
+  overview: {
+    totalMembers: number;
+    activeMembers: number;
+    newMembersThisMonth: number;
+    excellentMembers: number;
+    totalActivities: number;
+    upcomingActivities: number;
+    completedActivities: number;
+    totalPoints: number;
+  };
+  membersByRank: {
+    xuatSac: number;
+    kha: number;
+    trungBinh: number;
+    yeu: number;
+  };
+  membersByUnit: Array<{
+    unitName: string;
+    memberCount: number;
+    activeCount: number;
+  }>;
+  recentActivities: Array<{
+    id: string;
+    title: string;
+    type: string;
+    date: string;
+    participants: number;
+  }>;
+  systemInfo: {
+    uptime: number;
+    nodeVersion: string;
+    platform: string;
+  };
+}
+
+export default function AdminDashboard() {
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    // Đảm bảo component mounted và có localStorage
+    if (typeof window !== 'undefined') {
+      setMounted(true);
+      
+      // Kiểm tra authentication
+      const user = localStorage.getItem('currentUser');
+      if (!user) {
+        router.push('/admin/login');
+        return;
+      }
+      
+      try {
+        const userData = JSON.parse(user);
+        if (userData.role !== 'ADMIN') {
+          router.push('/admin/login');
+          return;
+        }
+        
+        setCurrentUser(userData);
+        
+        // Load dashboard stats với data mẫu về đoàn viên
+        setStats({
+          overview: {
+            totalMembers: 156,
+            activeMembers: 142,
+            newMembersThisMonth: 8,
+            excellentMembers: 45,
+            totalActivities: 24,
+            upcomingActivities: 5,
+            completedActivities: 19,
+            totalPoints: 12450
+          },
+          membersByRank: {
+            xuatSac: 45,
+            kha: 67,
+            trungBinh: 32,
+            yeu: 12
+          },
+          membersByUnit: [
+            { unitName: 'Chi đoàn Công nghệ', memberCount: 28, activeCount: 26 },
+            { unitName: 'Chi đoàn Kinh tế', memberCount: 32, activeCount: 30 },
+            { unitName: 'Chi đoàn Y khoa', memberCount: 24, activeCount: 22 },
+            { unitName: 'Chi đoàn Sư phạm', memberCount: 35, activeCount: 33 },
+            { unitName: 'Chi đoàn Kỹ thuật', memberCount: 37, activeCount: 31 }
+          ],
+          recentActivities: [
+            {
+              id: '1',
+              title: 'Sinh hoạt chuyên đề tháng 9',
+              type: 'MEETING',
+              date: '2024-09-15',
+              participants: 128
+            },
+            {
+              id: '2',
+              title: 'Hoạt động tình nguyện',
+              type: 'VOLUNTEER',
+              date: '2024-09-10',
+              participants: 85
+            },
+            {
+              id: '3',
+              title: 'Thi tìm hiểu lịch sử Đoàn',
+              type: 'STUDY',
+              date: '2024-09-08',
+              participants: 96
+            }
+          ],
+          systemInfo: {
+            uptime: 3600,
+            nodeVersion: 'v18.0.0',
+            platform: 'win32'
+          }
+        });
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        router.push('/admin/login');
+      }
+    }
+  }, [router]);
+
+  const handleLogout = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('accessToken');
+      router.push('/admin/login');
+    }
+  };
+
+  // Loading state
+  if (!mounted || !currentUser || !stats) {
+    return (
+      <div className="min-h-screen bg-red-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
+          <p className="text-red-700">Đang tải hệ thống quản lý...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Menu items cho quản lý đoàn viên
+  const menuItems = [
+    { id: 'dashboard', label: 'Tổng quan', icon: Home },
+    { id: 'members', label: 'Quản lý đoàn viên', icon: Users },
+    { id: 'units', label: 'Quản lý chi đoàn', icon: Flag },
+    { id: 'activities', label: 'Sinh hoạt đoàn', icon: Activity },
+    { id: 'ratings', label: 'Xếp loại đoàn viên', icon: Star },
+    { id: 'points', label: 'Điểm rèn luyện', icon: Trophy },
+    { id: 'documents', label: 'Tài liệu đoàn', icon: FileText },
+    { id: 'exams', label: 'Kiểm tra tìm hiểu', icon: BookOpen },
+    { id: 'suggestions', label: 'Kiến nghị', icon: MessageSquare },
+    { id: 'reports', label: 'Báo cáo thống kê', icon: BarChart3 },
+  ];
+
+  const renderDashboard = () => (
+    <div className="space-y-6">
+      {/* Header với background đỏ đặc trưng */}
+      <div className="bg-gradient-to-r from-red-600 to-red-700 rounded-xl p-6 text-white">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Hệ thống quản lý Đoàn thanh niên</h1>
+            <p className="text-red-100 mt-2">
+              Chào mừng, {currentUser?.fullName} - Bí thư Đoàn trường
+            </p>
+          </div>
+          <div className="text-right">
+            <div className="text-2xl font-bold">{new Date().toLocaleDateString('vi-VN')}</div>
+            <div className="text-red-100">Hôm nay</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-red-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600">Tổng số đoàn viên</p>
+              <p className="text-3xl font-bold text-gray-900">{stats.overview.totalMembers}</p>
+              <p className="text-green-600 text-sm">
+                +{stats.overview.newMembersThisMonth} tháng này
+              </p>
+            </div>
+            <Users className="h-12 w-12 text-red-500" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600">Đoàn viên tích cực</p>
+              <p className="text-3xl font-bold text-gray-900">{stats.overview.activeMembers}</p>
+              <p className="text-green-600 text-sm">
+                {((stats.overview.activeMembers / stats.overview.totalMembers) * 100).toFixed(1)}% tổng số
+              </p>
+            </div>
+            <UserCheck className="h-12 w-12 text-green-500" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-yellow-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600">Đoàn viên xuất sắc</p>
+              <p className="text-3xl font-bold text-gray-900">{stats.overview.excellentMembers}</p>
+              <p className="text-yellow-600 text-sm">
+                {((stats.overview.excellentMembers / stats.overview.totalMembers) * 100).toFixed(1)}% tổng số
+              </p>
+            </div>
+            <Award className="h-12 w-12 text-yellow-500" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600">Tổng điểm rèn luyện</p>
+              <p className="text-3xl font-bold text-gray-900">{stats.overview.totalPoints.toLocaleString()}</p>
+              <p className="text-blue-600 text-sm">
+                TB: {(stats.overview.totalPoints / stats.overview.totalMembers).toFixed(0)} điểm/người
+              </p>
+            </div>
+            <Trophy className="h-12 w-12 text-blue-500" />
+          </div>
+        </div>
+      </div>
+
+      {/* Charts and Tables */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Thống kê xếp loại */}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+            <PieChart className="h-6 w-6 text-red-600 mr-2" />
+            Xếp loại đoàn viên
+          </h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+              <span className="font-semibold text-red-700">Xuất sắc</span>
+              <div className="flex items-center space-x-2">
+                <div className="w-20 bg-red-200 rounded-full h-2">
+                  <div 
+                    className="bg-red-600 h-2 rounded-full" 
+                    style={{ width: `${(stats.membersByRank.xuatSac / stats.overview.totalMembers) * 100}%` }}
+                  ></div>
+                </div>
+                <span className="font-bold text-red-700">{stats.membersByRank.xuatSac}</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+              <span className="font-semibold text-green-700">Khá</span>
+              <div className="flex items-center space-x-2">
+                <div className="w-20 bg-green-200 rounded-full h-2">
+                  <div 
+                    className="bg-green-600 h-2 rounded-full" 
+                    style={{ width: `${(stats.membersByRank.kha / stats.overview.totalMembers) * 100}%` }}
+                  ></div>
+                </div>
+                <span className="font-bold text-green-700">{stats.membersByRank.kha}</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+              <span className="font-semibold text-yellow-700">Trung bình</span>
+              <div className="flex items-center space-x-2">
+                <div className="w-20 bg-yellow-200 rounded-full h-2">
+                  <div 
+                    className="bg-yellow-600 h-2 rounded-full" 
+                    style={{ width: `${(stats.membersByRank.trungBinh / stats.overview.totalMembers) * 100}%` }}
+                  ></div>
+                </div>
+                <span className="font-bold text-yellow-700">{stats.membersByRank.trungBinh}</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <span className="font-semibold text-gray-700">Yếu</span>
+              <div className="flex items-center space-x-2">
+                <div className="w-20 bg-gray-200 rounded-full h-2">
+                  <div 
+                    className="bg-gray-600 h-2 rounded-full" 
+                    style={{ width: `${(stats.membersByRank.yeu / stats.overview.totalMembers) * 100}%` }}
+                  ></div>
+                </div>
+                <span className="font-bold text-gray-700">{stats.membersByRank.yeu}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Thống kê theo chi đoàn */}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+            <Flag className="h-6 w-6 text-red-600 mr-2" />
+            Đoàn viên theo chi đoàn
+          </h3>
+          <div className="space-y-3">
+            {stats.membersByUnit.map((unit, index) => (
+              <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div>
+                  <span className="font-semibold text-gray-900">{unit.unitName}</span>
+                  <p className="text-sm text-gray-600">{unit.activeCount}/{unit.memberCount} hoạt động</p>
+                </div>
+                <div className="text-right">
+                  <span className="font-bold text-red-600">{unit.memberCount}</span>
+                  <div className="w-16 bg-gray-200 rounded-full h-2 mt-1">
+                    <div 
+                      className="bg-red-600 h-2 rounded-full" 
+                      style={{ width: `${(unit.activeCount / unit.memberCount) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Hoạt động gần đây */}
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+          <Activity className="h-6 w-6 text-red-600 mr-2" />
+          Hoạt động sinh hoạt gần đây
+        </h3>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b">
+                <th className="text-left py-3 font-semibold text-gray-700">Tên hoạt động</th>
+                <th className="text-left py-3 font-semibold text-gray-700">Loại</th>
+                <th className="text-left py-3 font-semibold text-gray-700">Ngày</th>
+                <th className="text-left py-3 font-semibold text-gray-700">Số người tham gia</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stats.recentActivities.map((activity) => (
+                <tr key={activity.id} className="border-b hover:bg-gray-50">
+                  <td className="py-3 font-medium text-gray-900">{activity.title}</td>
+                  <td className="py-3">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      activity.type === 'MEETING' ? 'bg-blue-100 text-blue-800' :
+                      activity.type === 'VOLUNTEER' ? 'bg-green-100 text-green-800' :
+                      'bg-purple-100 text-purple-800'
+                    }`}>
+                      {activity.type === 'MEETING' ? 'Sinh hoạt' :
+                       activity.type === 'VOLUNTEER' ? 'Tình nguyện' : 'Học tập'}
+                    </span>
+                  </td>
+                  <td className="py-3 text-gray-600">{new Date(activity.date).toLocaleDateString('vi-VN')}</td>
+                  <td className="py-3">
+                    <span className="font-semibold text-red-600">{activity.participants}</span>
+                    <span className="text-gray-500 text-sm">/{stats.overview.totalMembers}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return renderDashboard();
+      case 'members':
+        return <MemberManagement />;
+      case 'units':
+        return <UnitManagement />;
+      case 'activities':
+        return <ActivityManagement currentUserRole="ADMIN" />;
+      case 'ratings':
+        return <RatingManagement />;
+      case 'points':
+        return <PointsManagement />;
+      case 'documents':
+        return <DocumentManagement />;
+      case 'exams':
+        return <ExamManagement />;
+      case 'suggestions':
+        return <SuggestionManagement />;
+      case 'reports':
+        return <ReportsManagement />;
+      default:
+        return renderDashboard();
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-red-50">
+      <div className="flex h-screen">
+        {/* Sidebar */}
+        <div className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-white shadow-xl transition-all duration-300 flex-shrink-0`}>
+          <div className="p-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center">
+                <Flag className="h-6 w-6 text-white" />
+              </div>
+              {sidebarOpen && (
+                <div>
+                  <h2 className="font-bold text-gray-900">Đoàn TN</h2>
+                  <p className="text-xs text-gray-500">Admin Panel</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <nav className="mt-8">
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  className={`w-full flex items-center px-4 py-3 text-left hover:bg-red-50 transition-colors ${
+                    activeTab === item.id ? 'bg-red-100 border-r-4 border-red-600 text-red-700' : 'text-gray-700'
+                  }`}
+                >
+                  <Icon className={`h-5 w-5 ${activeTab === item.id ? 'text-red-600' : 'text-gray-500'}`} />
+                  {sidebarOpen && <span className="ml-3 font-medium">{item.label}</span>}
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className="absolute bottom-4 left-4 right-4">
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            >
+              <LogOut className="h-5 w-5" />
+              {sidebarOpen && <span className="ml-3 font-medium">Đăng xuất</span>}
+            </button>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col">
+          {/* Header */}
+          <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="p-2 rounded-lg hover:bg-gray-100"
+                >
+                  <Menu className="h-5 w-5 text-gray-600" />
+                </button>
+                <h1 className="text-xl font-semibold text-gray-900">
+                  {menuItems.find(item => item.id === activeTab)?.label || 'Tổng quan'}
+                </h1>
+              </div>
+              
+              <div className="flex items-center space-x-4">
+                <div className="text-right">
+                  <p className="font-medium text-gray-900">{currentUser?.fullName}</p>
+                  <p className="text-sm text-gray-500">Bí thư Đoàn trường</p>
+                </div>
+                <div className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center">
+                  <span className="text-white font-medium">
+                    {currentUser?.fullName?.charAt(0) || 'A'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          {/* Page Content */}
+          <main className="flex-1 overflow-auto p-6">
+            {renderContent()}
+          </main>
+        </div>
+      </div>
+    </div>
+  );
+}
