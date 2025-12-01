@@ -76,22 +76,26 @@ app.post('/api/admin/seed-admin', async (req, res) => {
     const bcrypt = require('bcryptjs');
     const prisma = new PrismaClient();
     
+    const hashedPassword = await bcrypt.hash('123456', 10);
+    
     // Check if admin exists
     let admin = await prisma.user.findFirst({
       where: { email: 'admin@youth.com' }
     });
     
     if (admin) {
-      // Update to ADMIN role
+      // Update to ADMIN role and reset password
       admin = await prisma.user.update({
         where: { id: admin.id },
-        data: { role: 'ADMIN' }
+        data: { 
+          role: 'ADMIN',
+          passwordHash: hashedPassword
+        }
       });
-      return res.json({ success: true, message: 'Admin role updated', user: { id: admin.id, email: admin.email, role: admin.role } });
+      return res.json({ success: true, message: 'Admin updated with new password', user: { id: admin.id, email: admin.email, role: admin.role } });
     }
     
     // Create new admin
-    const hashedPassword = await bcrypt.hash('123456', 10);
     admin = await prisma.user.create({
       data: {
         username: 'admin',
