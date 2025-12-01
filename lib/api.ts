@@ -1,8 +1,5 @@
 // API service for Youth Handbook Frontend
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 
-  (process.env.NODE_ENV === 'production' 
-    ? 'https://your-backend-domain.com/api' 
-    : 'http://localhost:3001/api');
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://youth-handbook.onrender.com/api';
 
 // API Response types
 interface ApiResponse<T = any> {
