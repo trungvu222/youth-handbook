@@ -69,6 +69,46 @@ app.get('/api/admin/test', (req, res) => {
   });
 });
 
+// Seed admin endpoint (one-time use)
+app.post('/api/admin/seed-admin', async (req, res) => {
+  try {
+    const { PrismaClient } = require('@prisma/client');
+    const bcrypt = require('bcryptjs');
+    const prisma = new PrismaClient();
+    
+    // Check if admin exists
+    let admin = await prisma.user.findFirst({
+      where: { email: 'admin@youth.com' }
+    });
+    
+    if (admin) {
+      // Update to ADMIN role
+      admin = await prisma.user.update({
+        where: { id: admin.id },
+        data: { role: 'ADMIN' }
+      });
+      return res.json({ success: true, message: 'Admin role updated', user: { id: admin.id, email: admin.email, role: admin.role } });
+    }
+    
+    // Create new admin
+    const hashedPassword = await bcrypt.hash('123456', 10);
+    admin = await prisma.user.create({
+      data: {
+        username: 'admin',
+        email: 'admin@youth.com',
+        passwordHash: hashedPassword,
+        fullName: 'Administrator',
+        role: 'ADMIN'
+      }
+    });
+    
+    res.json({ success: true, message: 'Admin created', user: { id: admin.id, email: admin.email, role: admin.role } });
+  } catch (error) {
+    console.error('Seed admin error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 app.get('/api/admin/dashboard/stats', (req, res) => {
   res.json({
     success: true,
