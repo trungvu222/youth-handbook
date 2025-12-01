@@ -29,7 +29,7 @@ const PORT = process.env.PORT || 3001;
 app.use(helmet());
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['http://localhost:3000', 'http://localhost:3001'] // Add your production domains
+    ? ['http://localhost:3000', 'http://localhost:3001', 'https://youth-handbook.vercel.app', 'https://youth-handbook-trungvu222s-projects.vercel.app']
     : true,
   credentials: true
 }));
