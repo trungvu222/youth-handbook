@@ -128,21 +128,6 @@ export default function LoginForm() {
             )}
           </Button>
         </form>
-
-        {/* Demo login */}
-        <div className="mt-6 pt-4 border-t">
-          <div className="text-center text-sm text-gray-600 mb-3">
-            Tài khoản demo để kiểm tra:
-          </div>
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={handleDemoLogin}
-            type="button"
-          >
-            Điền thông tin demo
-          </Button>
-        </div>
       </CardContent>
     </Card>
   );

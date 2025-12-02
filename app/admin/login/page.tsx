@@ -36,7 +36,7 @@ export default function AdminLogin() {
 
         {/* Footer */}
         <div className="text-center mt-8 text-sm text-gray-500">
-          <p>© 2024 Hệ thống quản lý Đoàn thanh niên</p>
+          <p>© 2025 Hệ thống quản lý Đoàn thanh niên</p>
           <p className="mt-1">Phiên bản Admin Dashboard v1.0</p>
         </div>
       </div>
