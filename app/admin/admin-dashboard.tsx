@@ -37,6 +37,7 @@ import { DocumentManagement } from '@/components/admin/document-management';
 import { ExamManagement } from '@/components/admin/exam-management';
 import SuggestionManagement from '@/components/admin/suggestion-management';
 import { ReportsManagement } from '@/components/admin/reports-management';
+import { AdminProfile } from '@/components/admin/admin-profile';
 
 // Interface cho dashboard stats
 interface DashboardStats {
@@ -197,6 +198,7 @@ export default function AdminDashboard() {
     { id: 'exams', label: 'Kiểm tra tìm hiểu', icon: BookOpen },
     { id: 'suggestions', label: 'Kiến nghị', icon: MessageSquare },
     { id: 'reports', label: 'Báo cáo thống kê', icon: BarChart3 },
+    { id: 'profile', label: 'Hồ sơ cá nhân', icon: Settings },
   ];
 
   const renderDashboard = () => (
@@ -426,6 +428,12 @@ export default function AdminDashboard() {
         return <SuggestionManagement />;
       case 'reports':
         return <ReportsManagement />;
+      case 'profile':
+        return <AdminProfile currentUser={currentUser} onUpdate={() => {
+          // Refresh user data after update
+          const user = localStorage.getItem('currentUser');
+          if (user) setCurrentUser(JSON.parse(user));
+        }} />;
       default:
         return renderDashboard();
     }
@@ -498,11 +506,17 @@ export default function AdminDashboard() {
               </div>
               
               <div className="flex items-center space-x-4">
-                <div className="text-right">
+                <div 
+                  className="text-right cursor-pointer hover:opacity-80"
+                  onClick={() => setActiveTab('profile')}
+                >
                   <p className="font-medium text-gray-900">{currentUser?.fullName}</p>
                   <p className="text-sm text-gray-500">Bí thư Đoàn trường</p>
                 </div>
-                <div className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center">
+                <div 
+                  className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-red-300 transition-all"
+                  onClick={() => setActiveTab('profile')}
+                >
                   <span className="text-white font-medium">
                     {currentUser?.fullName?.charAt(0) || 'A'}
                   </span>

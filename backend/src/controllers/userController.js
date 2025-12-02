@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient();
 
@@ -370,12 +371,83 @@ const deleteUser = async (req, res, next) => {
   }
 };
 
+// @desc    Change user password
+// @route   PUT /api/users/:id/password
+// @access  Private (User can change own password, Admin can change any)
+const changePassword = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { currentPassword, newPassword } = req.body;
+    const currentUser = req.user;
+
+    // Check if user can change this password
+    const isSelf = currentUser.id === parseInt(id);
+    const isAdmin = currentUser.role === 'ADMIN';
+
+    if (!isSelf && !isAdmin) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. You can only change your own password.'
+      });
+    }
+
+    // Get user
+    const user = await prisma.user.findUnique({
+      where: { id: parseInt(id) }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    // If changing own password, verify current password
+    if (isSelf) {
+      const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!isMatch) {
+        return res.status(400).json({
+          success: false,
+          error: 'Current password is incorrect'
+        });
+      }
+    }
+
+    // Validate new password
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        error: 'New password must be at least 6 characters'
+      });
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(newPassword, salt);
+
+    // Update password
+    await prisma.user.update({
+      where: { id: parseInt(id) },
+      data: { passwordHash }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Password changed successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getUserProfile,
   getUsers,
   updateUserProfile,
   assignUserToUnit,
   changeUserRole,
-  deleteUser
+  deleteUser,
+  changePassword
 };
 
