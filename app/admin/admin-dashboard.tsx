@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 
 // Import components quản lý đoàn viên
-import MemberManagement from '@/components/admin/member-management';
+import { MemberManagement } from '@/components/admin/member-management';
 import UnitManagement from '@/components/admin/unit-management';
 import ActivityManagement from '@/components/admin/activity-management';
 import RatingManagement from '@/components/admin/rating-management';
@@ -36,7 +36,7 @@ import { PointsManagement } from '@/components/admin/points-management';
 import { DocumentManagement } from '@/components/admin/document-management';
 import { ExamManagement } from '@/components/admin/exam-management';
 import SuggestionManagement from '@/components/admin/suggestion-management';
-import ReportsManagement from '@/components/admin/reports-management';
+import { ReportsManagement } from '@/components/admin/reports-management';
 
 // Interface cho dashboard stats
 interface DashboardStats {
