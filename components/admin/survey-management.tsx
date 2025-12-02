@@ -1,256 +1,174 @@
 "use client"
 
-import { useState } from "react"
-import { Card, CardContent } from "@/components/ui/card"
+import { useState, useEffect } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
-import { Plus, Edit, Trash2, BarChart3, Users, Calendar } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Plus, Edit, Trash2, BarChart3, Users, Calendar, RefreshCw, Eye } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
-type Survey = {
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://youth-handbook.onrender.com"
+
+interface Survey {
   id: string
   title: string
-  description: string
-  questions: number
-  responses: number
-  status: "draft" | "active" | "closed"
-  createdDate: string
-  endDate: string
+  description?: string
+  status: string
   isAnonymous: boolean
+  startDate: string
+  endDate: string
+  _count?: { responses: number }
 }
 
 export function SurveyManagement() {
-  const [showCreateForm, setShowCreateForm] = useState(false)
-  const [newSurvey, setNewSurvey] = useState({
-    title: "",
-    description: "",
-    isAnonymous: false,
-    endDate: "",
+  const { toast } = useToast()
+  const [surveys, setSurveys] = useState<Survey[]>([])
+  const [loading, setLoading] = useState(true)
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [formData, setFormData] = useState({
+    title: "", description: "", isAnonymous: false, endDate: ""
   })
-  const [editingSurvey, setEditingSurvey] = useState<Survey | null>(null)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
 
-  const handleEditSurvey = (survey: Survey) => {
-    setEditingSurvey(survey)
-    setNewSurvey({
-      title: survey.title,
-      description: survey.description,
-      isAnonymous: survey.isAnonymous,
-      endDate: survey.endDate,
-    })
-    setShowCreateForm(true)
-  }
-
-  const handleDeleteSurvey = (surveyId: string) => {
-    setShowDeleteConfirm(surveyId)
-  }
-
-  const confirmDeleteSurvey = () => {
-    console.log('Deleting survey:', showDeleteConfirm)
-    setShowDeleteConfirm(null)
-  }
-
-  const surveys: Survey[] = [
-    {
-      id: "1",
-      title: "Đánh giá chất lượng hoạt động Đoàn",
-      description: "Khảo sát ý kiến về chất lượng các hoạt động của Đoàn trong tháng qua",
-      questions: 10,
-      responses: 45,
-      status: "active",
-      createdDate: "2024-12-01",
-      endDate: "2024-12-31",
-      isAnonymous: true,
-    },
-    {
-      id: "2",
-      title: "Góp ý cải thiện sinh hoạt Chi Đoàn",
-      description: "Thu thập ý kiến đóng góp để cải thiện chất lượng sinh hoạt Chi Đoàn",
-      questions: 8,
-      responses: 23,
-      status: "active",
-      createdDate: "2024-11-15",
-      endDate: "2024-12-25",
-      isAnonymous: false,
-    },
-    {
-      id: "3",
-      title: "Khảo sát nhu cầu đào tạo",
-      description: "Tìm hiểu nhu cầu đào tạo và phát triển kỹ năng của đoàn viên",
-      questions: 12,
-      responses: 67,
-      status: "closed",
-      createdDate: "2024-10-01",
-      endDate: "2024-11-30",
-      isAnonymous: true,
-    },
-  ]
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "draft":
-        return "bg-gray-100 text-gray-800 border-gray-200"
-      case "active":
-        return "bg-green-100 text-green-800 border-green-200"
-      case "closed":
-        return "bg-red-100 text-red-800 border-red-200"
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200"
+  const fetchSurveys = async () => {
+    setLoading(true)
+    try {
+      const token = localStorage.getItem("token")
+      const res = await fetch(`${API_URL}/api/surveys`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setSurveys(data.data || data.surveys || data || [])
+      }
+    } catch (error) {
+      console.error("Error:", error)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "draft":
-        return "Bản nháp"
-      case "active":
-        return "Đang mở"
-      case "closed":
-        return "Đã đóng"
-      default:
-        return status
+  useEffect(() => { fetchSurveys() }, [])
+
+  const handleCreate = async () => {
+    if (!formData.title) {
+      toast({ title: "Lỗi", description: "Vui lòng nhập tiêu đề", variant: "destructive" })
+      return
+    }
+    try {
+      const token = localStorage.getItem("token")
+      const res = await fetch(`${API_URL}/api/surveys`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          ...formData,
+          startDate: new Date().toISOString(),
+          endDate: formData.endDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          questions: "[]"
+        })
+      })
+      if (res.ok) {
+        toast({ title: "Thành công", description: "Đã tạo khảo sát mới" })
+        setShowCreateDialog(false)
+        setFormData({ title: "", description: "", isAnonymous: false, endDate: "" })
+        fetchSurveys()
+      }
+    } catch (error) {
+      toast({ title: "Lỗi", variant: "destructive" })
     }
   }
 
-  const handleCreateSurvey = () => {
-    console.log("Create survey:", newSurvey)
-    setNewSurvey({ title: "", description: "", isAnonymous: false, endDate: "" })
-    setShowCreateForm(false)
+  const handleDelete = async (id: string) => {
+    if (!confirm("Xác nhận xóa?")) return
+    try {
+      const token = localStorage.getItem("token")
+      await fetch(`${API_URL}/api/surveys/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      toast({ title: "Đã xóa" })
+      fetchSurveys()
+    } catch (error) {
+      toast({ title: "Lỗi", variant: "destructive" })
+    }
   }
 
-  if (showCreateForm) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold">Tạo khảo sát mới</h2>
-          <Button variant="outline" onClick={() => setShowCreateForm(false)}>
-            Hủy
-          </Button>
-        </div>
-
-        <Card>
-          <CardContent className="p-6 space-y-4">
-            <div>
-              <Label htmlFor="title">Tiêu đề khảo sát</Label>
-              <Input
-                id="title"
-                placeholder="Nhập tiêu đề khảo sát"
-                value={newSurvey.title}
-                onChange={(e) => setNewSurvey({ ...newSurvey, title: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label htmlFor="description">Mô tả</Label>
-              <Textarea
-                id="description"
-                placeholder="Nhập mô tả khảo sát"
-                value={newSurvey.description}
-                onChange={(e) => setNewSurvey({ ...newSurvey, description: e.target.value })}
-                rows={3}
-              />
-            </div>
-            <div>
-              <Label htmlFor="endDate">Ngày kết thúc</Label>
-              <Input
-                id="endDate"
-                type="date"
-                value={newSurvey.endDate}
-                onChange={(e) => setNewSurvey({ ...newSurvey, endDate: e.target.value })}
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="anonymous"
-                checked={newSurvey.isAnonymous}
-                onCheckedChange={(checked) => setNewSurvey({ ...newSurvey, isAnonymous: checked })}
-              />
-              <Label htmlFor="anonymous">Khảo sát ẩn danh</Label>
-            </div>
-            <Button onClick={handleCreateSurvey} className="w-full">
-              Tạo khảo sát
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
+  const getStatusBadge = (status: string) => {
+    const map: Record<string, { variant: any; label: string }> = {
+      DRAFT: { variant: "secondary", label: "Nháp" },
+      ACTIVE: { variant: "default", label: "Đang mở" },
+      CLOSED: { variant: "outline", label: "Đã đóng" }
+    }
+    const s = map[status] || { variant: "outline", label: status }
+    return <Badge variant={s.variant}>{s.label}</Badge>
   }
+
+  if (loading) return <div className="flex justify-center p-8"><RefreshCw className="h-8 w-8 animate-spin" /></div>
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">Quản lý khảo sát</h2>
-        <Button onClick={() => setShowCreateForm(true)} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Tạo khảo sát
-        </Button>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold">Quản lý khảo sát</h2>
+          <p className="text-muted-foreground">Tổng: {surveys.length} khảo sát</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={fetchSurveys}><RefreshCw className="h-4 w-4" /></Button>
+          <Button onClick={() => setShowCreateDialog(true)}><Plus className="h-4 w-4 mr-2" />Tạo mới</Button>
+        </div>
       </div>
 
-      <div className="space-y-3">
-        {surveys.map((survey) => (
+      <div className="grid gap-4">
+        {surveys.length === 0 ? (
+          <Card><CardContent className="py-8 text-center text-muted-foreground">Chưa có khảo sát nào</CardContent></Card>
+        ) : surveys.map(survey => (
           <Card key={survey.id}>
             <CardContent className="p-4">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg">{survey.title}</h3>
-                  <p className="text-sm text-muted-foreground line-clamp-2">{survey.description}</p>
+              <div className="flex justify-between items-start">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold">{survey.title}</h3>
+                    {getStatusBadge(survey.status)}
+                    {survey.isAnonymous && <Badge variant="outline">Ẩn danh</Badge>}
+                  </div>
+                  {survey.description && <p className="text-sm text-muted-foreground">{survey.description}</p>}
+                  <div className="flex gap-4 text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1"><Users className="h-4 w-4" />{survey._count?.responses || 0} phản hồi</span>
+                    <span className="flex items-center gap-1"><Calendar className="h-4 w-4" />Hết hạn: {new Date(survey.endDate).toLocaleDateString("vi-VN")}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge className={getStatusColor(survey.status)}>{getStatusText(survey.status)}</Badge>
-                  {survey.isAnonymous && <Badge variant="outline">Ẩn danh</Badge>}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4 text-sm text-muted-foreground mb-4">
-                <div className="flex items-center gap-1">
-                  <BarChart3 className="h-4 w-4" />
-                  <span>{survey.questions} câu hỏi</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Users className="h-4 w-4" />
-                  <span>{survey.responses} phản hồi</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  <span>Đến {new Date(survey.endDate).toLocaleDateString("vi-VN")}</span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-muted-foreground">
-                  Tạo: {new Date(survey.createdDate).toLocaleDateString("vi-VN")}
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-                    <BarChart3 className="h-4 w-4" />
-                    Kết quả
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="gap-2 bg-transparent"
-                    onClick={() => handleEditSurvey(survey)}
-                  >
-                    <Edit className="h-4 w-4" />
-                    Sửa
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="gap-2 text-red-600 hover:text-red-700 bg-transparent"
-                    onClick={() => handleDeleteSurvey(survey.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Xóa
-                  </Button>
+                <div className="flex gap-1">
+                  <Button variant="ghost" size="icon"><BarChart3 className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" className="text-red-600" onClick={() => handleDelete(survey.id)}><Trash2 className="h-4 w-4" /></Button>
                 </div>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Tạo khảo sát mới</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div><Label>Tiêu đề *</Label><Input value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} /></div>
+            <div><Label>Mô tả</Label><Textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} /></div>
+            <div><Label>Ngày kết thúc</Label><Input type="date" value={formData.endDate} onChange={e => setFormData({...formData, endDate: e.target.value})} /></div>
+            <div className="flex items-center gap-2">
+              <Switch checked={formData.isAnonymous} onCheckedChange={v => setFormData({...formData, isAnonymous: v})} />
+              <Label>Cho phép trả lời ẩn danh</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>Hủy</Button>
+            <Button onClick={handleCreate}>Tạo</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

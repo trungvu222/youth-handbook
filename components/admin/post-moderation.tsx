@@ -1,247 +1,192 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Textarea } from "@/components/ui/textarea"
-import { Check, X, Eye, Calendar, User } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Check, X, Eye, Calendar, User, RefreshCw, FileText } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
-type Post = {
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://youth-handbook.onrender.com"
+
+interface Post {
   id: string
   title: string
   content: string
-  author: string
-  authorAvatar: string
-  submitDate: string
-  status: "pending" | "approved" | "rejected"
-  category: string
-  attachments?: string[]
+  status: string
+  postType: string
+  createdAt: string
+  author?: { fullName: string }
 }
 
 export function PostModeration() {
+  const { toast } = useToast()
+  const [posts, setPosts] = useState<Post[]>([])
+  const [loading, setLoading] = useState(true)
   const [selectedPost, setSelectedPost] = useState<Post | null>(null)
+  const [showDetailDialog, setShowDetailDialog] = useState(false)
   const [moderationNote, setModerationNote] = useState("")
 
-  const pendingPosts: Post[] = [
-    {
-      id: "1",
-      title: "Chia sẻ kinh nghiệm tham gia hoạt động tình nguyện",
-      content: "Trong chuyến đi tình nguyện vừa qua, tôi đã có những trải nghiệm rất ý nghĩa...",
-      author: "Nguyễn Văn An",
-      authorAvatar: "",
-      submitDate: "2024-12-15",
-      status: "pending",
-      category: "Chia sẻ kinh nghiệm",
-    },
-    {
-      id: "2",
-      title: "Đề xuất cải thiện hoạt động sinh hoạt Chi Đoàn",
-      content: "Tôi xin đề xuất một số ý kiến để cải thiện chất lượng sinh hoạt Chi Đoàn...",
-      author: "Trần Thị Bình",
-      authorAvatar: "",
-      submitDate: "2024-12-14",
-      status: "pending",
-      category: "Đề xuất",
-    },
-    {
-      id: "3",
-      title: "Báo cáo hoạt động nhóm nghiên cứu",
-      content: "Nhóm nghiên cứu của chúng tôi đã hoàn thành dự án về...",
-      author: "Lê Văn Cường",
-      authorAvatar: "",
-      submitDate: "2024-12-13",
-      status: "pending",
-      category: "Báo cáo",
-    },
-  ]
-
-  const handleApprove = (postId: string) => {
-    console.log("Approve post:", postId, "Note:", moderationNote)
-    setModerationNote("")
-  }
-
-  const handleReject = (postId: string) => {
-    console.log("Reject post:", postId, "Note:", moderationNote)
-    setModerationNote("")
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200"
-      case "approved":
-        return "bg-green-100 text-green-800 border-green-200"
-      case "rejected":
-        return "bg-red-100 text-red-800 border-red-200"
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200"
+  const fetchPosts = async () => {
+    setLoading(true)
+    try {
+      const token = localStorage.getItem("token")
+      const res = await fetch(`${API_URL}/api/posts`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setPosts(data.data || data.posts || data || [])
+      }
+    } catch (error) {
+      console.error("Error:", error)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "Chờ duyệt"
-      case "approved":
-        return "Đã duyệt"
-      case "rejected":
-        return "Từ chối"
-      default:
-        return status
+  useEffect(() => { fetchPosts() }, [])
+
+  const handleModerate = async (id: string, status: "APPROVED" | "REJECTED") => {
+    try {
+      const token = localStorage.getItem("token")
+      const res = await fetch(`${API_URL}/api/posts/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status })
+      })
+      if (res.ok) {
+        toast({ title: status === "APPROVED" ? "Đã duyệt" : "Đã từ chối" })
+        fetchPosts()
+        setShowDetailDialog(false)
+      }
+    } catch (error) {
+      toast({ title: "Lỗi", variant: "destructive" })
     }
   }
 
-  if (selectedPost) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => setSelectedPost(null)}>
-            <Eye className="h-4 w-4" />
-          </Button>
-          <h2 className="text-xl font-bold">Chi tiết bài viết</h2>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <CardTitle className="text-xl mb-2">{selectedPost.title}</CardTitle>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage src={selectedPost.authorAvatar || "/placeholder.svg"} />
-                      <AvatarFallback>{selectedPost.author.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <span>{selectedPost.author}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    <span>{new Date(selectedPost.submitDate).toLocaleDateString("vi-VN")}</span>
-                  </div>
-                </div>
-              </div>
-              <Badge className={getStatusColor(selectedPost.status)}>{getStatusText(selectedPost.status)}</Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <h4 className="font-medium mb-2">Nội dung bài viết</h4>
-              <div className="p-4 bg-muted/30 rounded-lg">
-                <p className="whitespace-pre-wrap">{selectedPost.content}</p>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="font-medium mb-2">Danh mục</h4>
-              <Badge variant="outline">{selectedPost.category}</Badge>
-            </div>
-
-            {selectedPost.status === "pending" && (
-              <div className="space-y-4 pt-4 border-t">
-                <div>
-                  <h4 className="font-medium mb-2">Ghi chú kiểm duyệt</h4>
-                  <Textarea
-                    placeholder="Nhập ghi chú cho tác giả (tùy chọn)"
-                    value={moderationNote}
-                    onChange={(e) => setModerationNote(e.target.value)}
-                    rows={3}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={() => handleApprove(selectedPost.id)} className="gap-2">
-                    <Check className="h-4 w-4" />
-                    Duyệt bài
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => handleReject(selectedPost.id)}
-                    className="gap-2 text-red-600 hover:text-red-700"
-                  >
-                    <X className="h-4 w-4" />
-                    Từ chối
-                  </Button>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    )
+  const getStatusBadge = (status: string) => {
+    const map: Record<string, { variant: any; label: string }> = {
+      DRAFT: { variant: "secondary", label: "Nháp" },
+      PENDING: { variant: "warning", label: "Chờ duyệt" },
+      APPROVED: { variant: "default", label: "Đã duyệt" },
+      REJECTED: { variant: "destructive", label: "Từ chối" }
+    }
+    const s = map[status] || { variant: "outline", label: status }
+    return <Badge variant={s.variant}>{s.label}</Badge>
   }
+
+  const getTypeBadge = (type: string) => {
+    const map: Record<string, string> = {
+      ANNOUNCEMENT: "Thông báo", NEWS: "Tin tức", SUGGESTION: "Góp ý"
+    }
+    return <Badge variant="outline">{map[type] || type}</Badge>
+  }
+
+  const pendingPosts = posts.filter(p => p.status === "PENDING")
+
+  if (loading) return <div className="flex justify-center p-8"><RefreshCw className="h-8 w-8 animate-spin" /></div>
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">Kiểm duyệt bài viết</h2>
-        <Badge variant="secondary">{pendingPosts.length} bài chờ duyệt</Badge>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold">Duyệt bài viết</h2>
+          <p className="text-muted-foreground">{pendingPosts.length} bài chờ duyệt</p>
+        </div>
+        <Button variant="outline" onClick={fetchPosts}><RefreshCw className="h-4 w-4 mr-2" />Làm mới</Button>
       </div>
 
-      <div className="space-y-3">
-        {pendingPosts.map((post) => (
-          <Card key={post.id} className="cursor-pointer hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-start gap-4">
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={post.authorAvatar || "/placeholder.svg"} />
-                  <AvatarFallback>{post.author.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg">{post.title}</h3>
-                      <p className="text-sm text-muted-foreground line-clamp-2">{post.content}</p>
+      {pendingPosts.length > 0 && (
+        <Card>
+          <CardHeader><CardTitle className="text-orange-600">Chờ duyệt ({pendingPosts.length})</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            {pendingPosts.map(post => (
+              <div key={post.id} className="p-4 border rounded-lg">
+                <div className="flex justify-between items-start">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold">{post.title}</h3>
+                      {getTypeBadge(post.postType)}
                     </div>
-                    <Badge className={getStatusColor(post.status)}>{getStatusText(post.status)}</Badge>
+                    <p className="text-sm text-muted-foreground line-clamp-2">{post.content}</p>
+                    <div className="flex gap-4 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1"><User className="h-3 w-3" />{post.author?.fullName || "Ẩn danh"}</span>
+                      <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{new Date(post.createdAt).toLocaleDateString("vi-VN")}</span>
+                    </div>
                   </div>
-
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
-                    <div className="flex items-center gap-1">
-                      <User className="h-4 w-4" />
-                      <span>{post.author}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      <span>{new Date(post.submitDate).toLocaleDateString("vi-VN")}</span>
-                    </div>
-                    <Badge variant="outline" className="text-xs">
-                      {post.category}
-                    </Badge>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div />
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => setSelectedPost(post)} className="gap-2">
-                        <Eye className="h-4 w-4" />
-                        Xem chi tiết
-                      </Button>
-                      {post.status === "pending" && (
-                        <>
-                          <Button size="sm" onClick={() => handleApprove(post.id)} className="gap-2">
-                            <Check className="h-4 w-4" />
-                            Duyệt
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleReject(post.id)}
-                            className="gap-2 text-red-600 hover:text-red-700"
-                          >
-                            <X className="h-4 w-4" />
-                            Từ chối
-                          </Button>
-                        </>
-                      )}
-                    </div>
+                  <div className="flex gap-1">
+                    <Button size="sm" variant="ghost" onClick={() => { setSelectedPost(post); setShowDetailDialog(true) }}><Eye className="h-4 w-4" /></Button>
+                    <Button size="sm" variant="default" onClick={() => handleModerate(post.id, "APPROVED")}><Check className="h-4 w-4" /></Button>
+                    <Button size="sm" variant="destructive" onClick={() => handleModerate(post.id, "REJECTED")}><X className="h-4 w-4" /></Button>
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader><CardTitle>Tất cả bài viết ({posts.length})</CardTitle></CardHeader>
+        <CardContent>
+          {posts.length === 0 ? (
+            <p className="text-center py-8 text-muted-foreground">Chưa có bài viết nào</p>
+          ) : (
+            <div className="space-y-3">
+              {posts.map(post => (
+                <div key={post.id} className="flex justify-between items-center p-3 border rounded">
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">{post.title}</p>
+                      <p className="text-xs text-muted-foreground">{post.author?.fullName} • {new Date(post.createdAt).toLocaleDateString("vi-VN")}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {getStatusBadge(post.status)}
+                    <Button size="sm" variant="ghost" onClick={() => { setSelectedPost(post); setShowDetailDialog(true) }}><Eye className="h-4 w-4" /></Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>Chi tiết bài viết</DialogTitle></DialogHeader>
+          {selectedPost && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                {getTypeBadge(selectedPost.postType)}
+                {getStatusBadge(selectedPost.status)}
+              </div>
+              <h3 className="text-xl font-bold">{selectedPost.title}</h3>
+              <div className="text-sm text-muted-foreground">
+                Tác giả: {selectedPost.author?.fullName || "Ẩn danh"} • {new Date(selectedPost.createdAt).toLocaleString("vi-VN")}
+              </div>
+              <div className="p-4 bg-muted rounded-lg max-h-60 overflow-auto">
+                <p className="whitespace-pre-wrap">{selectedPost.content}</p>
+              </div>
+              {selectedPost.status === "PENDING" && (
+                <Textarea placeholder="Ghi chú (tùy chọn)" value={moderationNote} onChange={e => setModerationNote(e.target.value)} />
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            {selectedPost?.status === "PENDING" && (
+              <>
+                <Button variant="destructive" onClick={() => handleModerate(selectedPost.id, "REJECTED")}><X className="h-4 w-4 mr-2" />Từ chối</Button>
+                <Button onClick={() => handleModerate(selectedPost.id, "APPROVED")}><Check className="h-4 w-4 mr-2" />Duyệt</Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
