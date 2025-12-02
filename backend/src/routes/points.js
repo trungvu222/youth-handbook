@@ -1,17 +1,31 @@
 const express = require('express');
 const { protect, authorize } = require('../middleware/auth');
+const {
+  getLeaderboard,
+  addPoints,
+  subtractPoints,
+  getPointsHistory,
+  getUnits
+} = require('../controllers/pointsController');
 
 const router = express.Router();
 
 router.use(protect);
 
-router.get('/leaderboard', (req, res) => {
-  res.json({ message: 'Get leaderboard - TODO' });
-});
+// Get leaderboard with stats
+router.get('/leaderboard', getLeaderboard);
 
-router.get('/history', (req, res) => {
-  res.json({ message: 'Get points history - TODO' });
-});
+// Get points history
+router.get('/history', getPointsHistory);
+
+// Get units list
+router.get('/units', getUnits);
+
+// Add points (Admin/Leader only)
+router.post('/add', addPoints);
+
+// Subtract points (Admin/Leader only)
+router.post('/subtract', subtractPoints);
 
 module.exports = router;
 

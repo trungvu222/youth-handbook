@@ -113,6 +113,91 @@ app.post('/api/admin/seed-admin', async (req, res) => {
   }
 });
 
+// Seed sample data endpoint
+app.post('/api/admin/seed-data', async (req, res) => {
+  try {
+    const { PrismaClient } = require('@prisma/client');
+    const bcrypt = require('bcryptjs');
+    const prisma = new PrismaClient();
+    
+    const hashedPassword = await bcrypt.hash('123456', 10);
+    
+    // Create units
+    const units = await Promise.all([
+      prisma.unit.upsert({
+        where: { id: 'unit-cntt' },
+        update: {},
+        create: { id: 'unit-cntt', name: 'Chi đoàn Công nghệ' }
+      }),
+      prisma.unit.upsert({
+        where: { id: 'unit-kt' },
+        update: {},
+        create: { id: 'unit-kt', name: 'Chi đoàn Kinh tế' }
+      }),
+      prisma.unit.upsert({
+        where: { id: 'unit-yk' },
+        update: {},
+        create: { id: 'unit-yk', name: 'Chi đoàn Y khoa' }
+      }),
+      prisma.unit.upsert({
+        where: { id: 'unit-sp' },
+        update: {},
+        create: { id: 'unit-sp', name: 'Chi đoàn Sư phạm' }
+      }),
+      prisma.unit.upsert({
+        where: { id: 'unit-kthuat' },
+        update: {},
+        create: { id: 'unit-kthuat', name: 'Chi đoàn Kỹ thuật' }
+      })
+    ]);
+    
+    // Create sample members
+    const members = [
+      { username: 'nguyenvanan', email: 'an@youth.com', fullName: 'Nguyễn Văn An', unitId: 'unit-cntt', points: 850 },
+      { username: 'tranthiminh', email: 'minh@youth.com', fullName: 'Trần Thị Minh', unitId: 'unit-kt', points: 720 },
+      { username: 'levancuong', email: 'cuong@youth.com', fullName: 'Lê Văn Cường', unitId: 'unit-yk', points: 580 },
+      { username: 'phamthidung', email: 'dung@youth.com', fullName: 'Phạm Thị Dung', unitId: 'unit-sp', points: 920 },
+      { username: 'hoangvanem', email: 'em@youth.com', fullName: 'Hoàng Văn Em', unitId: 'unit-kthuat', points: 450 },
+      { username: 'ngothimai', email: 'mai@youth.com', fullName: 'Ngô Thị Mai', unitId: 'unit-cntt', points: 780 },
+      { username: 'dangvantuan', email: 'tuan@youth.com', fullName: 'Đặng Văn Tuấn', unitId: 'unit-kt', points: 650 },
+      { username: 'vuthilan', email: 'lan@youth.com', fullName: 'Vũ Thị Lan', unitId: 'unit-yk', points: 890 }
+    ];
+    
+    const createdMembers = [];
+    for (const member of members) {
+      const user = await prisma.user.upsert({
+        where: { email: member.email },
+        update: { points: member.points, unitId: member.unitId },
+        create: {
+          username: member.username,
+          email: member.email,
+          passwordHash: hashedPassword,
+          fullName: member.fullName,
+          role: 'MEMBER',
+          unitId: member.unitId,
+          points: member.points,
+          phone: '0' + Math.floor(100000000 + Math.random() * 900000000)
+        }
+      });
+      createdMembers.push(user);
+    }
+    
+    await prisma.$disconnect();
+    
+    res.json({ 
+      success: true, 
+      message: 'Sample data created', 
+      data: {
+        units: units.length,
+        members: createdMembers.length
+      }
+    });
+  } catch (error) {
+    console.error('Seed data error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 app.get('/api/admin/dashboard/stats', (req, res) => {
   res.json({
     success: true,
