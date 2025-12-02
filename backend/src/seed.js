@@ -1,289 +1,232 @@
 const { PrismaClient } = require('@prisma/client');
-const { hashPassword } = require('./utils/auth');
-const { generateQRCode } = require('./utils/helpers');
+const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient();
+
+async function hashPassword(password) {
+  const salt = await bcrypt.genSalt(12);
+  return await bcrypt.hash(password, salt);
+}
 
 async function main() {
   console.log('🌱 Seeding database...');
 
   try {
-    // Clear existing data
-    await prisma.pointsHistory.deleteMany({});
-    await prisma.activityParticipant.deleteMany({});
-    await prisma.activity.deleteMany({});
-    await prisma.surveyResponse.deleteMany({});
-    await prisma.survey.deleteMany({});
-    await prisma.post.deleteMany({});
-    await prisma.quizAttempt.deleteMany({});
-    await prisma.studyMaterial.deleteMany({});
-    await prisma.document.deleteMany({});
-    await prisma.user.deleteMany({});
-    await prisma.unit.deleteMany({});
-
-    // Create admin user
-    const adminPassword = await hashPassword('admin123');
-    const admin = await prisma.user.create({
-      data: {
-        username: 'admin',
-        email: 'admin@youth-handbook.com',
-        passwordHash: adminPassword,
-        fullName: 'Quản trị viên hệ thống',
-        phone: '0123456789',
-        role: 'ADMIN',
-        points: 1000
-      }
+    // Check if data already exists
+    const existingAdmin = await prisma.user.findFirst({
+      where: { email: 'admin@youth.com' }
     });
 
-    console.log('✅ Created admin user:', admin.username);
+    if (existingAdmin) {
+      console.log('✅ Database already seeded. Skipping...');
+      return;
+    }
 
-    // Create units
+    // Create Units first
+    console.log('📋 Creating units...');
+    
     const units = await Promise.all([
-      prisma.unit.create({
-        data: {
-          name: 'Chi đoàn CNTT',
-          leaderId: null // Will update later
-        }
-      }),
-      prisma.unit.create({
-        data: {
-          name: 'Chi đoàn Kinh tế',
-          leaderId: null
-        }
-      }),
-      prisma.unit.create({
-        data: {
-          name: 'Chi đoàn Ngoại ngữ',
-          leaderId: null
-        }
-      })
+      prisma.unit.create({ data: { name: 'Chi đoàn Công nghệ' } }),
+      prisma.unit.create({ data: { name: 'Chi đoàn Kinh tế' } }),
+      prisma.unit.create({ data: { name: 'Chi đoàn Y khoa' } }),
+      prisma.unit.create({ data: { name: 'Chi đoàn Sư phạm' } }),
+      prisma.unit.create({ data: { name: 'Chi đoàn Kỹ thuật' } }),
     ]);
 
-    console.log('✅ Created units:', units.map(u => u.name).join(', '));
+    console.log(`✅ Created ${units.length} units`);
 
-    // Create leaders
-    const leaderPassword = await hashPassword('leader123');
-    const leaders = await Promise.all([
+    // Create Admin user
+    console.log('👤 Creating users...');
+    
+    const hashedPassword = await hashPassword('123456');
+
+    const adminUser = await prisma.user.create({
+      data: {
+        username: 'admin',
+        email: 'admin@youth.com',
+        fullName: 'Administrator',
+        passwordHash: hashedPassword,
+        role: 'ADMIN',
+        points: 150,
+        unitId: units[0].id,
+        phone: '0123456789',
+        address: 'Hà Nội',
+        youthPosition: 'Bí thư Đoàn trường',
+        isActive: true
+      },
+    });
+
+    // Set admin as leader of unit1
+    await prisma.unit.update({
+      where: { id: units[0].id },
+      data: { leaderId: adminUser.id }
+    });
+
+    // Create Leader users
+    const leaderUsers = await Promise.all([
       prisma.user.create({
         data: {
-          username: 'leader_cntt',
-          email: 'leader.cntt@youth-handbook.com',
-          passwordHash: leaderPassword,
-          fullName: 'Nguyễn Văn An',
+          username: 'leader1',
+          email: 'leader1@youth.com',
+          fullName: 'Trần Thị Hương',
+          passwordHash: hashedPassword,
+          role: 'LEADER',
+          points: 120,
+          unitId: units[1].id,
           phone: '0987654321',
+          address: 'Hà Nội',
+          youthPosition: 'Bí thư Chi đoàn Kinh tế',
+          isActive: true
+        },
+      }),
+      prisma.user.create({
+        data: {
+          username: 'leader2',
+          email: 'leader2@youth.com',
+          fullName: 'Lê Văn Minh',
+          passwordHash: hashedPassword,
           role: 'LEADER',
-          unitId: units[0].id,
-          points: 850
-        }
+          points: 115,
+          unitId: units[2].id,
+          phone: '0912345678',
+          address: 'TP. Hồ Chí Minh',
+          youthPosition: 'Bí thư Chi đoàn Y khoa',
+          isActive: true
+        },
       }),
-      prisma.user.create({
-        data: {
-          username: 'leader_kt',
-          email: 'leader.kt@youth-handbook.com',
-          passwordHash: leaderPassword,
-          fullName: 'Trần Thị Bình',
-          phone: '0987654322',
-          role: 'LEADER',
-          unitId: units[1].id,
-          points: 820
-        }
-      })
     ]);
 
-    // Update units with leaders
-    await Promise.all([
-      prisma.unit.update({
-        where: { id: units[0].id },
-        data: { leaderId: leaders[0].id }
-      }),
-      prisma.unit.update({
-        where: { id: units[1].id },
-        data: { leaderId: leaders[1].id }
-      })
-    ]);
+    // Set leaders for units
+    await prisma.unit.update({
+      where: { id: units[1].id },
+      data: { leaderId: leaderUsers[0].id }
+    });
+    await prisma.unit.update({
+      where: { id: units[2].id },
+      data: { leaderId: leaderUsers[1].id }
+    });
 
-    console.log('✅ Created leaders:', leaders.map(l => l.fullName).join(', '));
+    // Create Members
+    const memberUsers = [];
+    const memberNames = [
+      'Nguyễn Văn An', 'Phạm Thị Bình', 'Hoàng Văn Cường',
+      'Trần Thị Dung', 'Lê Minh Đức', 'Ngô Thị Em',
+      'Đỗ Văn Phong', 'Bùi Thị Giang', 'Vũ Văn Hải',
+      'Đinh Thị Lan'
+    ];
 
-    // Create members
-    const memberPassword = await hashPassword('member123');
-    const members = await Promise.all([
-      prisma.user.create({
+    for (let i = 0; i < memberNames.length; i++) {
+      const unitIndex = i % 5;
+      const member = await prisma.user.create({
         data: {
-          username: 'member_001',
-          email: 'member001@youth-handbook.com',
-          passwordHash: memberPassword,
-          fullName: 'Lê Văn Cường',
-          phone: '0987654323',
+          username: `member${i + 1}`,
+          email: `member${i + 1}@youth.com`,
+          fullName: memberNames[i],
+          passwordHash: hashedPassword,
           role: 'MEMBER',
-          unitId: units[0].id,
-          points: 780
-        }
-      }),
-      prisma.user.create({
-        data: {
-          username: 'member_002',
-          email: 'member002@youth-handbook.com',
-          passwordHash: memberPassword,
-          fullName: 'Phạm Thị Dung',
-          phone: '0987654324',
-          role: 'MEMBER',
-          unitId: units[1].id,
-          points: 750
-        }
-      }),
-      prisma.user.create({
-        data: {
-          username: 'member_003',
-          email: 'member003@youth-handbook.com',
-          passwordHash: memberPassword,
-          fullName: 'Hoàng Văn Em',
-          phone: '0987654325',
-          role: 'MEMBER',
-          unitId: units[0].id,
-          points: 720
-        }
-      })
-    ]);
+          points: 60 + Math.floor(Math.random() * 60), // 60-120 points
+          unitId: units[unitIndex].id,
+          phone: `091234567${i}`,
+          address: 'Hà Nội',
+          youthPosition: 'Đoàn viên',
+          isActive: true
+        },
+      });
+      memberUsers.push(member);
+    }
 
-    console.log('✅ Created members:', members.map(m => m.fullName).join(', '));
+    console.log(`✅ Created ${memberUsers.length + leaderUsers.length + 1} users`);
 
-    // Create activities
+    // Create Activities
+    console.log('📅 Creating activities...');
+    
     const activities = await Promise.all([
       prisma.activity.create({
         data: {
-          title: 'Sinh hoạt Chi đoàn CNTT tháng 1',
-          description: 'Sinh hoạt định kỳ của Chi đoàn CNTT',
+          title: 'Sinh hoạt Chi đoàn tháng 12',
+          description: 'Sinh hoạt định kỳ đánh giá hoạt động tháng 12',
           type: 'MEETING',
-          organizerId: leaders[0].id,
-          unitId: units[0].id,
-          startTime: new Date('2024-01-22T09:00:00Z'),
-          endTime: new Date('2024-01-22T11:00:00Z'),
-          location: 'Phòng họp A101',
-          pointsReward: 50,
-          qrCode: generateQRCode('meeting-cntt-jan'),
-          status: 'ACTIVE'
+          organizerId: adminUser.id,
+          startTime: new Date('2024-12-15T14:00:00'),
+          endTime: new Date('2024-12-15T16:00:00'),
+          location: 'Hội trường A',
+          pointsReward: 10,
+          status: 'ACTIVE',
+          qrCode: 'meeting-dec-2024'
         }
       }),
       prisma.activity.create({
         data: {
-          title: 'Hoạt động tình nguyện vệ sinh môi trường',
-          description: 'Tham gia làm sạch công viên thành phố',
+          title: 'Tình nguyện vì cộng đồng',
+          description: 'Hoạt động tình nguyện dọn dẹp vệ sinh môi trường',
           type: 'VOLUNTEER',
-          organizerId: admin.id,
-          unitId: null, // Public activity
-          startTime: new Date('2024-01-25T07:00:00Z'),
-          endTime: new Date('2024-01-25T11:00:00Z'),
-          location: 'Công viên Thống Nhất',
-          pointsReward: 80,
-          qrCode: generateQRCode('volunteer-cleanup'),
-          status: 'ACTIVE'
-        }
-      })
-    ]);
-
-    console.log('✅ Created activities:', activities.map(a => a.title).join(', '));
-
-    // Create study materials
-    const studyMaterials = await Promise.all([
-      prisma.studyMaterial.create({
-        data: {
-          title: 'Lịch sử Đảng Cộng sản Việt Nam',
-          content: 'Tài liệu học tập về lịch sử thành lập và phát triển của Đảng',
-          category: 'Lý luận chính trị',
-          quizQuestions: JSON.stringify([
-            {
-              question: 'Đảng Cộng sản Việt Nam được thành lập năm nào?',
-              options: ['1925', '1930', '1935', '1940'],
-              correctAnswer: 1
-            }
-          ]),
-          pointsReward: 30,
-          accessLevel: 'PUBLIC'
-        }
-      })
-    ]);
-
-    console.log('✅ Created study materials:', studyMaterials.map(s => s.title).join(', '));
-
-    // Create sample documents
-    const documents = await Promise.all([
-      prisma.document.create({
-        data: {
-          title: 'Điều lệ Đoàn TNCS Hồ Chí Minh',
-          description: 'Điều lệ chính thức của Đoàn Thanh niên Cộng sản Hồ Chí Minh',
-          fileUrl: '/uploads/documents/dieu-le-doan.pdf',
-          category: 'Văn bản pháp quy',
-          uploaderId: admin.id,
-          accessLevel: 'PUBLIC'
+          organizerId: leaderUsers[0].id,
+          unitId: units[1].id,
+          startTime: new Date('2024-12-20T08:00:00'),
+          endTime: new Date('2024-12-20T12:00:00'),
+          location: 'Công viên thành phố',
+          pointsReward: 20,
+          status: 'ACTIVE',
+          qrCode: 'volunteer-dec-2024'
         }
       }),
-      prisma.document.create({
+      prisma.activity.create({
         data: {
-          title: 'Biên bản họp Chi đoàn CNTT',
-          description: 'Biên bản cuộc họp Chi đoàn CNTT tháng 12/2023',
-          fileUrl: '/uploads/documents/bien-ban-hop.pdf',
-          category: 'Biên bản họp',
-          uploaderId: leaders[0].id,
-          accessLevel: 'UNIT'
-        }
-      })
-    ]);
-
-    console.log('✅ Created documents:', documents.map(d => d.title).join(', '));
-
-    // Create activity participants
-    await Promise.all([
-      prisma.activityParticipant.create({
-        data: {
-          activityId: activities[0].id,
-          userId: members[0].id,
-          status: 'CHECKED_IN',
-          checkInTime: new Date('2024-01-22T09:05:00Z'),
-          pointsEarned: 50
+          title: 'Hội thảo nghiên cứu khoa học',
+          description: 'Hội thảo trao đổi kinh nghiệm nghiên cứu khoa học',
+          type: 'STUDY',
+          organizerId: leaderUsers[1].id,
+          unitId: units[2].id,
+          startTime: new Date('2024-12-22T09:00:00'),
+          endTime: new Date('2024-12-22T11:00:00'),
+          location: 'Phòng hội thảo B',
+          pointsReward: 15,
+          status: 'ACTIVE',
+          qrCode: 'study-dec-2024'
         }
       }),
-      prisma.activityParticipant.create({
-        data: {
-          activityId: activities[0].id,
-          userId: members[2].id,
-          status: 'REGISTERED'
-        }
-      })
     ]);
 
-    // Create points history
-    await Promise.all([
-      prisma.pointsHistory.create({
-        data: {
-          userId: members[0].id,
-          activityId: activities[0].id,
-          points: 50,
-          reason: 'Tham gia sinh hoạt Chi đoàn',
-          type: 'EARN'
-        }
-      }),
-      prisma.pointsHistory.create({
-        data: {
-          userId: leaders[0].id,
-          points: 100,
-          reason: 'Tổ chức thành công sinh hoạt Chi đoàn',
-          type: 'BONUS'
-        }
-      })
-    ]);
+    console.log(`✅ Created ${activities.length} activities`);
 
-    console.log('✅ Created sample data');
+    // Create some points history
+    console.log('📊 Creating points history...');
+    
+    const allUsers = [adminUser, ...leaderUsers, ...memberUsers];
+    const reasons = [
+      'Tham gia sinh hoạt định kỳ',
+      'Hoàn thành nhiệm vụ được giao',
+      'Góp ý xây dựng tích cực',
+      'Tham gia tình nguyện',
+      'Đạt thành tích học tập tốt',
+    ];
 
-    // Print login credentials
-    console.log('\n🔑 Login Credentials:');
-    console.log('Admin: admin / admin123');
-    console.log('Leader CNTT: leader_cntt / leader123');
-    console.log('Leader KT: leader_kt / leader123');
-    console.log('Member: member_001 / member123');
-    console.log('\n🎉 Database seeded successfully!');
+    for (const user of allUsers) {
+      const numRecords = Math.floor(Math.random() * 3) + 1;
+      for (let i = 0; i < numRecords; i++) {
+        await prisma.pointsHistory.create({
+          data: {
+            userId: user.id,
+            points: [5, 10, 15, 20][Math.floor(Math.random() * 4)],
+            reason: reasons[Math.floor(Math.random() * reasons.length)],
+            type: 'EARN',
+          },
+        });
+      }
+    }
+
+    console.log('✅ Created points history');
+
+    console.log('🎉 Seed database hoàn thành!');
+    console.log('');
+    console.log('🔐 Thông tin đăng nhập:');
+    console.log('   Admin: admin@youth.com / 123456');
+    console.log('   Leader: leader1@youth.com / 123456');
+    console.log('   Member: member1@youth.com / 123456');
+    console.log('');
 
   } catch (error) {
-    console.error('❌ Error seeding database:', error);
+    console.error('❌ Lỗi khi seed:', error);
     throw error;
   }
 }
