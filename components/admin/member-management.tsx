@@ -68,7 +68,7 @@ export function MemberManagement() {
   const fetchData = async () => {
     setLoading(true)
     try {
-      const token = localStorage.getItem("token")
+      const token = localStorage.getItem("accessToken")
       const headers: HeadersInit = {
         "Content-Type": "application/json"
       }
@@ -138,7 +138,7 @@ export function MemberManagement() {
     }
 
     try {
-      const token = localStorage.getItem("token")
+      const token = localStorage.getItem("accessToken")
       const res = await fetch(`${API_URL}/api/auth/register`, {
         method: "POST",
         headers: {
@@ -186,7 +186,7 @@ export function MemberManagement() {
     if (!selectedMember) return
 
     try {
-      const token = localStorage.getItem("token")
+      const token = localStorage.getItem("accessToken")
       const res = await fetch(`${API_URL}/api/users/${selectedMember.id}`, {
         method: "PUT",
         headers: {
@@ -234,7 +234,7 @@ export function MemberManagement() {
     if (!selectedMember) return
 
     try {
-      const token = localStorage.getItem("token")
+      const token = localStorage.getItem("accessToken")
       const res = await fetch(`${API_URL}/api/users/${selectedMember.id}`, {
         method: "DELETE",
         headers: {
@@ -271,7 +271,7 @@ export function MemberManagement() {
   // Toggle member status
   const handleToggleStatus = async (member: Member) => {
     try {
-      const token = localStorage.getItem("token")
+      const token = localStorage.getItem("accessToken")
       const res = await fetch(`${API_URL}/api/users/${member.id}`, {
         method: "PUT",
         headers: {

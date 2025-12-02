@@ -72,7 +72,7 @@ export default function UnitManagement() {
   const fetchData = async () => {
     setLoading(true)
     try {
-      const token = localStorage.getItem("token")
+      const token = localStorage.getItem("accessToken")
       const headers: HeadersInit = {
         "Content-Type": "application/json"
       }
@@ -141,7 +141,7 @@ export default function UnitManagement() {
     }
 
     try {
-      const token = localStorage.getItem("token")
+      const token = localStorage.getItem("accessToken")
       const res = await fetch(`${API_URL}/api/units`, {
         method: "POST",
         headers: {
@@ -186,7 +186,7 @@ export default function UnitManagement() {
     if (!selectedUnit) return
 
     try {
-      const token = localStorage.getItem("token")
+      const token = localStorage.getItem("accessToken")
       const res = await fetch(`${API_URL}/api/units/${selectedUnit.id}`, {
         method: "PUT",
         headers: {
@@ -232,7 +232,7 @@ export default function UnitManagement() {
     if (!selectedUnit) return
 
     try {
-      const token = localStorage.getItem("token")
+      const token = localStorage.getItem("accessToken")
       const res = await fetch(`${API_URL}/api/units/${selectedUnit.id}`, {
         method: "DELETE",
         headers: {
@@ -289,7 +289,7 @@ export default function UnitManagement() {
 
   const openDetailDialog = async (unit: Unit) => {
     try {
-      const token = localStorage.getItem("token")
+      const token = localStorage.getItem("accessToken")
       const res = await fetch(`${API_URL}/api/units/${unit.id}`, {
         headers: {
           "Authorization": `Bearer ${token}`

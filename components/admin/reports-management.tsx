@@ -16,7 +16,7 @@ export function ReportsManagement() {
   const fetchStats = async () => {
     setLoading(true)
     try {
-      const token = localStorage.getItem("token")
+      const token = localStorage.getItem("accessToken")
       const headers = { Authorization: `Bearer ${token}` }
       
       const [usersRes, activitiesRes, unitsRes] = await Promise.all([

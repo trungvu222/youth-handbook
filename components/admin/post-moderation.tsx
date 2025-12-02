@@ -32,7 +32,7 @@ export function PostModeration() {
   const fetchPosts = async () => {
     setLoading(true)
     try {
-      const token = localStorage.getItem("token")
+      const token = localStorage.getItem("accessToken")
       const res = await fetch(`${API_URL}/api/posts`, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -51,7 +51,7 @@ export function PostModeration() {
 
   const handleModerate = async (id: string, status: "APPROVED" | "REJECTED") => {
     try {
-      const token = localStorage.getItem("token")
+      const token = localStorage.getItem("accessToken")
       const res = await fetch(`${API_URL}/api/posts/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },

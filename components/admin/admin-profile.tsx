@@ -61,7 +61,7 @@ export function AdminProfile({ currentUser, onUpdate }: AdminProfileProps) {
 
     setLoading(true)
     try {
-      const token = localStorage.getItem("token")
+      const token = localStorage.getItem("accessToken")
       const res = await fetch(`${API_URL}/api/users/${currentUser.id}`, {
         method: "PUT",
         headers: {
@@ -140,7 +140,7 @@ export function AdminProfile({ currentUser, onUpdate }: AdminProfileProps) {
 
     setLoading(true)
     try {
-      const token = localStorage.getItem("token")
+      const token = localStorage.getItem("accessToken")
       const res = await fetch(`${API_URL}/api/users/${currentUser.id}/password`, {
         method: "PUT",
         headers: {

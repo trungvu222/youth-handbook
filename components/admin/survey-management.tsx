@@ -37,7 +37,7 @@ export function SurveyManagement() {
   const fetchSurveys = async () => {
     setLoading(true)
     try {
-      const token = localStorage.getItem("token")
+      const token = localStorage.getItem("accessToken")
       const res = await fetch(`${API_URL}/api/surveys`, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -60,7 +60,7 @@ export function SurveyManagement() {
       return
     }
     try {
-      const token = localStorage.getItem("token")
+      const token = localStorage.getItem("accessToken")
       const res = await fetch(`${API_URL}/api/surveys`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -85,7 +85,7 @@ export function SurveyManagement() {
   const handleDelete = async (id: string) => {
     if (!confirm("Xác nhận xóa?")) return
     try {
-      const token = localStorage.getItem("token")
+      const token = localStorage.getItem("accessToken")
       await fetch(`${API_URL}/api/surveys/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` }

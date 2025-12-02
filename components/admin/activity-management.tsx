@@ -51,7 +51,7 @@ export default function ActivityManagement() {
   const fetchActivities = async () => {
     setLoading(true)
     try {
-      const token = localStorage.getItem("token")
+      const token = localStorage.getItem("accessToken")
       const res = await fetch(`${API_URL}/api/activities`, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -74,7 +74,7 @@ export default function ActivityManagement() {
       return
     }
     try {
-      const token = localStorage.getItem("token")
+      const token = localStorage.getItem("accessToken")
       const res = await fetch(`${API_URL}/api/activities`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -94,7 +94,7 @@ export default function ActivityManagement() {
   const handleDelete = async (id: string) => {
     if (!confirm("Xác nhận xóa?")) return
     try {
-      const token = localStorage.getItem("token")
+      const token = localStorage.getItem("accessToken")
       const res = await fetch(`${API_URL}/api/activities/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` }
