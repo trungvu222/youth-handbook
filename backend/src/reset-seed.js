@@ -8,19 +8,45 @@ async function hashPassword(password) {
   return await bcrypt.hash(password, salt);
 }
 
-async function main() {
-  console.log('🌱 Seeding database với dữ liệu đầy đủ...');
+async function resetAndSeed() {
+  console.log('🔄 Resetting và seeding database...');
 
   try {
-    // Check if data already exists
-    const existingAdmin = await prisma.user.findFirst({
-      where: { email: 'admin@youth.com' }
-    });
-
-    if (existingAdmin) {
-      console.log('✅ Database already seeded. Skipping...');
-      return;
-    }
+    // Xóa tất cả dữ liệu theo thứ tự (tránh foreign key conflicts)
+    console.log('🗑️  Đang xóa dữ liệu cũ...');
+    
+    await prisma.suggestionResponse.deleteMany({});
+    await prisma.suggestion.deleteMany({});
+    await prisma.selfRating.deleteMany({});
+    await prisma.ratingPeriod.deleteMany({});
+    await prisma.examAttempt.deleteMany({});
+    await prisma.examQuestion.deleteMany({});
+    await prisma.exam.deleteMany({});
+    await prisma.documentView.deleteMany({});
+    await prisma.userDocumentFavorite.deleteMany({});
+    await prisma.document.deleteMany({});
+    await prisma.userQuizAttempt.deleteMany({});
+    await prisma.studyQuiz.deleteMany({});
+    await prisma.userMaterialProgress.deleteMany({});
+    await prisma.studyTopicMaterial.deleteMany({});
+    await prisma.userStudyProgress.deleteMany({});
+    await prisma.studyTopic.deleteMany({});
+    await prisma.activitySurveyResponse.deleteMany({});
+    await prisma.activitySurvey.deleteMany({});
+    await prisma.activityNotification.deleteMany({});
+    await prisma.activityFeedback.deleteMany({});
+    await prisma.activityParticipant.deleteMany({});
+    await prisma.pointsHistory.deleteMany({});
+    await prisma.post.deleteMany({});
+    await prisma.surveyResponse.deleteMany({});
+    await prisma.survey.deleteMany({});
+    await prisma.quizAttempt.deleteMany({});
+    await prisma.studyMaterial.deleteMany({});
+    await prisma.activity.deleteMany({});
+    await prisma.user.deleteMany({});
+    await prisma.unit.deleteMany({});
+    
+    console.log('✅ Đã xóa tất cả dữ liệu cũ');
 
     const hashedPassword = await hashPassword('123456');
 
@@ -495,6 +521,61 @@ async function main() {
             ],
             points: 1
           },
+          {
+            questionText: 'Bài hát chính thức của Đoàn TNCS Hồ Chí Minh là bài gì?',
+            questionType: 'SINGLE_CHOICE',
+            answers: [
+              { text: 'Tiến lên đoàn viên', isCorrect: true },
+              { text: 'Thanh niên làm theo lời Bác', isCorrect: false },
+              { text: 'Đoàn ca', isCorrect: false },
+              { text: 'Khát vọng tuổi trẻ', isCorrect: false }
+            ],
+            points: 1
+          },
+          {
+            questionText: 'Tuổi đoàn viên từ bao nhiêu đến bao nhiêu?',
+            questionType: 'SINGLE_CHOICE',
+            answers: [
+              { text: '16-30 tuổi', isCorrect: true },
+              { text: '15-28 tuổi', isCorrect: false },
+              { text: '18-35 tuổi', isCorrect: false },
+              { text: '14-30 tuổi', isCorrect: false }
+            ],
+            points: 1
+          },
+          {
+            questionText: 'Nhiệm kỳ của Ban Chấp hành Chi đoàn là bao lâu?',
+            questionType: 'SINGLE_CHOICE',
+            answers: [
+              { text: '1 năm', isCorrect: true },
+              { text: '2 năm', isCorrect: false },
+              { text: '5 năm', isCorrect: false },
+              { text: '3 năm', isCorrect: false }
+            ],
+            points: 1
+          },
+          {
+            questionText: 'Nguyên tắc tổ chức của Đoàn là gì?',
+            questionType: 'SINGLE_CHOICE',
+            answers: [
+              { text: 'Tập trung dân chủ', isCorrect: true },
+              { text: 'Dân chủ tập trung', isCorrect: false },
+              { text: 'Tự nguyện', isCorrect: false },
+              { text: 'Liên kết', isCorrect: false }
+            ],
+            points: 1
+          },
+          {
+            questionText: 'Màu cờ Đoàn là màu gì?',
+            questionType: 'SINGLE_CHOICE',
+            answers: [
+              { text: 'Đỏ', isCorrect: true },
+              { text: 'Xanh', isCorrect: false },
+              { text: 'Vàng', isCorrect: false },
+              { text: 'Trắng', isCorrect: false }
+            ],
+            points: 1
+          },
         ];
 
         for (let i = 0; i < questions.length; i++) {
@@ -551,6 +632,13 @@ async function main() {
         priority: 'MEDIUM',
         status: 'SUBMITTED'
       },
+      {
+        title: 'Góp ý về chương trình Xuân tình nguyện',
+        content: 'Chương trình Xuân tình nguyện năm nay rất ý nghĩa. Đề xuất mở rộng quy mô và phối hợp với thêm các tổ chức xã hội.',
+        category: 'IMPROVEMENT',
+        priority: 'MEDIUM',
+        status: 'SUBMITTED'
+      },
     ];
 
     const suggestions = [];
@@ -560,14 +648,13 @@ async function main() {
         data: {
           ...s,
           userId: members[i % members.length].id,
-          isAnonymous: i === 3, // 1 kiến nghị ẩn danh
+          isAnonymous: i === 3,
           viewCount: Math.floor(10 + Math.random() * 50),
           resolvedAt: s.status === 'RESOLVED' ? new Date() : null
         }
       });
       suggestions.push(suggestion);
 
-      // Thêm response cho các kiến nghị đã được xử lý
       if (s.status === 'RESOLVED' || s.status === 'IN_PROGRESS') {
         await prisma.suggestionResponse.create({
           data: {
@@ -624,9 +711,8 @@ async function main() {
       })
     ]);
 
-    // Tạo một số self-ratings cho đợt đã hoàn thành
     const completedPeriod = ratingPeriods[1];
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 15; i++) {
       const member = members[i];
       const responses = ratingCriteria.map(c => ({
         criteriaId: c.id,
@@ -720,13 +806,19 @@ async function main() {
         postType: 'NEWS',
         status: 'APPROVED'
       },
+      {
+        title: 'Thông báo về việc nộp đoàn phí Quý 4/2025',
+        content: 'Đề nghị các đoàn viên hoàn thành nộp đoàn phí Quý 4/2025 trước ngày 25/12/2025.\n\nMức đoàn phí: 10.000đ/tháng\nNộp tại: Văn phòng Đoàn trường hoặc chuyển khoản',
+        postType: 'ANNOUNCEMENT',
+        status: 'APPROVED'
+      },
     ];
 
     for (let i = 0; i < postData.length; i++) {
       await prisma.post.create({
         data: {
           ...postData[i],
-          authorId: i < 2 ? adminUser.id : members[i].id,
+          authorId: i < 2 ? adminUser.id : members[i % members.length].id,
           unitId: i < 2 ? null : units[i % 5].id,
           publishedAt: postData[i].status === 'APPROVED' ? new Date() : null
         }
@@ -738,7 +830,7 @@ async function main() {
     // HOÀN THÀNH
     // =====================================
     console.log('\n🎉 ====================================');
-    console.log('   SEED DATABASE HOÀN THÀNH!');
+    console.log('   RESET & SEED DATABASE HOÀN THÀNH!');
     console.log('=====================================');
     console.log('');
     console.log('📊 Thống kê dữ liệu đã tạo:');
@@ -762,7 +854,7 @@ async function main() {
   }
 }
 
-main()
+resetAndSeed()
   .catch((e) => {
     console.error(e);
     process.exit(1);
@@ -770,5 +862,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
-
-
