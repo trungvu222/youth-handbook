@@ -4,7 +4,8 @@ const {
   getUsers,
   updateUserProfile,
   assignUserToUnit,
-  changeUserRole
+  changeUserRole,
+  deleteUser
 } = require('../controllers/userController');
 const { protect } = require('../middleware/auth');
 
@@ -27,6 +28,11 @@ router.get('/:id', getUserProfile);
 // @desc    Update user profile (Admin/Leader)
 // @access  Private
 router.put('/:id', updateUserProfile);
+
+// @route   DELETE /api/users/:id
+// @desc    Delete user (Admin only)
+// @access  Private
+router.delete('/:id', deleteUser);
 
 // @route   PUT /api/users/:id/unit
 // @desc    Assign user to unit (Admin only)

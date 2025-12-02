@@ -435,22 +435,22 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-red-50">
       <div className="flex h-screen">
         {/* Sidebar */}
-        <div className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-white shadow-xl transition-all duration-300 flex-shrink-0`}>
+        <div className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-white shadow-xl transition-all duration-300 flex-shrink-0 flex flex-col relative overflow-hidden`}>
           <div className="p-4">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center">
+              <div className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center flex-shrink-0">
                 <Flag className="h-6 w-6 text-white" />
               </div>
               {sidebarOpen && (
-                <div>
-                  <h2 className="font-bold text-gray-900">Đoàn TN</h2>
-                  <p className="text-xs text-gray-500">Admin Panel</p>
+                <div className="overflow-hidden">
+                  <h2 className="font-bold text-gray-900 truncate">Đoàn TN</h2>
+                  <p className="text-xs text-gray-500 truncate">Admin Panel</p>
                 </div>
               )}
             </div>
           </div>
 
-          <nav className="mt-8">
+          <nav className="mt-8 flex-1 overflow-y-auto">
             {menuItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -468,13 +468,14 @@ export default function AdminDashboard() {
             })}
           </nav>
 
-          <div className="absolute bottom-4 left-4 right-4">
+          {/* Logout Button - Fixed at bottom */}
+          <div className="p-4 border-t border-gray-200 bg-white">
             <button
               onClick={handleLogout}
               className="w-full flex items-center px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
             >
-              <LogOut className="h-5 w-5" />
-              {sidebarOpen && <span className="ml-3 font-medium">Đăng xuất</span>}
+              <LogOut className="h-5 w-5 flex-shrink-0" />
+              {sidebarOpen && <span className="ml-3 font-medium truncate">Đăng xuất</span>}
             </button>
           </div>
         </div>

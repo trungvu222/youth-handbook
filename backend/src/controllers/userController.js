@@ -134,7 +134,7 @@ const getUsers = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      data: usersWithoutPasswords,
+      users: usersWithoutPasswords,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -320,11 +320,62 @@ const changeUserRole = async (req, res, next) => {
   }
 };
 
+// @desc    Delete user (Admin only)
+// @route   DELETE /api/users/:id
+// @access  Private (Admin only)
+const deleteUser = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const currentUser = req.user;
+
+    // Only admin can delete users
+    if (currentUser.role !== 'ADMIN') {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. Only Admin can delete users.'
+      });
+    }
+
+    // Cannot delete yourself
+    if (id === currentUser.id) {
+      return res.status(400).json({
+        success: false,
+        error: 'Cannot delete your own account.'
+      });
+    }
+
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { id: parseInt(id) }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    // Delete user
+    await prisma.user.delete({
+      where: { id: parseInt(id) }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'User deleted successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getUserProfile,
   getUsers,
   updateUserProfile,
   assignUserToUnit,
-  changeUserRole
+  changeUserRole,
+  deleteUser
 };
 
