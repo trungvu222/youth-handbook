@@ -87,19 +87,26 @@ export default function AdminDashboard() {
   const [currentUser, setCurrentUser] = useState(null);
   const [mounted, setMounted] = useState(false);
   const [loadingStats, setLoadingStats] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   // Fetch real stats from API
   const fetchDashboardStats = async () => {
     try {
       setLoadingStats(true);
+      setFetchError(null);
       const token = localStorage.getItem('accessToken');
-      console.log('🔐 Token:', token ? 'exists' : 'missing');
+      console.log('🔐 Token:', token ? 'exists (' + token.substring(0, 20) + '...)' : 'MISSING!');
+      
+      if (!token) {
+        setFetchError('Không tìm thấy token. Vui lòng đăng nhập lại.');
+        router.push('/admin/login');
+        return;
+      }
       
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
       }
 
       console.log('📡 Fetching from:', API_URL);
@@ -197,8 +204,10 @@ export default function AdminDashboard() {
           platform: 'linux'
         }
       });
-    } catch (error) {
-      console.error('Error fetching stats:', error);
+      console.log('✅ Stats loaded successfully!', { totalMembers, totalActivities: activities.length });
+    } catch (error: any) {
+      console.error('❌ Error fetching stats:', error);
+      setFetchError(`Lỗi tải dữ liệu: ${error.message || 'Unknown error'}`);
       // Set default empty stats on error
       setStats({
         overview: {
@@ -313,6 +322,17 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Error Alert */}
+      {fetchError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+          <div className="text-red-600">⚠️</div>
+          <div>
+            <p className="font-medium text-red-800">{fetchError}</p>
+            <p className="text-sm text-red-600">Nhấn "Làm mới" để thử lại hoặc đăng nhập lại.</p>
+          </div>
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
