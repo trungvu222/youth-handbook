@@ -123,8 +123,8 @@
   }
   body {
     @apply bg-background text-foreground;
-    /* Đông Sơn drum pattern background - use relative path for Capacitor */
-    background-image: url("./dong-son-pattern.jpg");
+    /* Đông Sơn drum pattern background - use absolute path */
+    background-image: url("/dong-son-pattern.jpg");
     background-size: 400px 400px;
     background-repeat: repeat;
     background-attachment: fixed;
@@ -167,7 +167,7 @@
 
   /* Added new utility classes for Vietnamese login design */
   .bg-dong-son-pattern {
-    background-image: url("./dong-son-pattern.jpg");
+    background-image: url("/dong-son-pattern.jpg");
     background-size: 400px 400px;
     background-repeat: repeat;
     background-position: center;
@@ -180,6 +180,12 @@
     .bg-dong-son-pattern {
       background: linear-gradient(135deg, #fef7f0 0%, #fff5eb 50%, #fef7f0 100%);
     }
+  }
+  
+  /* Always use gradient for Capacitor apps */
+  body.capacitor-app .bg-dong-son-pattern {
+    background-image: none;
+    background: linear-gradient(135deg, #fef7f0 0%, #fff5eb 50%, #fef7f0 100%);
   }
 
   .text-primary-gradient {
