@@ -52,15 +52,31 @@ export default function ActivityManagement() {
     setLoading(true)
     try {
       const token = localStorage.getItem("accessToken")
+      console.log("[ActivityManagement] Token:", token ? "exists" : "MISSING!")
+      
+      if (!token) {
+        console.error("[ActivityManagement] No token found!")
+        toast({ title: "Chưa đăng nhập", description: "Vui lòng đăng nhập lại", variant: "destructive" })
+        return
+      }
+      
+      console.log("[ActivityManagement] Fetching activities...")
       const res = await fetch(`${API_URL}/api/activities`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}` 
+        }
       })
+      console.log("[ActivityManagement] Response:", res.status)
       if (res.ok) {
         const data = await res.json()
+        console.log("[ActivityManagement] Activities count:", data.data?.length || data.activities?.length || 0)
         setActivities(data.data || data.activities || data || [])
+      } else {
+        console.error("[ActivityManagement] API failed:", res.status)
       }
     } catch (error) {
-      console.error("Error:", error)
+      console.error("[ActivityManagement] Error:", error)
     } finally {
       setLoading(false)
     }

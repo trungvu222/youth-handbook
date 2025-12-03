@@ -69,14 +69,25 @@ export function MemberManagement() {
     setLoading(true)
     try {
       const token = localStorage.getItem("accessToken")
-      const headers: HeadersInit = {
-        "Content-Type": "application/json"
+      console.log("[MemberManagement] Token:", token ? "exists" : "MISSING!")
+      
+      if (!token) {
+        console.error("[MemberManagement] No token found!")
+        toast({
+          title: "Chưa đăng nhập",
+          description: "Vui lòng đăng nhập lại",
+          variant: "destructive"
+        })
+        return
       }
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`
+      
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
       }
 
       // Fetch members
+      console.log("[MemberManagement] Fetching users...")
       const membersRes = await fetch(`${API_URL}/api/users`, { headers })
       if (membersRes.ok) {
         const data = await membersRes.json()

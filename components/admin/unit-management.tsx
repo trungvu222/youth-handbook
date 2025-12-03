@@ -73,14 +73,25 @@ export default function UnitManagement() {
     setLoading(true)
     try {
       const token = localStorage.getItem("accessToken")
-      const headers: HeadersInit = {
-        "Content-Type": "application/json"
+      console.log("[UnitManagement] Token:", token ? "exists" : "MISSING!")
+      
+      if (!token) {
+        console.error("[UnitManagement] No token found!")
+        toast({
+          title: "Chưa đăng nhập",
+          description: "Vui lòng đăng nhập lại",
+          variant: "destructive"
+        })
+        return
       }
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`
+      
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
       }
 
       // Fetch units
+      console.log("[UnitManagement] Fetching units...")
       const unitsRes = await fetch(`${API_URL}/api/units`, { headers })
       if (unitsRes.ok) {
         const data = await unitsRes.json()

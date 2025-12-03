@@ -17,13 +17,25 @@ export function ReportsManagement() {
     setLoading(true)
     try {
       const token = localStorage.getItem("accessToken")
-      const headers = { Authorization: `Bearer ${token}` }
+      console.log("[ReportsManagement] Token:", token ? "exists" : "MISSING!")
       
+      if (!token) {
+        console.error("[ReportsManagement] No token found!")
+        return
+      }
+      
+      const headers = { 
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}` 
+      }
+      
+      console.log("[ReportsManagement] Fetching stats...")
       const [usersRes, activitiesRes, unitsRes] = await Promise.all([
         fetch(`${API_URL}/api/users`, { headers }),
         fetch(`${API_URL}/api/activities`, { headers }),
         fetch(`${API_URL}/api/units`, { headers })
       ])
+      console.log("[ReportsManagement] Responses:", usersRes.status, activitiesRes.status, unitsRes.status)
       
       const users = usersRes.ok ? await usersRes.json() : { data: [] }
       const activities = activitiesRes.ok ? await activitiesRes.json() : { data: [] }
