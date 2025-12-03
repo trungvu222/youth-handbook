@@ -78,7 +78,7 @@ function fixHtmlPaths(filePath) {
 }
 
 // Function to fix paths in CSS files
-function fixCssPaths(dir) {
+function fixCssPaths(dir, depth = 0) {
   const files = fs.readdirSync(dir);
   
   for (const file of files) {
@@ -86,17 +86,30 @@ function fixCssPaths(dir) {
     const stat = fs.statSync(filePath);
     
     if (stat.isDirectory()) {
-      fixCssPaths(filePath);
+      fixCssPaths(filePath, depth + 1);
     } else if (file.endsWith('.css')) {
       let content = fs.readFileSync(filePath, 'utf8');
       
-      // Fix background-image url paths
-      content = content.replace(/url\(\/dong-son/g, 'url(../../dong-son');
-      content = content.replace(/url\("\/dong-son/g, 'url("../../dong-son');
-      content = content.replace(/url\('\/dong-son/g, "url('../../dong-son");
-      content = content.replace(/url\(\/placeholder/g, 'url(../../placeholder');
-      content = content.replace(/url\("\/placeholder/g, 'url("../../placeholder');
-      content = content.replace(/url\('\/placeholder/g, "url('../../placeholder");
+      // Calculate relative path based on CSS file location
+      // CSS files are in _next/static/css/ so need to go up 3 levels to reach root
+      const cssRelativePath = path.relative(path.dirname(filePath), outDir).replace(/\\/g, '/');
+      
+      // Fix ALL absolute url() paths - fonts, images, etc.
+      // Pattern: url(/_next/...) or url("/_next/...") or url('/_next/...')
+      content = content.replace(/url\(\/_next\//g, `url(${cssRelativePath}/_next/`);
+      content = content.replace(/url\("\/_next\//g, `url("${cssRelativePath}/_next/`);
+      content = content.replace(/url\('\/_next\//g, `url('${cssRelativePath}/_next/`);
+      
+      // Fix background-image url paths for images in public folder
+      content = content.replace(/url\(\/dong-son/g, `url(${cssRelativePath}/dong-son`);
+      content = content.replace(/url\("\/dong-son/g, `url("${cssRelativePath}/dong-son`);
+      content = content.replace(/url\('\/dong-son/g, `url('${cssRelativePath}/dong-son`);
+      content = content.replace(/url\(\/placeholder/g, `url(${cssRelativePath}/placeholder`);
+      content = content.replace(/url\("\/placeholder/g, `url("${cssRelativePath}/placeholder`);
+      content = content.replace(/url\('\/placeholder/g, `url('${cssRelativePath}/placeholder`);
+      
+      // Fix any other absolute paths starting with /
+      content = content.replace(/url\(\/([^)]+)\)/g, `url(${cssRelativePath}/$1)`);
       
       fs.writeFileSync(filePath, content, 'utf8');
       console.log(`Fixed CSS: ${filePath}`);

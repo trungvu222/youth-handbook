@@ -22,12 +22,49 @@ export function MainApp({ onLogout }: MainAppProps) {
   const [showPoints, setShowPoints] = useState(false)
   const [showAdmin, setShowAdmin] = useState(false)
 
+  // Inline styles for mobile compatibility
+  const containerStyle: React.CSSProperties = {
+    minHeight: '100vh',
+    background: 'linear-gradient(to bottom, #eff6ff, #dbeafe)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  }
+
+  const appWrapperStyle: React.CSSProperties = {
+    maxWidth: '448px',
+    margin: '0 auto',
+    backgroundColor: '#ffffff',
+    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+    minHeight: '100vh',
+    width: '100%',
+    position: 'relative',
+    display: 'flex',
+    flexDirection: 'column',
+  }
+
+  const mainStyle: React.CSSProperties = {
+    flex: 1,
+    paddingBottom: '64px',
+    overflowY: 'auto',
+    overflowX: 'hidden',
+  }
+
+  const backButtonStyle: React.CSSProperties = {
+    color: '#2563eb',
+    fontWeight: 500,
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '14px',
+  }
+
   const renderScreen = () => {
     if (showPoints) {
       return (
-        <div className="p-4">
-          <div className="flex items-center justify-between mb-4">
-            <button onClick={() => setShowPoints(false)} className="text-blue-600 hover:text-blue-700 font-medium">
+        <div style={{ padding: '16px' }} className="p-4">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }} className="flex items-center justify-between mb-4">
+            <button style={backButtonStyle} onClick={() => setShowPoints(false)} className="text-blue-600 hover:text-blue-700 font-medium">
               ← Quay lại
             </button>
           </div>
@@ -38,9 +75,9 @@ export function MainApp({ onLogout }: MainAppProps) {
 
     if (showAdmin) {
       return (
-        <div className="p-4">
-          <div className="flex items-center justify-between mb-4">
-            <button onClick={() => setShowAdmin(false)} className="text-blue-600 hover:text-blue-700 font-medium">
+        <div style={{ padding: '16px' }} className="p-4">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }} className="flex items-center justify-between mb-4">
+            <button style={backButtonStyle} onClick={() => setShowAdmin(false)} className="text-blue-600 hover:text-blue-700 font-medium">
               ← Quay lại
             </button>
           </div>
@@ -66,10 +103,10 @@ export function MainApp({ onLogout }: MainAppProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-blue-100 flex items-center justify-center">
+    <div style={containerStyle} className="min-h-screen bg-gradient-to-b from-blue-50 to-blue-100 flex items-center justify-center">
       {/* Mobile container wrapper */}
-      <div className="max-w-md mx-auto bg-white shadow-lg min-h-screen w-full relative flex flex-col">
-        <main className="flex-1 pb-16 overflow-auto">{renderScreen()}</main>
+      <div style={appWrapperStyle} className="max-w-md mx-auto bg-white shadow-lg min-h-screen w-full relative flex flex-col">
+        <main style={mainStyle} className="flex-1 pb-16 overflow-auto">{renderScreen()}</main>
         {!showPoints && !showAdmin && <BottomNavigation activeTab={activeTab} onTabChange={setActiveTab} />}
       </div>
     </div>

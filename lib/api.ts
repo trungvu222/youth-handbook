@@ -64,39 +64,204 @@ interface RegisterData {
   phone?: string;
 }
 
-// Mock users database
+// Mock users database - sync with real database passwords
 const MOCK_USERS = [
   {
     id: '1',
     username: 'admin',
-    email: 'admin@youth-handbook.com',
-    password: 'admin123',
-    fullName: 'Quản trị viên hệ thống',
+    email: 'admin@youth.com',
+    password: '123456',
+    fullName: 'Nguyễn Văn Admin',
     role: 'ADMIN' as const,
     points: 1000,
     phone: '0123456789'
   },
   {
     id: '2',
-    username: 'leader_cntt',
-    email: 'leader.cntt@youth-handbook.com',
-    password: 'leader123',
-    fullName: 'Nguyễn Văn An',
-    role: 'LEADER' as const,
+    username: 'user1',
+    email: 'user1@youth.com',
+    password: '123456',
+    fullName: 'Trần Văn User',
+    role: 'MEMBER' as const,
     points: 850,
     phone: '0987654321',
-    unitId: 'unit_cntt'
+    unitId: 'unit_1'
   },
   {
     id: '3',
-    username: 'member_001',
-    email: 'member001@youth-handbook.com',
-    password: 'member123',
-    fullName: 'Lê Văn Cường',
+    username: 'user2',
+    email: 'user2@youth.com',
+    password: '123456',
+    fullName: 'Lê Văn Hai',
     role: 'MEMBER' as const,
     points: 780,
     phone: '0987654323',
-    unitId: 'unit_cntt'
+    unitId: 'unit_1'
+  }
+];
+
+// Mock activities data
+const MOCK_ACTIVITIES = [
+  {
+    id: '1',
+    title: 'Sinh hoạt Chi đoàn tháng 12',
+    description: 'Họp mặt định kỳ hàng tháng của chi đoàn, triển khai công tác Đoàn',
+    type: 'MEETING',
+    startTime: '2025-12-05T14:00:00Z',
+    endTime: '2025-12-05T16:00:00Z',
+    location: 'Hội trường A, Trung đoàn 196',
+    maxParticipants: 50,
+    status: 'ACTIVE',
+    organizer: { id: '1', fullName: 'Nguyễn Văn Admin' },
+    unit: { id: 'unit_1', name: 'Chi đoàn 1' },
+    participants: [],
+    _count: { participants: 25, feedbacks: 5 }
+  },
+  {
+    id: '2',
+    title: 'Chiến dịch Mùa hè xanh 2025',
+    description: 'Hoạt động tình nguyện xây dựng nông thôn mới tại xã biên giới',
+    type: 'VOLUNTEER',
+    startTime: '2025-12-10T07:00:00Z',
+    endTime: '2025-12-10T17:00:00Z',
+    location: 'Xã A, Huyện B',
+    maxParticipants: 100,
+    status: 'ACTIVE',
+    organizer: { id: '1', fullName: 'Nguyễn Văn Admin' },
+    unit: { id: 'unit_1', name: 'Chi đoàn 1' },
+    participants: [],
+    _count: { participants: 45, feedbacks: 10 }
+  },
+  {
+    id: '3',
+    title: 'Học tập tư tưởng Hồ Chí Minh',
+    description: 'Chương trình sinh hoạt chính trị về tư tưởng Bác Hồ',
+    type: 'STUDY',
+    startTime: '2025-12-15T08:00:00Z',
+    endTime: '2025-12-15T11:00:00Z',
+    location: 'Phòng học 101',
+    maxParticipants: 80,
+    status: 'ACTIVE',
+    organizer: { id: '1', fullName: 'Nguyễn Văn Admin' },
+    unit: { id: 'unit_1', name: 'Chi đoàn 1' },
+    participants: [],
+    _count: { participants: 35, feedbacks: 8 }
+  }
+];
+
+// Mock documents data - Full format matching API
+const MOCK_DOCUMENTS = [
+  {
+    id: '1',
+    title: 'Điều lệ Đoàn TNCS Hồ Chí Minh',
+    documentNumber: 'DL-01/2025',
+    documentType: 'REGULATION',
+    issuer: 'Trung ương Đoàn',
+    description: 'Điều lệ chính thức của Đoàn TNCS Hồ Chí Minh',
+    content: 'Nội dung điều lệ Đoàn...',
+    fileUrl: '',
+    fileName: 'dieu-le-doan.pdf',
+    fileSize: 1024000,
+    status: 'PUBLISHED',
+    issuedDate: '2025-01-01T00:00:00Z',
+    effectiveDate: '2025-01-01T00:00:00Z',
+    authorId: '1',
+    viewCount: 150,
+    downloadCount: 45,
+    tags: 'điều lệ,chính sách',
+    isNotificationSent: true,
+    createdAt: '2025-01-01T00:00:00Z',
+    updatedAt: '2025-01-01T00:00:00Z',
+    author: { id: '1', fullName: 'Nguyễn Văn Admin', role: 'ADMIN' },
+    isFavorited: false
+  },
+  {
+    id: '2',
+    title: 'Hướng dẫn sinh hoạt Chi đoàn',
+    documentNumber: 'HD-02/2025',
+    documentType: 'GUIDELINE',
+    issuer: 'Ban Tổ chức',
+    description: 'Hướng dẫn chi tiết về sinh hoạt Chi đoàn',
+    content: 'Hướng dẫn chi tiết về sinh hoạt Chi đoàn...',
+    fileUrl: '',
+    fileName: 'huong-dan-sinh-hoat.pdf',
+    fileSize: 512000,
+    status: 'PUBLISHED',
+    issuedDate: '2025-02-01T00:00:00Z',
+    effectiveDate: '2025-02-01T00:00:00Z',
+    authorId: '1',
+    viewCount: 89,
+    downloadCount: 23,
+    tags: 'hướng dẫn,sinh hoạt',
+    isNotificationSent: true,
+    createdAt: '2025-02-01T00:00:00Z',
+    updatedAt: '2025-02-01T00:00:00Z',
+    author: { id: '1', fullName: 'Nguyễn Văn Admin', role: 'ADMIN' },
+    isFavorited: false
+  },
+  {
+    id: '3',
+    title: 'Mẫu báo cáo hoạt động Đoàn',
+    documentNumber: 'MB-03/2025',
+    documentType: 'FORM',
+    issuer: 'Ban Tổ chức',
+    description: 'Mẫu báo cáo hoạt động Đoàn hàng tháng',
+    content: 'Mẫu báo cáo...',
+    fileUrl: '',
+    fileName: 'mau-bao-cao.docx',
+    fileSize: 256000,
+    status: 'PUBLISHED',
+    issuedDate: '2025-03-01T00:00:00Z',
+    effectiveDate: '2025-03-01T00:00:00Z',
+    authorId: '1',
+    viewCount: 120,
+    downloadCount: 67,
+    tags: 'mẫu,báo cáo',
+    isNotificationSent: true,
+    createdAt: '2025-03-01T00:00:00Z',
+    updatedAt: '2025-03-01T00:00:00Z',
+    author: { id: '1', fullName: 'Nguyễn Văn Admin', role: 'ADMIN' },
+    isFavorited: false
+  }
+];
+
+// Mock posts/news data
+const MOCK_POSTS = [
+  {
+    id: '1',
+    title: 'Thông báo về kế hoạch sinh hoạt tháng 12',
+    content: 'Kính gửi các đồng chí đoàn viên, Chi đoàn thông báo kế hoạch sinh hoạt tháng 12...',
+    postType: 'ANNOUNCEMENT',
+    status: 'PUBLISHED',
+    publishedAt: '2025-12-01T08:00:00Z',
+    createdAt: '2025-12-01T08:00:00Z',
+    author: { id: '1', fullName: 'Nguyễn Văn Admin', role: 'ADMIN' },
+    unit: { id: 'unit_1', name: 'Chi đoàn 1' }
+  },
+  {
+    id: '2',
+    title: 'Kết quả đánh giá đoàn viên quý 4/2025',
+    content: 'Thông báo kết quả đánh giá, xếp loại đoàn viên quý 4 năm 2025...',
+    postType: 'NEWS',
+    status: 'PUBLISHED',
+    publishedAt: '2025-11-28T10:00:00Z',
+    createdAt: '2025-11-28T10:00:00Z',
+    author: { id: '1', fullName: 'Nguyễn Văn Admin', role: 'ADMIN' },
+    unit: { id: 'unit_1', name: 'Chi đoàn 1' }
+  }
+];
+
+// Mock exams data  
+const MOCK_EXAMS = [
+  {
+    id: '1',
+    title: 'Kiểm tra kiến thức Đoàn viên',
+    description: 'Bài kiểm tra kiến thức cơ bản về Đoàn TNCS Hồ Chí Minh',
+    category: 'Kiến thức chung',
+    duration: 30,
+    totalQuestions: 20,
+    passingScore: 60,
+    status: 'PUBLISHED'
   }
 ];
 
@@ -110,6 +275,9 @@ async function apiCall<T>(
 ): Promise<ApiResponse<T>> {
   try {
     const url = `${API_BASE_URL}${endpoint}`;
+    
+    console.log('[API] Calling:', url);
+    console.log('[API] Method:', options.method || 'GET');
     
     // Add Content-Type header for JSON requests and force no-cache
     const headers = {
@@ -126,7 +294,10 @@ async function apiCall<T>(
       cache: 'no-store',
     });
 
+    console.log('[API] Response status:', response.status);
+    
     const data = await response.json();
+    console.log('[API] Response data:', data);
 
     if (!response.ok) {
       return {
@@ -140,7 +311,7 @@ async function apiCall<T>(
       ...data
     };
   } catch (error) {
-    console.warn('Real API failed, falling back to mock API:', error);
+    console.warn('[API] Real API failed, falling back to mock API:', error);
     
     // Fallback to mock API if real API fails
     return mockApiCall<T>(endpoint, options);
@@ -154,11 +325,12 @@ async function mockApiCall<T>(
 ): Promise<ApiResponse<T>> {
   await delay(500); // Simulate network delay
 
-  const url = endpoint.replace('/', '');
+  // Remove leading slash and query params for matching
+  const url = endpoint.replace(/^\//, '').split('?')[0];
   const method = options.method || 'GET';
   const body = options.body ? JSON.parse(options.body as string) : null;
 
-  console.log('Mock API Call:', { method, url, body });
+  console.log('[Mock API] Call:', { method, url, body });
 
   // Handle different endpoints
   if (url === 'auth/login' && method === 'POST') {
@@ -246,6 +418,116 @@ async function mockApiCall<T>(
       success: true,
       token,
       user: userWithoutPassword
+    };
+  }
+
+  // Handle activities endpoints
+  if (url === 'activities' || url.startsWith('activities')) {
+    if (method === 'GET') {
+      console.log('[Mock] Returning mock activities');
+      return {
+        success: true,
+        data: {
+          data: MOCK_ACTIVITIES,
+          pagination: { total: MOCK_ACTIVITIES.length, page: 1, limit: 20 }
+        }
+      } as any;
+    }
+  }
+
+  // Handle documents endpoints
+  if (url === 'documents' || url.startsWith('documents')) {
+    if (method === 'GET') {
+      console.log('[Mock] Returning mock documents');
+      return {
+        success: true,
+        data: {
+          data: MOCK_DOCUMENTS,
+          pagination: { total: MOCK_DOCUMENTS.length, page: 1, limit: 20 }
+        }
+      } as any;
+    }
+  }
+
+  // Handle exams endpoints
+  if (url === 'exams' || url.startsWith('exams')) {
+    if (method === 'GET') {
+      console.log('[Mock] Returning mock exams');
+      return {
+        success: true,
+        data: {
+          data: MOCK_EXAMS,
+          pagination: { total: MOCK_EXAMS.length, page: 1, limit: 20 }
+        }
+      } as any;
+    }
+  }
+
+  // Handle posts endpoints
+  if (url === 'posts' || url.startsWith('posts')) {
+    if (method === 'GET') {
+      console.log('[Mock] Returning mock posts');
+      return {
+        success: true,
+        data: {
+          data: MOCK_POSTS,
+          pagination: { total: MOCK_POSTS.length, page: 1, limit: 20 }
+        }
+      } as any;
+    }
+  }
+
+  // Handle study endpoints
+  if (url === 'study' || url.startsWith('study')) {
+    if (method === 'GET') {
+      console.log('[Mock] Returning empty study topics');
+      return {
+        success: true,
+        data: []
+      } as any;
+    }
+  }
+
+  // Handle rating endpoints
+  if (url === 'rating' || url.startsWith('rating')) {
+    if (method === 'GET') {
+      console.log('[Mock] Returning empty rating periods');
+      return {
+        success: true,
+        data: []
+      } as any;
+    }
+  }
+
+  // Handle suggestions endpoints
+  if (url === 'suggestions' || url.startsWith('suggestions')) {
+    if (method === 'GET') {
+      console.log('[Mock] Returning empty suggestions');
+      return {
+        success: true,
+        data: {
+          data: [],
+          pagination: { total: 0, page: 1, limit: 20 }
+        }
+      } as any;
+    }
+  }
+
+  // Handle join activity
+  if (url.includes('/join') && method === 'POST') {
+    console.log('[Mock] Activity joined');
+    return {
+      success: true,
+      data: { message: 'Đăng ký thành công' }
+    };
+  }
+
+  // Handle any other GET request with empty data
+  if (method === 'GET') {
+    console.log('[Mock] Returning empty data for:', url);
+    return {
+      success: true,
+      data: []
     };
   }
 
