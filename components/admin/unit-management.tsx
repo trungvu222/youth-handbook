@@ -42,7 +42,8 @@ interface UnitStats {
   unitsWithoutLeaders: number
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://youth-handbook.onrender.com"
+const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL || "https://youth-handbook.onrender.com";
+const API_URL = RAW_API_URL.replace(/\/api\/?$/, '')
 
 export default function UnitManagement() {
   const { toast } = useToast()

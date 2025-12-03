@@ -34,7 +34,8 @@ interface Member {
   createdAt: string
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://youth-handbook.onrender.com"
+const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL || "https://youth-handbook.onrender.com";
+const API_URL = RAW_API_URL.replace(/\/api\/?$/, '')
 
 export function MemberManagement() {
   const { toast } = useToast()

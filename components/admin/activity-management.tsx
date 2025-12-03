@@ -12,7 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Calendar, Plus, Users, Edit, Trash2, Eye, RefreshCw, MapPin, Clock } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://youth-handbook.onrender.com"
+const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL || "https://youth-handbook.onrender.com";
+const API_URL = RAW_API_URL.replace(/\/api\/?$/, '')
 
 interface Activity {
   id: string

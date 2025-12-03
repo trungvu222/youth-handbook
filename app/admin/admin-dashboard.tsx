@@ -40,7 +40,9 @@ import SuggestionManagement from '@/components/admin/suggestion-management';
 import { ReportsManagement } from '@/components/admin/reports-management';
 import { AdminProfile } from '@/components/admin/admin-profile';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://youth-handbook.onrender.com";
+// Đảm bảo API_URL không có /api ở cuối
+const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL || "https://youth-handbook.onrender.com";
+const API_URL = RAW_API_URL.replace(/\/api\/?$/, '');
 
 // Interface cho dashboard stats
 interface DashboardStats {

@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { BarChart3, Users, Calendar, Award, TrendingUp, Download, RefreshCw } from "lucide-react"
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://youth-handbook.onrender.com"
+const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL || "https://youth-handbook.onrender.com";
+const API_URL = RAW_API_URL.replace(/\/api\/?$/, '')
 
 export function ReportsManagement() {
   const [stats, setStats] = useState({ users: 0, activities: 0, units: 0, totalPoints: 0 })
