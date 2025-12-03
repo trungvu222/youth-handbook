@@ -93,12 +93,16 @@ export default function AdminDashboard() {
     try {
       setLoadingStats(true);
       const token = localStorage.getItem('accessToken');
+      console.log('🔐 Token:', token ? 'exists' : 'missing');
+      
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
       };
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
+
+      console.log('📡 Fetching from:', API_URL);
 
       // Fetch users, units, activities in parallel
       const [usersRes, unitsRes, activitiesRes] = await Promise.all([
@@ -107,9 +111,15 @@ export default function AdminDashboard() {
         fetch(`${API_URL}/api/activities`, { headers }),
       ]);
 
+      console.log('📊 Response status:', {
+        users: usersRes.status,
+        units: unitsRes.status,
+        activities: activitiesRes.status
+      });
+
       // Kiểm tra nếu có lỗi 401 thì redirect về login
       if (usersRes.status === 401 || unitsRes.status === 401 || activitiesRes.status === 401) {
-        console.log('Token expired or invalid, redirecting to login...');
+        console.log('❌ Token expired or invalid, redirecting to login...');
         localStorage.removeItem('accessToken');
         localStorage.removeItem('currentUser');
         router.push('/admin/login');
@@ -119,6 +129,12 @@ export default function AdminDashboard() {
       const usersData = usersRes.ok ? await usersRes.json() : { users: [] };
       const unitsData = unitsRes.ok ? await unitsRes.json() : { units: [] };
       const activitiesData = activitiesRes.ok ? await activitiesRes.json() : { activities: [] };
+
+      console.log('📦 Data received:', {
+        usersCount: usersData?.users?.length || usersData?.length || 0,
+        unitsCount: unitsData?.units?.length || unitsData?.length || 0,
+        activitiesCount: activitiesData?.activities?.length || activitiesData?.data?.length || 0
+      });
 
       const users = usersData.users || usersData.data || usersData || [];
       const units = unitsData.units || unitsData.data || unitsData || [];
@@ -281,9 +297,19 @@ export default function AdminDashboard() {
               Chào mừng, {currentUser?.fullName} - Bí thư Đoàn trường
             </p>
           </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold">{new Date().toLocaleDateString('vi-VN')}</div>
-            <div className="text-red-100">Hôm nay</div>
+          <div className="text-right flex items-center gap-4">
+            <button 
+              onClick={() => fetchDashboardStats()}
+              className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+              disabled={loadingStats}
+            >
+              <RefreshCw className={`h-4 w-4 ${loadingStats ? 'animate-spin' : ''}`} />
+              {loadingStats ? 'Đang tải...' : 'Làm mới'}
+            </button>
+            <div>
+              <div className="text-2xl font-bold">{new Date().toLocaleDateString('vi-VN')}</div>
+              <div className="text-red-100">Hôm nay</div>
+            </div>
           </div>
         </div>
       </div>
