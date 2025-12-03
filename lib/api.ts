@@ -1,5 +1,7 @@
 // API service for Youth Handbook Frontend
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://youth-handbook.onrender.com/api';
+const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://youth-handbook.onrender.com';
+// Đảm bảo API_BASE_URL luôn kết thúc bằng /api (không có duplicate)
+const API_BASE_URL = RAW_API_URL.replace(/\/api\/?$/, '') + '/api';
 
 // API Response types
 interface ApiResponse<T = any> {
