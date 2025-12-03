@@ -107,7 +107,6 @@ export default function AdminDashboard() {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       };
-      }
 
       console.log('📡 Fetching from:', API_URL);
 
