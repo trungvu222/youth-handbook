@@ -107,6 +107,15 @@ export default function AdminDashboard() {
         fetch(`${API_URL}/api/activities`, { headers }),
       ]);
 
+      // Kiểm tra nếu có lỗi 401 thì redirect về login
+      if (usersRes.status === 401 || unitsRes.status === 401 || activitiesRes.status === 401) {
+        console.log('Token expired or invalid, redirecting to login...');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('currentUser');
+        router.push('/admin/login');
+        return;
+      }
+
       const usersData = usersRes.ok ? await usersRes.json() : { users: [] };
       const unitsData = unitsRes.ok ? await unitsRes.json() : { units: [] };
       const activitiesData = activitiesRes.ok ? await activitiesRes.json() : { activities: [] };
