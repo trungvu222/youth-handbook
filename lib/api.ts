@@ -260,7 +260,9 @@ export function getStoredUser(): User | null {
 // Clear auth data
 export function clearAuth(): void {
   if (typeof window === 'undefined') return;
+  localStorage.removeItem('accessToken');
   localStorage.removeItem('auth_token');
+  localStorage.removeItem('currentUser');
   localStorage.removeItem('user');
 }
 
@@ -284,7 +286,10 @@ export const authApi = {
     // Save token and user to localStorage on successful login
     if (result.success && result.token && result.user) {
       if (typeof window !== 'undefined') {
+        // Lưu cả 2 key để tương thích
+        localStorage.setItem('accessToken', result.token);
         localStorage.setItem('auth_token', result.token);
+        localStorage.setItem('currentUser', JSON.stringify(result.user));
         localStorage.setItem('user', JSON.stringify(result.user));
         
         // Trigger storage event to notify other components
