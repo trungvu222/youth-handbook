@@ -334,6 +334,14 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {/* Debug Panel - Remove in production */}
+      {process.env.NODE_ENV !== 'production' && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm">
+          <strong>🔧 Debug:</strong> Token: {typeof window !== 'undefined' && localStorage.getItem('accessToken') ? '✅ Có' : '❌ Không'} | 
+          Stats: {stats?.overview?.totalMembers ?? 'null'} users
+        </div>
+      )}
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-red-500">
