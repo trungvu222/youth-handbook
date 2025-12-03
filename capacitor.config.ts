@@ -7,10 +7,21 @@ const config: CapacitorConfig = {
   server: {
     androidScheme: 'https',
     hostname: 'localhost',
-    iosScheme: 'capacitor'
+    iosScheme: 'capacitor',
+    // Allow connections to backend API
+    cleartext: true
   },
   android: {
-    allowMixedContent: true
+    allowMixedContent: true,
+    // Allow HTTP connections for development
+    webContentsDebuggingEnabled: true
+  },
+  plugins: {
+    // Enable keyboard handling
+    Keyboard: {
+      resize: 'body',
+      resizeOnFullScreen: true
+    }
   }
 };
 

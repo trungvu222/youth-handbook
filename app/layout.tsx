@@ -13,6 +13,7 @@ export const metadata: Metadata = {
     width: 'device-width',
     initialScale: 1,
     maximumScale: 1,
+    userScalable: false,
   },
   themeColor: '#1976d2',
   icons: {
@@ -20,6 +21,16 @@ export const metadata: Metadata = {
     apple: '/placeholder-logo.png',
   },
 }
+
+// Script to detect Capacitor and add class to body
+const capacitorDetectionScript = `
+  (function() {
+    if (window.Capacitor) {
+      document.body.classList.add('capacitor-app');
+      console.log('[App] Running in Capacitor');
+    }
+  })();
+`;
 
 export default function RootLayout({
   children,
@@ -33,10 +44,13 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Youth Handbook" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src * 'self' https://youth-handbook.onrender.com; img-src * 'self' data: blob: https:; style-src * 'self' 'unsafe-inline';" />
         <link rel="manifest" href="/manifest.json" />
         <link rel="apple-touch-icon" href="/placeholder-logo.png" />
       </head>
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
+        <script dangerouslySetInnerHTML={{ __html: capacitorDetectionScript }} />
         {children}
         <Analytics />
       </body>

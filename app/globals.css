@@ -123,13 +123,19 @@
   }
   body {
     @apply bg-background text-foreground;
-    /* Added Đông Sơn drum pattern background */
-    background-image: url("/dong-son-pattern.jpg");
+    /* Đông Sơn drum pattern background - use relative path for Capacitor */
+    background-image: url("./dong-son-pattern.jpg");
     background-size: 400px 400px;
     background-repeat: repeat;
     background-attachment: fixed;
     background-blend-mode: overlay;
     background-color: rgba(255, 255, 255, 0.92);
+  }
+  
+  /* Fallback for Capacitor when background fails to load */
+  body.capacitor-app {
+    background-image: none;
+    background: linear-gradient(135deg, #fef7f0 0%, #fff5eb 50%, #fef7f0 100%);
   }
 }
 
@@ -161,12 +167,19 @@
 
   /* Added new utility classes for Vietnamese login design */
   .bg-dong-son-pattern {
-    background-image: url("/dong-son-pattern.jpg");
+    background-image: url("./dong-son-pattern.jpg");
     background-size: 400px 400px;
     background-repeat: repeat;
     background-position: center;
     background-color: #fef7f0;
     background-blend-mode: overlay;
+  }
+  
+  /* Fallback gradient for Capacitor mobile */
+  @supports not (background-blend-mode: overlay) {
+    .bg-dong-son-pattern {
+      background: linear-gradient(135deg, #fef7f0 0%, #fff5eb 50%, #fef7f0 100%);
+    }
   }
 
   .text-primary-gradient {

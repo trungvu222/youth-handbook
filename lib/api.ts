@@ -1,7 +1,17 @@
 // API service for Youth Handbook Frontend
-const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://youth-handbook.onrender.com';
+// Luôn sử dụng URL tuyệt đối cho cả web và mobile (Capacitor)
+const BACKEND_URL = 'https://youth-handbook.onrender.com';
+const RAW_API_URL = (typeof window !== 'undefined' && (window as any).Capacitor) 
+  ? BACKEND_URL 
+  : (process.env.NEXT_PUBLIC_API_URL || BACKEND_URL);
 // Đảm bảo API_BASE_URL luôn kết thúc bằng /api (không có duplicate)
 const API_BASE_URL = RAW_API_URL.replace(/\/api\/?$/, '') + '/api';
+
+// Debug log for mobile
+if (typeof window !== 'undefined') {
+  console.log('[API] Using API URL:', API_BASE_URL);
+  console.log('[API] Is Capacitor:', !!(window as any).Capacitor);
+}
 
 // API Response types
 interface ApiResponse<T = any> {

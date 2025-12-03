@@ -1,12 +1,19 @@
 "use client"
 
-import { useState } from "react"
-import { Calendar, Plus } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Calendar, Plus, RefreshCw } from "lucide-react"
 import ActivityList from "@/components/activities/activity-list"
 import ActivityDetail from "@/components/activities/activity-detail"
+import { Button } from "@/components/ui/button"
 
 export default function ActivitiesScreen() {
   const [selectedActivity, setSelectedActivity] = useState<string | null>(null)
+  const [isReady, setIsReady] = useState(false)
+
+  useEffect(() => {
+    // Đảm bảo component đã mount trước khi render
+    setIsReady(true)
+  }, [])
 
   const handleActivitySelect = (activity: any) => {
     setSelectedActivity(activity.id)
@@ -14,6 +21,17 @@ export default function ActivitiesScreen() {
 
   const handleBack = () => {
     setSelectedActivity(null)
+  }
+
+  if (!isReady) {
+    return (
+      <div className="h-full flex items-center justify-center bg-gradient-to-b from-[#5B2EFF] to-[#0F62FF]">
+        <div className="text-center text-white">
+          <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2" />
+          <p>Đang tải...</p>
+        </div>
+      </div>
+    )
   }
 
   if (selectedActivity) {
@@ -28,7 +46,7 @@ export default function ActivitiesScreen() {
   }
 
   return (
-    <div className="h-full">
+    <div className="h-full bg-gray-50">
       {/* Header */}
       <div className="bg-gradient-to-r from-[#5B2EFF] to-[#0F62FF] px-6 py-6 text-white mb-6">
         <div className="flex items-center justify-between mb-4">

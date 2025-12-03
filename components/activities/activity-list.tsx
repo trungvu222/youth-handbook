@@ -53,6 +53,7 @@ interface ActivityListProps {
 export default function ActivityList({ onActivitySelect }: ActivityListProps) {
   const [activities, setActivities] = useState<Activity[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [filters, setFilters] = useState({
     search: '',
     type: 'all',
@@ -62,7 +63,9 @@ export default function ActivityList({ onActivitySelect }: ActivityListProps) {
 
   const loadActivities = async () => {
     setLoading(true)
+    setError(null)
     try {
+      console.log('[ActivityList] Loading activities...')
       const { activityApi } = await import('@/lib/api')
       const result = await activityApi.getActivities({
         type: filters.type === 'all' ? undefined : filters.type,
@@ -70,6 +73,8 @@ export default function ActivityList({ onActivitySelect }: ActivityListProps) {
         search: filters.search || undefined,
         limit: 20
       })
+
+      console.log('[ActivityList] API result:', result)
 
       if (result.success && result.data) {
         // Handle different data access patterns
@@ -82,12 +87,18 @@ export default function ActivityList({ onActivitySelect }: ActivityListProps) {
           activitiesData = result.data.activities;
         }
         
+        console.log('[ActivityList] Activities loaded:', activitiesData.length)
         setActivities(activitiesData)
       } else {
+        console.log('[ActivityList] No data or error:', result.error)
         setActivities([])
+        if (result.error) {
+          setError(result.error)
+        }
       }
     } catch (error) {
       console.error('❌ ActivityList: Error loading activities:', error)
+      setError('Không thể tải danh sách sinh hoạt. Vui lòng kiểm tra kết nối mạng.')
       setActivities([])
     } finally {
       setLoading(false)
@@ -95,21 +106,27 @@ export default function ActivityList({ onActivitySelect }: ActivityListProps) {
   }
 
   useEffect(() => {
-    loadActivities()
+    // Initial load with delay for Capacitor
+    const timer = setTimeout(() => {
+      loadActivities()
+    }, 100)
+    return () => clearTimeout(timer)
   }, [filters])
 
   // Load activities when component mounts and when auth changes
   useEffect(() => {
     const checkAndLoad = () => {
       if (typeof window !== 'undefined') {
-        const token = localStorage.getItem('auth_token')
+        const token = localStorage.getItem('accessToken') || localStorage.getItem('auth_token')
+        console.log('[ActivityList] Token check:', token ? 'exists' : 'missing')
         if (token) {
           loadActivities()
         }
       }
     }
     
-    checkAndLoad()
+    // Delay for Capacitor initialization
+    const timer = setTimeout(checkAndLoad, 200)
     
     // Listen for storage changes (when login happens)
     const handleStorageChange = () => {
@@ -123,6 +140,7 @@ export default function ActivityList({ onActivitySelect }: ActivityListProps) {
     window.addEventListener('focus', checkAndLoad)
     
     return () => {
+      clearTimeout(timer)
       window.removeEventListener('storage', handleStorageChange)
       window.removeEventListener('auth_changed', handleStorageChange)
       window.removeEventListener('focus', checkAndLoad)
@@ -198,6 +216,23 @@ export default function ActivityList({ onActivitySelect }: ActivityListProps) {
             </CardContent>
           </Card>
         ))}
+      </div>
+    )
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="pt-6 text-center">
+            <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+            <p className="text-red-600 mb-4">{error}</p>
+            <Button onClick={loadActivities} variant="outline">
+              Thử lại
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     )
   }
