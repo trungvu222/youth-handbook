@@ -164,63 +164,114 @@ export function ReportsManagement() {
     </Card>
   )
 
-  // Animated vertical bar chart
+  // Animated vertical bar chart - Always visible with minimum height
   const AnimatedBarChart = ({ data }: { data: {month: string, count: number}[] }) => {
     const maxValue = Math.max(...data.map(d => d.count), 1)
+    const hasData = data.some(d => d.count > 0)
     
     return (
-      <div className="h-64 flex items-end justify-between gap-1 px-2">
-        {data.map((item, idx) => {
-          const height = (item.count / maxValue) * 100
-          const isHovered = hoveredBar === idx
+      <div className="h-72 flex flex-col">
+        {/* Chart area */}
+        <div className="flex-1 flex items-end justify-between gap-2 px-4 pb-2 relative">
+          {/* Grid lines */}
+          <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+            {[0, 1, 2, 3, 4].map((_, i) => (
+              <div key={i} className="border-b border-gray-100 w-full" />
+            ))}
+          </div>
           
-          return (
-            <div 
-              key={idx} 
-              className="flex flex-col items-center flex-1 cursor-pointer"
-              onMouseEnter={() => setHoveredBar(idx)}
-              onMouseLeave={() => setHoveredBar(null)}
-            >
-              <div className="relative w-full flex justify-center mb-2">
-                {/* Tooltip */}
-                <div 
-                  className={`absolute -top-8 bg-gray-800 text-white text-xs px-2 py-1 rounded transition-all duration-200 whitespace-nowrap ${
-                    isHovered ? 'opacity-100 transform -translate-y-1' : 'opacity-0'
-                  }`}
-                >
-                  {item.count} hoạt động
-                </div>
-                
-                {/* Bar */}
-                <div 
-                  className="w-full max-w-[30px] rounded-t-lg transition-all duration-500 ease-out relative overflow-hidden"
-                  style={{ 
-                    height: animateCharts ? `${Math.max(height, 5)}%` : '0%',
-                    background: `linear-gradient(to top, ${gradientColors[idx % 5].start}, ${gradientColors[idx % 5].end})`,
-                    transitionDelay: `${idx * 50}ms`,
-                    transform: isHovered ? 'scaleY(1.05)' : 'scaleY(1)',
-                    boxShadow: isHovered ? '0 -4px 20px rgba(0,0,0,0.2)' : 'none'
-                  }}
-                >
-                  {/* Shine effect */}
+          {data.map((item, idx) => {
+            const height = hasData ? (item.count / maxValue) * 100 : 0
+            const isHovered = hoveredBar === idx
+            const barHeight = item.count > 0 ? Math.max(height, 8) : 8 // Minimum height of 8%
+            
+            return (
+              <div 
+                key={idx} 
+                className="flex flex-col items-center flex-1 cursor-pointer z-10 group"
+                onMouseEnter={() => setHoveredBar(idx)}
+                onMouseLeave={() => setHoveredBar(null)}
+              >
+                <div className="relative w-full flex justify-center flex-1">
+                  {/* Tooltip */}
                   <div 
-                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
-                    style={{
-                      transform: animateCharts ? 'translateX(100%)' : 'translateX(-100%)',
-                      transition: 'transform 1s ease-out',
-                      transitionDelay: `${idx * 50 + 500}ms`
-                    }}
-                  />
+                    className={`absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-3 py-1.5 rounded-lg transition-all duration-300 whitespace-nowrap z-20 ${
+                      isHovered ? 'opacity-100 transform -translate-y-2 scale-100' : 'opacity-0 scale-95'
+                    }`}
+                  >
+                    <div className="font-semibold">{item.count} hoạt động</div>
+                    <div className="text-gray-300 text-[10px]">Tháng {idx + 1}</div>
+                    {/* Arrow */}
+                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 rotate-45 w-2 h-2 bg-gray-900" />
+                  </div>
+                  
+                  {/* Bar container - aligned to bottom */}
+                  <div className="absolute bottom-0 w-full flex justify-center">
+                    {/* Bar */}
+                    <div 
+                      className="w-8 rounded-t-xl transition-all duration-700 ease-out relative overflow-hidden"
+                      style={{ 
+                        height: animateCharts ? `${barHeight * 2}px` : '0px',
+                        minHeight: animateCharts ? '16px' : '0px',
+                        background: item.count > 0 
+                          ? `linear-gradient(180deg, ${gradientColors[idx % 5].end}, ${gradientColors[idx % 5].start})`
+                          : 'linear-gradient(180deg, #e5e7eb, #d1d5db)',
+                        transitionDelay: `${idx * 80}ms`,
+                        transform: isHovered ? 'scaleY(1.1) scaleX(1.15)' : 'scaleY(1) scaleX(1)',
+                        transformOrigin: 'bottom',
+                        boxShadow: isHovered 
+                          ? `0 -8px 25px ${item.count > 0 ? gradientColors[idx % 5].start + '60' : 'rgba(0,0,0,0.15)'}` 
+                          : 'none'
+                      }}
+                    >
+                      {/* Shine effect */}
+                      <div 
+                        className="absolute inset-0 bg-gradient-to-b from-white/40 via-transparent to-transparent"
+                        style={{ height: '50%' }}
+                      />
+                      
+                      {/* Animated shine sweep */}
+                      <div 
+                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent"
+                        style={{
+                          transform: animateCharts ? 'translateX(200%)' : 'translateX(-200%)',
+                          transition: 'transform 1.2s ease-out',
+                          transitionDelay: `${idx * 80 + 400}ms`
+                        }}
+                      />
+                      
+                      {/* Value on bar */}
+                      {item.count > 0 && (
+                        <div 
+                          className={`absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold transition-all duration-300 ${
+                            isHovered ? 'opacity-100 scale-110' : 'opacity-70'
+                          }`}
+                          style={{ color: gradientColors[idx % 5].start }}
+                        >
+                          {item.count}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
-              
-              {/* Label */}
-              <span className={`text-xs transition-all duration-200 ${isHovered ? 'text-gray-900 font-bold' : 'text-gray-500'}`}>
-                {item.month}
-              </span>
+            )
+          })}
+        </div>
+        
+        {/* X-axis labels */}
+        <div className="flex justify-between px-4 pt-3 border-t border-gray-100">
+          {data.map((item, idx) => (
+            <div 
+              key={idx} 
+              className={`flex-1 text-center text-xs font-medium transition-all duration-200 ${
+                hoveredBar === idx ? 'text-gray-900 scale-110' : 'text-gray-400'
+              }`}
+            >
+              {item.month}
             </div>
-          )
-        })}
+          ))}
+        </div>
       </div>
     )
   }
@@ -376,10 +427,10 @@ export function ReportsManagement() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="hover:shadow-lg transition-shadow duration-300">
-          <CardHeader>
+        <Card className="hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-gradient-to-r from-green-400 to-emerald-500">
+              <div className="p-2 rounded-lg bg-gradient-to-r from-green-400 to-emerald-500 shadow-lg shadow-green-500/30">
                 <TrendingUp className="h-4 w-4 text-white" />
               </div>
               Hoạt động theo tháng
@@ -387,15 +438,11 @@ export function ReportsManagement() {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="h-64 flex items-center justify-center">
+              <div className="h-72 flex items-center justify-center">
                 <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
               </div>
-            ) : activityData.length > 0 ? (
-              <AnimatedBarChart data={activityData} />
             ) : (
-              <div className="h-64 flex items-center justify-center text-gray-400">
-                Không có dữ liệu
-              </div>
+              <AnimatedBarChart data={activityData} />
             )}
           </CardContent>
         </Card>
