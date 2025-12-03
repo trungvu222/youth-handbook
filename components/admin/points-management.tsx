@@ -28,7 +28,8 @@ import {
   RefreshCw
 } from "lucide-react"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://youth-handbook.onrender.com/api';
+const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://youth-handbook.onrender.com';
+const API_BASE_URL = RAW_API_URL.replace(/\/api\/?$/, '') + '/api';
 
 interface Member {
   id: string;

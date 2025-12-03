@@ -9,8 +9,24 @@ import { BarChart3, Users, Calendar, Award, TrendingUp, Download, RefreshCw } fr
 const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL || "https://youth-handbook.onrender.com";
 const API_URL = RAW_API_URL.replace(/\/api\/?$/, '')
 
+interface UnitData {
+  id: string;
+  name: string;
+  memberCount?: number;
+}
+
+interface ActivityData {
+  id: string;
+  title: string;
+  type: string;
+  status: string;
+  startTime?: string;
+}
+
 export function ReportsManagement() {
   const [stats, setStats] = useState({ users: 0, activities: 0, units: 0, totalPoints: 0 })
+  const [unitData, setUnitData] = useState<UnitData[]>([])
+  const [activityData, setActivityData] = useState<{month: string, count: number}[]>([])
   const [loading, setLoading] = useState(true)
   const [period, setPeriod] = useState("month")
 
@@ -18,7 +34,6 @@ export function ReportsManagement() {
     setLoading(true)
     try {
       const token = localStorage.getItem("accessToken")
-      console.log("[ReportsManagement] Token:", token ? "exists" : "MISSING!")
       
       if (!token) {
         console.error("[ReportsManagement] No token found!")
@@ -30,13 +45,11 @@ export function ReportsManagement() {
         Authorization: `Bearer ${token}` 
       }
       
-      console.log("[ReportsManagement] Fetching stats...")
       const [usersRes, activitiesRes, unitsRes] = await Promise.all([
         fetch(`${API_URL}/api/users`, { headers }),
         fetch(`${API_URL}/api/activities`, { headers }),
         fetch(`${API_URL}/api/units`, { headers })
       ])
-      console.log("[ReportsManagement] Responses:", usersRes.status, activitiesRes.status, unitsRes.status)
       
       const users = usersRes.ok ? await usersRes.json() : { data: [] }
       const activities = activitiesRes.ok ? await activitiesRes.json() : { data: [] }
@@ -52,6 +65,29 @@ export function ReportsManagement() {
         units: Array.isArray(unitList) ? unitList.length : 0,
         totalPoints: Array.isArray(userList) ? userList.reduce((sum: number, u: any) => sum + (u.points || 0), 0) : 0
       })
+
+      // Process unit data for chart
+      if (Array.isArray(unitList)) {
+        const unitsWithCount = unitList.map((unit: any) => ({
+          id: unit.id,
+          name: unit.name,
+          memberCount: Array.isArray(userList) ? userList.filter((u: any) => u.unitId === unit.id).length : 0
+        }))
+        setUnitData(unitsWithCount)
+      }
+
+      // Process activity data by month
+      if (Array.isArray(activityList)) {
+        const months = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8', 'T9', 'T10', 'T11', 'T12']
+        const monthCounts = months.map((month, idx) => ({
+          month,
+          count: activityList.filter((a: any) => {
+            const date = new Date(a.startTime || a.createdAt)
+            return date.getMonth() === idx
+          }).length
+        }))
+        setActivityData(monthCounts)
+      }
     } catch (error) {
       console.error("Error:", error)
     } finally {
@@ -76,6 +112,28 @@ export function ReportsManagement() {
       </CardContent>
     </Card>
   )
+
+  // Simple bar chart component
+  const SimpleBarChart = ({ data, labelKey, valueKey, color }: { data: any[], labelKey: string, valueKey: string, color: string }) => {
+    const maxValue = Math.max(...data.map(d => d[valueKey]), 1)
+    return (
+      <div className="space-y-3">
+        {data.map((item, idx) => (
+          <div key={idx} className="flex items-center gap-3">
+            <div className="w-16 text-sm text-gray-600 truncate">{item[labelKey]}</div>
+            <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
+              <div 
+                className={`h-full ${color} rounded-full transition-all duration-500 flex items-center justify-end pr-2`}
+                style={{ width: `${Math.max((item[valueKey] / maxValue) * 100, 5)}%` }}
+              >
+                <span className="text-white text-xs font-medium">{item[valueKey]}</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -107,25 +165,56 @@ export function ReportsManagement() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
-          <CardHeader><CardTitle>Hoạt động theo tháng</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-green-500" />
+              Hoạt động theo tháng
+            </CardTitle>
+          </CardHeader>
           <CardContent>
-            <div className="h-64 flex items-center justify-center text-muted-foreground">
-              <div className="text-center">
-                <TrendingUp className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                <p>Biểu đồ thống kê</p>
+            {loading ? (
+              <div className="h-64 flex items-center justify-center">
+                <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
               </div>
-            </div>
+            ) : activityData.length > 0 ? (
+              <SimpleBarChart 
+                data={activityData.filter(d => d.count > 0).length > 0 ? activityData : [{month: 'T12', count: stats.activities}]} 
+                labelKey="month" 
+                valueKey="count" 
+                color="bg-green-500" 
+              />
+            ) : (
+              <div className="h-64 flex items-center justify-center text-gray-400">
+                Không có dữ liệu
+              </div>
+            )}
           </CardContent>
         </Card>
+        
         <Card>
-          <CardHeader><CardTitle>Phân bố đoàn viên</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-blue-500" />
+              Phân bố đoàn viên theo chi đoàn
+            </CardTitle>
+          </CardHeader>
           <CardContent>
-            <div className="h-64 flex items-center justify-center text-muted-foreground">
-              <div className="text-center">
-                <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                <p>Biểu đồ phân bố</p>
+            {loading ? (
+              <div className="h-64 flex items-center justify-center">
+                <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
               </div>
-            </div>
+            ) : unitData.length > 0 ? (
+              <SimpleBarChart 
+                data={unitData} 
+                labelKey="name" 
+                valueKey="memberCount" 
+                color="bg-blue-500" 
+              />
+            ) : (
+              <div className="h-64 flex items-center justify-center text-gray-400">
+                Không có dữ liệu
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
