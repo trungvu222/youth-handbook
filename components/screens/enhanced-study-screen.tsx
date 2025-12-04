@@ -1,9 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import StudyScreen from './study-screen'
-import ExamsScreen from './exams-screen'
+import StudyScreenMobile from './study-screen-mobile'
+import ExamsScreenMobile from './exams-screen-mobile'
 import { BookOpen, Trophy } from 'lucide-react'
 
 export default function EnhancedStudyScreen() {
@@ -11,92 +10,64 @@ export default function EnhancedStudyScreen() {
 
   // Inline styles for mobile compatibility
   const containerStyle: React.CSSProperties = {
-    maxWidth: '100%',
-    margin: '0 auto',
-    padding: '16px 16px 24px',
+    backgroundColor: '#f8fafc',
+    minHeight: '100%',
   }
 
-  const headerStyle: React.CSSProperties = {
-    marginBottom: '24px',
+  const tabsContainerStyle: React.CSSProperties = {
+    display: 'flex',
+    backgroundColor: '#ffffff',
+    borderBottom: '1px solid #e5e7eb',
+    position: 'sticky',
+    top: 0,
+    zIndex: 10,
   }
 
-  const titleStyle: React.CSSProperties = {
-    fontSize: '24px',
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: '8px',
-    color: '#1f2937',
-  }
-
-  const subtitleStyle: React.CSSProperties = {
-    color: '#6b7280',
-    textAlign: 'center',
-    fontSize: '14px',
-  }
-
-  const tabsListStyle: React.CSSProperties = {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    width: '100%',
-    backgroundColor: '#f3f4f6',
-    borderRadius: '8px',
-    padding: '4px',
-  }
-
-  const getTabTriggerStyle = (isActive: boolean): React.CSSProperties => ({
+  const getTabStyle = (isActive: boolean): React.CSSProperties => ({
+    flex: 1,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     gap: '8px',
-    padding: '12px',
-    borderRadius: '6px',
-    backgroundColor: isActive ? '#ffffff' : 'transparent',
+    padding: '16px',
+    backgroundColor: isActive ? '#eff6ff' : 'transparent',
+    border: 'none',
+    borderBottom: isActive ? '3px solid #2563eb' : '3px solid transparent',
     color: isActive ? '#2563eb' : '#6b7280',
     fontWeight: isActive ? 600 : 500,
-    border: 'none',
+    fontSize: '15px',
     cursor: 'pointer',
-    boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+    transition: 'all 0.2s',
   })
 
   const iconStyle: React.CSSProperties = {
-    width: '16px',
-    height: '16px',
-  }
-
-  const contentStyle: React.CSSProperties = {
-    marginTop: '24px',
+    width: '20px',
+    height: '20px',
   }
 
   return (
-    <div style={containerStyle} className="container mx-auto px-4 py-6">
-      <div style={headerStyle} className="mb-6">
-        <h1 style={titleStyle} className="text-2xl font-bold text-center mb-2">Học tập & Kiểm tra</h1>
-        <p style={subtitleStyle} className="text-muted-foreground text-center">
-          Nâng cao kiến thức và tham gia các kỳ thi
-        </p>
+    <div style={containerStyle}>
+      {/* Tabs */}
+      <div style={tabsContainerStyle}>
+        <button 
+          style={getTabStyle(activeTab === 'study')}
+          onClick={() => setActiveTab('study')}
+        >
+          <BookOpen style={iconStyle} />
+          Trợ lý ảo
+        </button>
+        <button 
+          style={getTabStyle(activeTab === 'exams')}
+          onClick={() => setActiveTab('exams')}
+        >
+          <Trophy style={iconStyle} />
+          Kỳ thi
+        </button>
       </div>
-
-      <div style={{ width: '100%' }}>
-        <div style={tabsListStyle}>
-          <button 
-            style={getTabTriggerStyle(activeTab === 'study')}
-            onClick={() => setActiveTab('study')}
-          >
-            <BookOpen style={iconStyle} className="h-4 w-4" />
-            Trợ lý ảo
-          </button>
-          <button 
-            style={getTabTriggerStyle(activeTab === 'exams')}
-            onClick={() => setActiveTab('exams')}
-          >
-            <Trophy style={iconStyle} className="h-4 w-4" />
-            Kỳ thi
-          </button>
-        </div>
-        
-        <div style={contentStyle}>
-          {activeTab === 'study' ? <StudyScreen /> : <ExamsScreen />}
-        </div>
+      
+      {/* Content */}
+      <div>
+        {activeTab === 'study' ? <StudyScreenMobile /> : <ExamsScreenMobile />}
       </div>
     </div>
   )

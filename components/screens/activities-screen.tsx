@@ -1,17 +1,15 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Calendar, Plus, RefreshCw } from "lucide-react"
-import ActivityList from "@/components/activities/activity-list"
-import ActivityDetail from "@/components/activities/activity-detail"
-import { Button } from "@/components/ui/button"
+import { Calendar, RefreshCw } from "lucide-react"
+import ActivityListMobile from "@/components/activities/activity-list-mobile"
+import ActivityDetailMobile from "@/components/activities/activity-detail-mobile"
 
 export default function ActivitiesScreen() {
   const [selectedActivity, setSelectedActivity] = useState<string | null>(null)
   const [isReady, setIsReady] = useState(false)
 
   useEffect(() => {
-    // Đảm bảo component đã mount trước khi render
     setIsReady(true)
   }, [])
 
@@ -23,80 +21,106 @@ export default function ActivitiesScreen() {
     setSelectedActivity(null)
   }
 
-  // Inline styles for mobile compatibility
+  // Inline styles for mobile
   const containerStyle: React.CSSProperties = {
-    height: '100%',
-    backgroundColor: '#f9fafb',
+    minHeight: '100%',
+    backgroundColor: '#f8fafc',
+    paddingBottom: '100px', // Extra space for scrolling past bottom nav
   }
 
   const headerStyle: React.CSSProperties = {
-    background: 'linear-gradient(to right, #5b2eff, #0f62ff)',
-    padding: '24px',
+    background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #0ea5e9 100%)',
+    padding: '20px',
     color: '#ffffff',
-    marginBottom: '24px',
   }
 
   const headerTopStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    gap: '12px',
     marginBottom: '16px',
   }
 
   const titleStyle: React.CSSProperties = {
-    fontSize: '18px',
-    fontWeight: 600,
+    fontSize: '20px',
+    fontWeight: 700,
+    textAlign: 'center',
   }
 
-  const cardStyle: React.CSSProperties = {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: '8px',
+  const subtitleStyle: React.CSSProperties = {
+    fontSize: '14px',
+    color: 'rgba(255,255,255,0.9)',
+    textAlign: 'center',
+  }
+
+  const statsCardStyle: React.CSSProperties = {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: '16px',
     padding: '16px',
+    marginTop: '16px',
+    backdropFilter: 'blur(10px)',
   }
 
-  const cardContentStyle: React.CSSProperties = {
+  const statsRowStyle: React.CSSProperties = {
     display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
+    textAlign: 'center',
   }
 
-  const cardTitleStyle: React.CSSProperties = {
-    fontSize: '18px',
+  const statItemStyle: React.CSSProperties = {
+    flex: 1,
+  }
+
+  const statNumberStyle: React.CSSProperties = {
+    fontSize: '24px',
     fontWeight: 700,
     marginBottom: '4px',
   }
 
-  const cardDescStyle: React.CSSProperties = {
-    color: 'rgba(191, 219, 254, 1)',
-    fontSize: '14px',
+  const statLabelStyle: React.CSSProperties = {
+    fontSize: '12px',
+    color: 'rgba(255,255,255,0.8)',
   }
 
   const contentStyle: React.CSSProperties = {
-    padding: '0 24px 24px',
+    padding: '20px',
+  }
+
+  const sectionTitleStyle: React.CSSProperties = {
+    fontSize: '16px',
+    fontWeight: 600,
+    color: '#1f2937',
+    marginBottom: '16px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
   }
 
   const loadingStyle: React.CSSProperties = {
-    height: '100%',
+    minHeight: '100vh',
     display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    background: 'linear-gradient(to bottom, #5b2eff, #0f62ff)',
+    background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)',
   }
 
   const spinnerStyle: React.CSSProperties = {
-    width: '32px',
-    height: '32px',
+    width: '40px',
+    height: '40px',
+    border: '3px solid rgba(255,255,255,0.3)',
+    borderTopColor: '#ffffff',
+    borderRadius: '50%',
     animation: 'spin 1s linear infinite',
-    margin: '0 auto 8px',
+    marginBottom: '16px',
   }
 
   if (!isReady) {
     return (
-      <div style={loadingStyle} className="h-full flex items-center justify-center bg-gradient-to-b from-[#5B2EFF] to-[#0F62FF]">
-        <div style={{ textAlign: 'center', color: '#ffffff' }} className="text-center text-white">
-          <RefreshCw style={spinnerStyle} className="h-8 w-8 animate-spin mx-auto mb-2" />
-          <p>Đang tải...</p>
-        </div>
+      <div style={loadingStyle}>
+        <div style={spinnerStyle} />
+        <p style={{ color: '#ffffff', fontSize: '14px' }}>Đang tải...</p>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     )
@@ -104,41 +128,50 @@ export default function ActivitiesScreen() {
 
   if (selectedActivity) {
     return (
-      <div style={{ height: '100%' }} className="h-full">
-        <ActivityDetail 
-          activityId={selectedActivity} 
-          onBack={handleBack}
-        />
+      <div style={{ height: '100%' }}>
+        <ActivityDetailMobile activityId={selectedActivity} onBack={handleBack} />
       </div>
     )
   }
 
   return (
-    <div style={containerStyle} className="h-full bg-gray-50">
+    <div style={containerStyle}>
       {/* Header */}
-      <div style={headerStyle} className="bg-gradient-to-r from-[#5B2EFF] to-[#0F62FF] px-6 py-6 text-white mb-6">
-        <div style={headerTopStyle} className="flex items-center justify-between mb-4">
-          <Calendar style={{ width: '24px', height: '24px' }} className="h-6 w-6" />
-          <h1 style={titleStyle} className="text-lg font-semibold">Sinh hoạt Đoàn</h1>
-          <div style={{ width: '24px', height: '24px' }} /> {/* Spacer */}
+      <div style={headerStyle}>
+        <div style={headerTopStyle}>
+          <Calendar style={{ width: '28px', height: '28px' }} />
+          <h1 style={titleStyle}>Sổ tay Đoàn viên</h1>
         </div>
-        
-        <div style={cardStyle} className="bg-white/10 rounded-lg p-4">
-          <div style={cardContentStyle} className="flex items-center justify-between">
-            <div>
-              <h2 style={cardTitleStyle} className="text-lg font-bold mb-1">Lịch sinh hoạt</h2>
-              <p style={cardDescStyle} className="text-blue-100 text-sm">
-                Xem danh sách, đăng ký và điểm danh các buổi sinh hoạt
-              </p>
+        <p style={subtitleStyle}>Theo dõi và tham gia các hoạt động Đoàn</p>
+
+        {/* Stats Card */}
+        <div style={statsCardStyle}>
+          <div style={statsRowStyle}>
+            <div style={statItemStyle}>
+              <div style={statNumberStyle}>3</div>
+              <div style={statLabelStyle}>Hoạt động</div>
             </div>
-            <Calendar style={{ width: '32px', height: '32px', color: 'rgba(191, 219, 254, 1)' }} className="h-8 w-8 text-blue-200" />
+            <div style={{ width: '1px', backgroundColor: 'rgba(255,255,255,0.2)' }} />
+            <div style={statItemStyle}>
+              <div style={statNumberStyle}>0</div>
+              <div style={statLabelStyle}>Đã tham gia</div>
+            </div>
+            <div style={{ width: '1px', backgroundColor: 'rgba(255,255,255,0.2)' }} />
+            <div style={statItemStyle}>
+              <div style={statNumberStyle}>850</div>
+              <div style={statLabelStyle}>Điểm</div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div style={contentStyle} className="px-6 pb-6">
-        <ActivityList onActivitySelect={handleActivitySelect} />
+      <div style={contentStyle}>
+        <div style={sectionTitleStyle}>
+          <Calendar style={{ width: '18px', height: '18px', color: '#3b82f6' }} />
+          Hoạt động sắp tới
+        </div>
+        <ActivityListMobile onActivitySelect={handleActivitySelect} />
       </div>
     </div>
   )

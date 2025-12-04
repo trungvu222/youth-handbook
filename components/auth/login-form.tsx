@@ -113,16 +113,26 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
 
   const buttonStyle: React.CSSProperties = {
     width: '100%',
-    height: '52px',
-    borderRadius: '26px',
-    background: 'linear-gradient(135deg, #5b2eff 0%, #0f62ff 100%)',
+    height: '56px',
+    borderRadius: '28px',
+    background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
     color: 'white',
-    fontWeight: 600,
-    fontSize: '16px',
-    border: 'none',
+    fontWeight: 700,
+    fontSize: '17px',
+    border: '3px solid #991b1b',
     cursor: 'pointer',
-    boxShadow: '0 4px 15px rgba(91, 46, 255, 0.35)',
-    marginTop: '8px',
+    boxShadow: '0 8px 20px rgba(185, 28, 28, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)',
+    marginTop: '20px',
+    textTransform: 'uppercase',
+    letterSpacing: '2px',
+    transition: 'all 0.3s ease',
+    position: 'relative',
+    overflow: 'hidden',
+  }
+
+  const buttonHoverStyle: React.CSSProperties = {
+    transform: 'translateY(-2px)',
+    boxShadow: '0 12px 30px rgba(185, 28, 28, 0.6)',
   }
 
   const tileStyle: React.CSSProperties = {
@@ -237,12 +247,38 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
           {/* Login Button */}
           <button
             type="submit"
-            style={{ ...buttonStyle, opacity: isLoading ? 0.7 : 1 }}
-            className="w-full h-12 rounded-full bg-gradient-to-r from-[#5B2EFF] to-[#0F62FF] hover:from-[#4A25E6] hover:to-[#0E58E6] text-white font-semibold text-base shadow-lg"
+            style={{ 
+              ...buttonStyle, 
+              opacity: isLoading ? 0.9 : 1,
+              background: isLoading 
+                ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+                : 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+            }}
             disabled={isLoading}
           >
-            {isLoading ? "Đang đăng nhập..." : "ĐĂNG NHẬP"}
+            {isLoading ? (
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                <span style={{ 
+                  width: '20px', 
+                  height: '20px', 
+                  border: '2px solid rgba(255,255,255,0.3)',
+                  borderTopColor: '#ffffff',
+                  borderRadius: '50%',
+                  display: 'inline-block',
+                  animation: 'spin 1s linear infinite',
+                }} />
+                ĐANG XỬ LÝ...
+              </span>
+            ) : (
+              <span>ĐĂNG NHẬP</span>
+            )}
           </button>
+          <style>{`
+            @keyframes spin { to { transform: rotate(360deg); } }
+            button[type="submit"]:active {
+              transform: scale(0.98);
+            }
+          `}</style>
 
           {/* Forgot Password */}
           <div style={{ textAlign: 'center', marginTop: '16px' }} className="text-center mt-4">
