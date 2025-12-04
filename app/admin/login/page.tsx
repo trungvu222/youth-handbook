@@ -1,18 +1,7 @@
 'use client';
 
-import dynamic from 'next/dynamic';
 import { Shield } from 'lucide-react';
-
-// Import LoginForm với no SSR để tránh hydration error
-const LoginForm = dynamic(() => import('./login-form'), {
-  ssr: false,
-  loading: () => (
-    <div className="text-center">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-      <p className="text-gray-600">Đang tải...</p>
-    </div>
-  )
-});
+import LoginForm from './login-form';
 
 export default function AdminLogin() {
   return (
