@@ -270,7 +270,7 @@ app.post('/api/admin/reset-and-seed', async (req, res) => {
         religion: 'Không',
         educationLevel: 'Đại học',
         politicsLevel: 'Trung cấp',
-        youthPosition: 'Bí thư Đoàn trường',
+        youthPosition: 'Ban chấp hành Đoàn Cơ sở',
         isActive: true
       },
     });

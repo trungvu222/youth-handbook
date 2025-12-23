@@ -275,7 +275,7 @@ export default function AdminDashboard() {
       <div className="min-h-screen bg-red-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
-          <p className="text-red-700">Đang tải hệ thống quản lý...</p>
+          <p className="text-red-700">Đang tải HỆ THỐNG QUẢN LÝ ĐOÀN VIÊN TRUNG ĐOÀN 196...</p>
         </div>
       </div>
     );
@@ -302,9 +302,9 @@ export default function AdminDashboard() {
       <div className="bg-gradient-to-r from-red-600 to-red-700 rounded-xl p-6 text-white">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Hệ thống quản lý Đoàn thanh niên</h1>
+            <h1 className="text-3xl font-bold">HỆ THỐNG QUẢN LÝ ĐOÀN VIÊN TRUNG ĐOÀN 196</h1>
             <p className="text-red-100 mt-2">
-              Chào mừng, {currentUser?.fullName} - Bí thư Đoàn trường
+              Chào mừng, {currentUser?.fullName} - Ban chấp hành Đoàn Cơ sở
             </p>
           </div>
           <div className="text-right flex items-center gap-4">
@@ -575,7 +575,7 @@ export default function AdminDashboard() {
               </div>
               {sidebarOpen && (
                 <div className="overflow-hidden">
-                  <h2 className="font-bold text-gray-900 truncate">Đoàn TN</h2>
+                  <h2 className="font-bold text-gray-900 truncate">Đoàn Thanh Niên</h2>
                   <p className="text-xs text-gray-500 truncate">Admin Panel</p>
                 </div>
               )}
@@ -635,7 +635,7 @@ export default function AdminDashboard() {
                   onClick={() => setActiveTab('profile')}
                 >
                   <p className="font-medium text-gray-900">{currentUser?.fullName}</p>
-                  <p className="text-sm text-gray-500">Bí thư Đoàn trường</p>
+                  <p className="text-sm text-gray-500">Ban chấp hành Đoàn Cơ sở</p>
                 </div>
                 <div 
                   className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-red-300 transition-all"

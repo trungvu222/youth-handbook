@@ -16,7 +16,7 @@ export default function AdminLogin() {
             Admin Dashboard
           </h1>
           <p className="text-gray-600">
-            Hệ thống quản lý Đoàn thanh niên
+            HỆ THỐNG QUẢN LÝ ĐOÀN VIÊN TRUNG ĐOÀN 196
           </p>
         </div>
 
@@ -25,7 +25,7 @@ export default function AdminLogin() {
 
         {/* Footer */}
         <div className="text-center mt-8 text-sm text-gray-500">
-          <p>© 2025 Hệ thống quản lý Đoàn thanh niên</p>
+          <p>© 2025 HỆ THỐNG QUẢN LÝ ĐOÀN VIÊN TRUNG ĐOÀN 196</p>
           <p className="mt-1">Phiên bản Admin Dashboard v1.0</p>
         </div>
       </div>

@@ -1,7 +1,7 @@
 import '../globals.css';
 
 export const metadata = {
-  title: 'Admin Dashboard - Hệ thống quản lý Đoàn thanh niên',
+  title: 'Admin Dashboard - HỆ THỐNG QUẢN LÝ ĐOÀN VIÊN TRUNG ĐOÀN 196',
   description: 'Trang quản trị hệ thống Đoàn thanh niên',
 };
 

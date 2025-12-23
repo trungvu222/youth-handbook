@@ -66,7 +66,7 @@ async function main() {
         religion: 'Không',
         educationLevel: 'Đại học',
         politicsLevel: 'Trung cấp',
-        youthPosition: 'Bí thư Đoàn trường',
+        youthPosition: 'Ban chấp hành Đoàn Cơ sở',
         isActive: true
       },
     });
