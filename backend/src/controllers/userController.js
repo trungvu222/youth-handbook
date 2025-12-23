@@ -347,7 +347,7 @@ const deleteUser = async (req, res, next) => {
 
     // Check if user exists
     const user = await prisma.user.findUnique({
-      where: { id: parseInt(id) }
+      where: { id }
     });
 
     if (!user) {
@@ -359,7 +359,7 @@ const deleteUser = async (req, res, next) => {
 
     // Delete user
     await prisma.user.delete({
-      where: { id: parseInt(id) }
+      where: { id }
     });
 
     res.status(200).json({
@@ -381,7 +381,7 @@ const changePassword = async (req, res, next) => {
     const currentUser = req.user;
 
     // Check if user can change this password
-    const isSelf = currentUser.id === parseInt(id);
+    const isSelf = currentUser.id === id;
     const isAdmin = currentUser.role === 'ADMIN';
 
     if (!isSelf && !isAdmin) {
@@ -393,7 +393,7 @@ const changePassword = async (req, res, next) => {
 
     // Get user
     const user = await prisma.user.findUnique({
-      where: { id: parseInt(id) }
+      where: { id }
     });
 
     if (!user) {
@@ -428,7 +428,7 @@ const changePassword = async (req, res, next) => {
 
     // Update password
     await prisma.user.update({
-      where: { id: parseInt(id) },
+      where: { id },
       data: { passwordHash }
     });
 
