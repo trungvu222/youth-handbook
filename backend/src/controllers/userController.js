@@ -207,6 +207,9 @@ const updateUserProfile = async (req, res, next) => {
     if (updateData.dateJoined) {
       updateData.dateJoined = new Date(updateData.dateJoined);
     }
+    if (updateData.partyJoinDate) {
+      updateData.partyJoinDate = new Date(updateData.partyJoinDate);
+    }
 
     const updatedUser = await prisma.user.update({
       where: { id },

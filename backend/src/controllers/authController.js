@@ -9,7 +9,14 @@ const prisma = new PrismaClient();
 // @access  Public
 const register = async (req, res, next) => {
   try {
-    const { username, email, password, fullName, phone, unitId } = req.body;
+    const { 
+      username, email, password, fullName, phone, unitId, role,
+      // New fields for Slide 4
+      dateOfBirth, gender, birthPlace, permanentAddress,
+      militaryRank, governmentPosition, youthPosition,
+      dateJoined, partyJoinDate, ethnicity, religion,
+      educationLevel, majorLevel, itLevel, languageLevel, politicsLevel
+    } = req.body;
 
     // Validation
     if (!username || !email || !password || !fullName) {
@@ -62,7 +69,24 @@ const register = async (req, res, next) => {
         fullName,
         phone,
         unitId,
-        role: 'MEMBER' // Default role
+        role: role || 'MEMBER',
+        // New fields for Slide 4
+        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
+        gender,
+        birthPlace,
+        permanentAddress,
+        militaryRank,
+        governmentPosition,
+        youthPosition,
+        dateJoined: dateJoined ? new Date(dateJoined) : undefined,
+        partyJoinDate: partyJoinDate ? new Date(partyJoinDate) : undefined,
+        ethnicity,
+        religion,
+        educationLevel,
+        majorLevel,
+        itLevel,
+        languageLevel,
+        politicsLevel
       },
       include: {
         unit: true

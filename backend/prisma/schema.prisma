@@ -25,26 +25,34 @@ model User {
   
   // Extended profile fields for Youth Handbook
   dateOfBirth     DateTime? @map("date_of_birth")
-  birthPlace      String?   @map("birth_place")
+  gender          String?   // Giới tính
+  birthPlace      String?   @map("birth_place") // Quê quán
+  hometown        String?   // Quê quán (alias)
+  permanentAddress String?  @map("permanent_address") // Nơi thường trú
   address         String?
   province        String?
   district        String?
   ward            String?
   title           String?   // Chức danh
   dateJoined      DateTime? @map("date_joined") // Ngày vào Đoàn
-  workPlace       String?   @map("work_place") // Nơi sinh hoạt
+  partyJoinDate   DateTime? @map("party_join_date") // Ngày vào Đảng
+  workPlace       String?   @map("work_place") // Nơi sinh hoạt Đoàn
   ethnicity       String?   // Dân tộc
   religion        String?   // Tôn giáo
   
+  // Military & Government position
+  militaryRank    String?   @map("military_rank") // Cấp bậc (Thiếu úy, Trung úy, etc.)
+  governmentPosition String? @map("government_position") // Chức vụ chính quyền
+  
   // Education & Skills levels
-  educationLevel  String?   @map("education_level") // Trình độ văn hóa
-  majorLevel      String?   @map("major_level") // Trình độ chuyên môn
-  itLevel         String?   @map("it_level") // Trình độ tin học
-  languageLevel   String?   @map("language_level") // Trình độ ngoại ngữ
-  politicsLevel   String?   @map("politics_level") // Trình độ lý luận chính trị
+  educationLevel  String?   @map("education_level") // Trình độ văn hóa (12/12)
+  majorLevel      String?   @map("major_level") // Trình độ chuyên môn (Kỹ sư, Cử nhân, Thạc sỹ, Tiến sỹ)
+  itLevel         String?   @map("it_level") // Trình độ tin học (A, B, C)
+  languageLevel   String?   @map("language_level") // Trình độ ngoại ngữ (IELTS, TOEIC, A1, A2, B1, B2)
+  politicsLevel   String?   @map("politics_level") // Trình độ lý luận chính trị (Sơ cấp, trung cấp, cao cấp)
   
   // Youth Union specific
-  youthPosition   String?   @map("youth_position") // Chức vụ Đoàn
+  youthPosition   String?   @map("youth_position") // Chức vụ Đoàn (Đoàn viên, Bí thư, Phó Bí thư, Ủy viên)
   
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")

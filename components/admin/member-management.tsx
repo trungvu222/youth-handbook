@@ -32,6 +32,22 @@ interface Member {
   isActive: boolean
   dateJoined?: string
   createdAt: string
+  // New fields for Slide 4
+  dateOfBirth?: string
+  gender?: string
+  birthPlace?: string
+  permanentAddress?: string
+  militaryRank?: string
+  governmentPosition?: string
+  youthPosition?: string
+  partyJoinDate?: string
+  ethnicity?: string
+  religion?: string
+  educationLevel?: string
+  majorLevel?: string
+  itLevel?: string
+  languageLevel?: string
+  politicsLevel?: string
 }
 
 const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL || "https://youth-handbook.onrender.com";
@@ -62,7 +78,24 @@ export function MemberManagement() {
     role: "MEMBER",
     unitId: "",
     address: "",
-    isActive: true
+    isActive: true,
+    // New fields for Slide 4
+    dateOfBirth: "",
+    gender: "",
+    birthPlace: "",
+    permanentAddress: "",
+    militaryRank: "",
+    governmentPosition: "",
+    youthPosition: "Đoàn viên",
+    dateJoined: "",
+    partyJoinDate: "",
+    ethnicity: "",
+    religion: "",
+    educationLevel: "",
+    majorLevel: "",
+    itLevel: "",
+    languageLevel: "",
+    politicsLevel: ""
   })
 
   // Fetch members and units
@@ -163,7 +196,25 @@ export function MemberManagement() {
           email: formData.email,
           password: formData.password,
           phone: formData.phone || undefined,
-          unitId: formData.unitId || undefined
+          unitId: formData.unitId || undefined,
+          role: formData.role || "MEMBER",
+          // New fields
+          dateOfBirth: formData.dateOfBirth || undefined,
+          gender: formData.gender || undefined,
+          birthPlace: formData.birthPlace || undefined,
+          permanentAddress: formData.permanentAddress || undefined,
+          militaryRank: formData.militaryRank || undefined,
+          governmentPosition: formData.governmentPosition || undefined,
+          youthPosition: formData.youthPosition || undefined,
+          dateJoined: formData.dateJoined || undefined,
+          partyJoinDate: formData.partyJoinDate || undefined,
+          ethnicity: formData.ethnicity || undefined,
+          religion: formData.religion || undefined,
+          educationLevel: formData.educationLevel || undefined,
+          majorLevel: formData.majorLevel || undefined,
+          itLevel: formData.itLevel || undefined,
+          languageLevel: formData.languageLevel || undefined,
+          politicsLevel: formData.politicsLevel || undefined
         })
       })
 
@@ -211,7 +262,24 @@ export function MemberManagement() {
           role: formData.role,
           unitId: formData.unitId || undefined,
           address: formData.address || undefined,
-          isActive: formData.isActive
+          isActive: formData.isActive,
+          // New fields
+          dateOfBirth: formData.dateOfBirth || undefined,
+          gender: formData.gender || undefined,
+          birthPlace: formData.birthPlace || undefined,
+          permanentAddress: formData.permanentAddress || undefined,
+          militaryRank: formData.militaryRank || undefined,
+          governmentPosition: formData.governmentPosition || undefined,
+          youthPosition: formData.youthPosition || undefined,
+          dateJoined: formData.dateJoined || undefined,
+          partyJoinDate: formData.partyJoinDate || undefined,
+          ethnicity: formData.ethnicity || undefined,
+          religion: formData.religion || undefined,
+          educationLevel: formData.educationLevel || undefined,
+          majorLevel: formData.majorLevel || undefined,
+          itLevel: formData.itLevel || undefined,
+          languageLevel: formData.languageLevel || undefined,
+          politicsLevel: formData.politicsLevel || undefined
         })
       })
 
@@ -323,7 +391,23 @@ export function MemberManagement() {
       role: "MEMBER",
       unitId: "",
       address: "",
-      isActive: true
+      isActive: true,
+      dateOfBirth: "",
+      gender: "",
+      birthPlace: "",
+      permanentAddress: "",
+      militaryRank: "",
+      governmentPosition: "",
+      youthPosition: "Đoàn viên",
+      dateJoined: "",
+      partyJoinDate: "",
+      ethnicity: "",
+      religion: "",
+      educationLevel: "",
+      majorLevel: "",
+      itLevel: "",
+      languageLevel: "",
+      politicsLevel: ""
     })
   }
 
@@ -337,7 +421,23 @@ export function MemberManagement() {
       role: member.role,
       unitId: member.unitId || "",
       address: member.address || "",
-      isActive: member.isActive
+      isActive: member.isActive,
+      dateOfBirth: member.dateOfBirth ? member.dateOfBirth.split('T')[0] : "",
+      gender: member.gender || "",
+      birthPlace: member.birthPlace || "",
+      permanentAddress: member.permanentAddress || "",
+      militaryRank: member.militaryRank || "",
+      governmentPosition: member.governmentPosition || "",
+      youthPosition: member.youthPosition || "Đoàn viên",
+      dateJoined: member.dateJoined ? member.dateJoined.split('T')[0] : "",
+      partyJoinDate: member.partyJoinDate ? member.partyJoinDate.split('T')[0] : "",
+      ethnicity: member.ethnicity || "",
+      religion: member.religion || "",
+      educationLevel: member.educationLevel || "",
+      majorLevel: member.majorLevel || "",
+      itLevel: member.itLevel || "",
+      languageLevel: member.languageLevel || "",
+      politicsLevel: member.politicsLevel || ""
     })
     setShowEditDialog(true)
   }
@@ -357,7 +457,7 @@ export function MemberManagement() {
       case "ADMIN":
         return <Badge variant="destructive">Admin</Badge>
       case "LEADER":
-        return <Badge variant="default">Chi đoàn trưởng</Badge>
+        return <Badge variant="default">Bí thư</Badge>
       case "SECRETARY":
         return <Badge variant="secondary">Bí thư</Badge>
       default:
@@ -580,11 +680,15 @@ export function MemberManagement() {
 
       {/* Add Member Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Thêm thành viên mới</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            {/* Thông tin cơ bản */}
+            <div className="col-span-2">
+              <h3 className="font-semibold text-sm text-gray-700 mb-2">Thông tin cơ bản</h3>
+            </div>
             <div>
               <Label htmlFor="fullName">Họ và tên *</Label>
               <Input
@@ -624,20 +728,133 @@ export function MemberManagement() {
               />
             </div>
             <div>
-              <Label htmlFor="role">Vai trò</Label>
+              <Label htmlFor="dateOfBirth">Ngày sinh</Label>
+              <Input
+                id="dateOfBirth"
+                type="date"
+                value={formData.dateOfBirth}
+                onChange={(e) => setFormData({...formData, dateOfBirth: e.target.value})}
+              />
+            </div>
+            <div>
+              <Label htmlFor="gender">Giới tính</Label>
+              <Select value={formData.gender} onValueChange={(v) => setFormData({...formData, gender: v})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn giới tính" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Nam">Nam</SelectItem>
+                  <SelectItem value="Nữ">Nữ</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="birthPlace">Quê quán</Label>
+              <Input
+                id="birthPlace"
+                value={formData.birthPlace}
+                onChange={(e) => setFormData({...formData, birthPlace: e.target.value})}
+                placeholder="VD: Hà Nội"
+              />
+            </div>
+            <div>
+              <Label htmlFor="permanentAddress">Nơi thường trú</Label>
+              <Input
+                id="permanentAddress"
+                value={formData.permanentAddress}
+                onChange={(e) => setFormData({...formData, permanentAddress: e.target.value})}
+                placeholder="Địa chỉ thường trú"
+              />
+            </div>
+            <div>
+              <Label htmlFor="ethnicity">Dân tộc</Label>
+              <Input
+                id="ethnicity"
+                value={formData.ethnicity}
+                onChange={(e) => setFormData({...formData, ethnicity: e.target.value})}
+                placeholder="VD: Kinh"
+              />
+            </div>
+            <div>
+              <Label htmlFor="religion">Tôn giáo</Label>
+              <Input
+                id="religion"
+                value={formData.religion}
+                onChange={(e) => setFormData({...formData, religion: e.target.value})}
+                placeholder="VD: Không"
+              />
+            </div>
+
+            {/* Thông tin cấp bậc, chức vụ */}
+            <div className="col-span-2 mt-2">
+              <h3 className="font-semibold text-sm text-gray-700 mb-2">Cấp bậc & Chức vụ</h3>
+            </div>
+            <div>
+              <Label htmlFor="militaryRank">Cấp bậc</Label>
+              <Select value={formData.militaryRank} onValueChange={(v) => setFormData({...formData, militaryRank: v})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn cấp bậc" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Thiếu úy">Thiếu úy</SelectItem>
+                  <SelectItem value="Trung úy">Trung úy</SelectItem>
+                  <SelectItem value="Thượng úy">Thượng úy</SelectItem>
+                  <SelectItem value="Đại úy">Đại úy</SelectItem>
+                  <SelectItem value="Thiếu tá">Thiếu tá</SelectItem>
+                  <SelectItem value="Trung tá">Trung tá</SelectItem>
+                  <SelectItem value="Thiếu úy CN">Thiếu úy CN</SelectItem>
+                  <SelectItem value="Trung úy CN">Trung úy CN</SelectItem>
+                  <SelectItem value="Đại úy CN">Đại úy CN</SelectItem>
+                  <SelectItem value="Thiếu tá CN">Thiếu tá CN</SelectItem>
+                  <SelectItem value="Trung tá CN">Trung tá CN</SelectItem>
+                  <SelectItem value="Khác">Khác</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="governmentPosition">Chức vụ chính quyền</Label>
+              <Input
+                id="governmentPosition"
+                value={formData.governmentPosition}
+                onChange={(e) => setFormData({...formData, governmentPosition: e.target.value})}
+                placeholder="VD: Nhân viên"
+              />
+            </div>
+            <div>
+              <Label htmlFor="youthPosition">Chức vụ Đoàn</Label>
+              <Select value={formData.youthPosition} onValueChange={(v) => setFormData({...formData, youthPosition: v})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn chức vụ Đoàn" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Đoàn viên">Đoàn viên</SelectItem>
+                  <SelectItem value="Bí thư">Bí thư</SelectItem>
+                  <SelectItem value="Phó Bí thư">Phó Bí thư</SelectItem>
+                  <SelectItem value="Ủy viên">Ủy viên</SelectItem>
+                  <SelectItem value="Khác">Khác</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="role">Vai trò hệ thống</Label>
               <Select value={formData.role} onValueChange={(v) => setFormData({...formData, role: v})}>
                 <SelectTrigger>
                   <SelectValue placeholder="Chọn vai trò" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="MEMBER">Đoàn viên</SelectItem>
-                  <SelectItem value="LEADER">Chi đoàn trưởng</SelectItem>
+                  <SelectItem value="LEADER">Bí thư</SelectItem>
                   <SelectItem value="ADMIN">Admin</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Thông tin Đoàn, Đảng */}
+            <div className="col-span-2 mt-2">
+              <h3 className="font-semibold text-sm text-gray-700 mb-2">Thông tin Đoàn & Đảng</h3>
+            </div>
             <div>
-              <Label htmlFor="unit">Chi đoàn</Label>
+              <Label htmlFor="unit">Nơi sinh hoạt Đoàn (Chi đoàn)</Label>
               <Select value={formData.unitId} onValueChange={(v) => setFormData({...formData, unitId: v})}>
                 <SelectTrigger>
                   <SelectValue placeholder="Chọn chi đoàn" />
@@ -652,7 +869,109 @@ export function MemberManagement() {
               </Select>
             </div>
             <div>
-              <Label htmlFor="address">Địa chỉ</Label>
+              <Label htmlFor="dateJoined">Ngày vào Đoàn</Label>
+              <Input
+                id="dateJoined"
+                type="date"
+                value={formData.dateJoined}
+                onChange={(e) => setFormData({...formData, dateJoined: e.target.value})}
+              />
+            </div>
+            <div>
+              <Label htmlFor="partyJoinDate">Ngày vào Đảng</Label>
+              <Input
+                id="partyJoinDate"
+                type="date"
+                value={formData.partyJoinDate}
+                onChange={(e) => setFormData({...formData, partyJoinDate: e.target.value})}
+              />
+            </div>
+
+            {/* Trình độ */}
+            <div className="col-span-2 mt-2">
+              <h3 className="font-semibold text-sm text-gray-700 mb-2">Trình độ</h3>
+            </div>
+            <div>
+              <Label htmlFor="educationLevel">Trình độ văn hóa</Label>
+              <Select value={formData.educationLevel} onValueChange={(v) => setFormData({...formData, educationLevel: v})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn trình độ" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="12/12">12/12</SelectItem>
+                  <SelectItem value="11/12">11/12</SelectItem>
+                  <SelectItem value="10/12">10/12</SelectItem>
+                  <SelectItem value="9/12">9/12</SelectItem>
+                  <SelectItem value="Khác">Khác</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="majorLevel">Trình độ chuyên môn</Label>
+              <Select value={formData.majorLevel} onValueChange={(v) => setFormData({...formData, majorLevel: v})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn trình độ" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Tiến sỹ">Tiến sỹ</SelectItem>
+                  <SelectItem value="Thạc sỹ">Thạc sỹ</SelectItem>
+                  <SelectItem value="Kỹ sư">Kỹ sư</SelectItem>
+                  <SelectItem value="Cử nhân">Cử nhân</SelectItem>
+                  <SelectItem value="Cao đẳng">Cao đẳng</SelectItem>
+                  <SelectItem value="Trung cấp">Trung cấp</SelectItem>
+                  <SelectItem value="Khác">Khác</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="itLevel">Trình độ tin học</Label>
+              <Select value={formData.itLevel} onValueChange={(v) => setFormData({...formData, itLevel: v})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn trình độ" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="A">A</SelectItem>
+                  <SelectItem value="B">B</SelectItem>
+                  <SelectItem value="C">C</SelectItem>
+                  <SelectItem value="Khác">Khác</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="languageLevel">Trình độ ngoại ngữ</Label>
+              <Select value={formData.languageLevel} onValueChange={(v) => setFormData({...formData, languageLevel: v})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn trình độ" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="IELTS">IELTS</SelectItem>
+                  <SelectItem value="TOEIC">TOEIC</SelectItem>
+                  <SelectItem value="A1">A1</SelectItem>
+                  <SelectItem value="A2">A2</SelectItem>
+                  <SelectItem value="B1">B1</SelectItem>
+                  <SelectItem value="B2">B2</SelectItem>
+                  <SelectItem value="Khác">Khác</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="politicsLevel">Lý luận chính trị</Label>
+              <Select value={formData.politicsLevel} onValueChange={(v) => setFormData({...formData, politicsLevel: v})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn trình độ" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Sơ cấp">Sơ cấp</SelectItem>
+                  <SelectItem value="Trung cấp">Trung cấp</SelectItem>
+                  <SelectItem value="Cao cấp">Cao cấp</SelectItem>
+                  <SelectItem value="Khác">Khác</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Địa chỉ */}
+            <div className="col-span-2">
+              <Label htmlFor="address">Địa chỉ liên hệ</Label>
               <Textarea
                 id="address"
                 value={formData.address}
@@ -674,11 +993,15 @@ export function MemberManagement() {
 
       {/* Edit Member Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Chỉnh sửa thành viên</DialogTitle>
+            <DialogTitle>Chỉnh sửa thông tin đoàn viên</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            {/* Thông tin cơ bản */}
+            <div className="col-span-2">
+              <h3 className="font-semibold text-sm text-gray-700 mb-2">Thông tin cơ bản</h3>
+            </div>
             <div>
               <Label htmlFor="edit-name">Họ và tên</Label>
               <Input
@@ -696,7 +1019,6 @@ export function MemberManagement() {
                 disabled
                 className="bg-muted"
               />
-              <p className="text-xs text-muted-foreground mt-1">Email không thể thay đổi</p>
             </div>
             <div>
               <Label htmlFor="edit-phone">Số điện thoại</Label>
@@ -707,20 +1029,129 @@ export function MemberManagement() {
               />
             </div>
             <div>
-              <Label htmlFor="edit-role">Vai trò</Label>
+              <Label htmlFor="edit-dateOfBirth">Ngày sinh</Label>
+              <Input
+                id="edit-dateOfBirth"
+                type="date"
+                value={formData.dateOfBirth}
+                onChange={(e) => setFormData({...formData, dateOfBirth: e.target.value})}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-gender">Giới tính</Label>
+              <Select value={formData.gender} onValueChange={(v) => setFormData({...formData, gender: v})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn giới tính" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Nam">Nam</SelectItem>
+                  <SelectItem value="Nữ">Nữ</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="edit-birthPlace">Quê quán</Label>
+              <Input
+                id="edit-birthPlace"
+                value={formData.birthPlace}
+                onChange={(e) => setFormData({...formData, birthPlace: e.target.value})}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-permanentAddress">Nơi thường trú</Label>
+              <Input
+                id="edit-permanentAddress"
+                value={formData.permanentAddress}
+                onChange={(e) => setFormData({...formData, permanentAddress: e.target.value})}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-ethnicity">Dân tộc</Label>
+              <Input
+                id="edit-ethnicity"
+                value={formData.ethnicity}
+                onChange={(e) => setFormData({...formData, ethnicity: e.target.value})}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-religion">Tôn giáo</Label>
+              <Input
+                id="edit-religion"
+                value={formData.religion}
+                onChange={(e) => setFormData({...formData, religion: e.target.value})}
+              />
+            </div>
+
+            {/* Cấp bậc & Chức vụ */}
+            <div className="col-span-2 mt-2">
+              <h3 className="font-semibold text-sm text-gray-700 mb-2">Cấp bậc & Chức vụ</h3>
+            </div>
+            <div>
+              <Label htmlFor="edit-militaryRank">Cấp bậc</Label>
+              <Select value={formData.militaryRank} onValueChange={(v) => setFormData({...formData, militaryRank: v})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn cấp bậc" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Thiếu úy">Thiếu úy</SelectItem>
+                  <SelectItem value="Trung úy">Trung úy</SelectItem>
+                  <SelectItem value="Thượng úy">Thượng úy</SelectItem>
+                  <SelectItem value="Đại úy">Đại úy</SelectItem>
+                  <SelectItem value="Thiếu tá">Thiếu tá</SelectItem>
+                  <SelectItem value="Trung tá">Trung tá</SelectItem>
+                  <SelectItem value="Thiếu úy CN">Thiếu úy CN</SelectItem>
+                  <SelectItem value="Trung úy CN">Trung úy CN</SelectItem>
+                  <SelectItem value="Đại úy CN">Đại úy CN</SelectItem>
+                  <SelectItem value="Thiếu tá CN">Thiếu tá CN</SelectItem>
+                  <SelectItem value="Trung tá CN">Trung tá CN</SelectItem>
+                  <SelectItem value="Khác">Khác</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="edit-governmentPosition">Chức vụ chính quyền</Label>
+              <Input
+                id="edit-governmentPosition"
+                value={formData.governmentPosition}
+                onChange={(e) => setFormData({...formData, governmentPosition: e.target.value})}
+                placeholder="VD: Nhân viên"
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-youthPosition">Chức vụ Đoàn</Label>
+              <Select value={formData.youthPosition} onValueChange={(v) => setFormData({...formData, youthPosition: v})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn chức vụ Đoàn" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Đoàn viên">Đoàn viên</SelectItem>
+                  <SelectItem value="Bí thư">Bí thư</SelectItem>
+                  <SelectItem value="Phó Bí thư">Phó Bí thư</SelectItem>
+                  <SelectItem value="Ủy viên">Ủy viên</SelectItem>
+                  <SelectItem value="Khác">Khác</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="edit-role">Vai trò hệ thống</Label>
               <Select value={formData.role} onValueChange={(v) => setFormData({...formData, role: v})}>
                 <SelectTrigger>
                   <SelectValue placeholder="Chọn vai trò" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="MEMBER">Đoàn viên</SelectItem>
-                  <SelectItem value="LEADER">Chi đoàn trưởng</SelectItem>
+                  <SelectItem value="LEADER">Bí thư</SelectItem>
                   <SelectItem value="ADMIN">Admin</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Thông tin Đoàn & Đảng */}
+            <div className="col-span-2 mt-2">
+              <h3 className="font-semibold text-sm text-gray-700 mb-2">Thông tin Đoàn & Đảng</h3>
+            </div>
             <div>
-              <Label htmlFor="edit-unit">Chi đoàn</Label>
+              <Label htmlFor="edit-unit">Nơi sinh hoạt Đoàn (Chi đoàn)</Label>
               <Select value={formData.unitId} onValueChange={(v) => setFormData({...formData, unitId: v})}>
                 <SelectTrigger>
                   <SelectValue placeholder="Chọn chi đoàn" />
@@ -735,14 +1166,116 @@ export function MemberManagement() {
               </Select>
             </div>
             <div>
-              <Label htmlFor="edit-address">Địa chỉ</Label>
+              <Label htmlFor="edit-dateJoined">Ngày vào Đoàn</Label>
+              <Input
+                id="edit-dateJoined"
+                type="date"
+                value={formData.dateJoined}
+                onChange={(e) => setFormData({...formData, dateJoined: e.target.value})}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-partyJoinDate">Ngày vào Đảng</Label>
+              <Input
+                id="edit-partyJoinDate"
+                type="date"
+                value={formData.partyJoinDate}
+                onChange={(e) => setFormData({...formData, partyJoinDate: e.target.value})}
+              />
+            </div>
+
+            {/* Trình độ */}
+            <div className="col-span-2 mt-2">
+              <h3 className="font-semibold text-sm text-gray-700 mb-2">Trình độ</h3>
+            </div>
+            <div>
+              <Label htmlFor="edit-educationLevel">Trình độ văn hóa</Label>
+              <Select value={formData.educationLevel} onValueChange={(v) => setFormData({...formData, educationLevel: v})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn trình độ" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="12/12">12/12</SelectItem>
+                  <SelectItem value="11/12">11/12</SelectItem>
+                  <SelectItem value="10/12">10/12</SelectItem>
+                  <SelectItem value="9/12">9/12</SelectItem>
+                  <SelectItem value="Khác">Khác</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="edit-majorLevel">Trình độ chuyên môn</Label>
+              <Select value={formData.majorLevel} onValueChange={(v) => setFormData({...formData, majorLevel: v})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn trình độ" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Tiến sỹ">Tiến sỹ</SelectItem>
+                  <SelectItem value="Thạc sỹ">Thạc sỹ</SelectItem>
+                  <SelectItem value="Kỹ sư">Kỹ sư</SelectItem>
+                  <SelectItem value="Cử nhân">Cử nhân</SelectItem>
+                  <SelectItem value="Cao đẳng">Cao đẳng</SelectItem>
+                  <SelectItem value="Trung cấp">Trung cấp</SelectItem>
+                  <SelectItem value="Khác">Khác</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="edit-itLevel">Trình độ tin học</Label>
+              <Select value={formData.itLevel} onValueChange={(v) => setFormData({...formData, itLevel: v})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn trình độ" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="A">A</SelectItem>
+                  <SelectItem value="B">B</SelectItem>
+                  <SelectItem value="C">C</SelectItem>
+                  <SelectItem value="Khác">Khác</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="edit-languageLevel">Trình độ ngoại ngữ</Label>
+              <Select value={formData.languageLevel} onValueChange={(v) => setFormData({...formData, languageLevel: v})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn trình độ" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="IELTS">IELTS</SelectItem>
+                  <SelectItem value="TOEIC">TOEIC</SelectItem>
+                  <SelectItem value="A1">A1</SelectItem>
+                  <SelectItem value="A2">A2</SelectItem>
+                  <SelectItem value="B1">B1</SelectItem>
+                  <SelectItem value="B2">B2</SelectItem>
+                  <SelectItem value="Khác">Khác</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="edit-politicsLevel">Lý luận chính trị</Label>
+              <Select value={formData.politicsLevel} onValueChange={(v) => setFormData({...formData, politicsLevel: v})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn trình độ" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Sơ cấp">Sơ cấp</SelectItem>
+                  <SelectItem value="Trung cấp">Trung cấp</SelectItem>
+                  <SelectItem value="Cao cấp">Cao cấp</SelectItem>
+                  <SelectItem value="Khác">Khác</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Địa chỉ & Trạng thái */}
+            <div className="col-span-2">
+              <Label htmlFor="edit-address">Địa chỉ liên hệ</Label>
               <Textarea
                 id="edit-address"
                 value={formData.address}
                 onChange={(e) => setFormData({...formData, address: e.target.value})}
               />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="col-span-2 flex items-center gap-2">
               <input
                 type="checkbox"
                 id="edit-active"
