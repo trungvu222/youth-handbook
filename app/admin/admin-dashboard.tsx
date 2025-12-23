@@ -304,7 +304,7 @@ export default function AdminDashboard() {
           <div>
             <h1 className="text-3xl font-bold">HỆ THỐNG QUẢN LÝ ĐOÀN VIÊN TRUNG ĐOÀN 196</h1>
             <p className="text-red-100 mt-2">
-              Chào mừng, {currentUser?.fullName} - Ban chấp hành Đoàn Cơ sở
+              Chào mừng, {currentUser?.fullName} - {currentUser?.youthPosition || 'Ban chấp hành Đoàn Cơ sở'}
             </p>
           </div>
           <div className="text-right flex items-center gap-4">
@@ -635,7 +635,7 @@ export default function AdminDashboard() {
                   onClick={() => setActiveTab('profile')}
                 >
                   <p className="font-medium text-gray-900">{currentUser?.fullName}</p>
-                  <p className="text-sm text-gray-500">Ban chấp hành Đoàn Cơ sở</p>
+                  <p className="text-sm text-gray-500">{currentUser?.youthPosition || 'Ban chấp hành Đoàn Cơ sở'}</p>
                 </div>
                 <div 
                   className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-red-300 transition-all"

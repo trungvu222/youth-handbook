@@ -28,7 +28,8 @@ export function AdminProfile({ currentUser, onUpdate }: AdminProfileProps) {
     email: "",
     phone: "",
     address: "",
-    dateOfBirth: ""
+    dateOfBirth: "",
+    youthPosition: ""
   })
   
   const [passwordData, setPasswordData] = useState({
@@ -44,7 +45,8 @@ export function AdminProfile({ currentUser, onUpdate }: AdminProfileProps) {
         email: currentUser.email || "",
         phone: currentUser.phone || "",
         address: currentUser.address || "",
-        dateOfBirth: currentUser.dateOfBirth ? new Date(currentUser.dateOfBirth).toISOString().split('T')[0] : ""
+        dateOfBirth: currentUser.dateOfBirth ? new Date(currentUser.dateOfBirth).toISOString().split('T')[0] : "",
+        youthPosition: currentUser.youthPosition || ""
       })
     }
   }, [currentUser])
@@ -72,7 +74,8 @@ export function AdminProfile({ currentUser, onUpdate }: AdminProfileProps) {
           fullName: formData.fullName,
           phone: formData.phone || undefined,
           address: formData.address || undefined,
-          dateOfBirth: formData.dateOfBirth || undefined
+          dateOfBirth: formData.dateOfBirth || undefined,
+          youthPosition: formData.youthPosition || undefined
         })
       })
 
@@ -86,6 +89,7 @@ export function AdminProfile({ currentUser, onUpdate }: AdminProfileProps) {
           userData.phone = formData.phone
           userData.address = formData.address
           userData.dateOfBirth = formData.dateOfBirth
+          userData.youthPosition = formData.youthPosition
           localStorage.setItem("currentUser", JSON.stringify(userData))
         }
         
@@ -267,6 +271,19 @@ export function AdminProfile({ currentUser, onUpdate }: AdminProfileProps) {
                   value={formData.dateOfBirth}
                   onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
                   disabled={!editMode}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="youthPosition">
+                  <User className="h-4 w-4 inline mr-2" />
+                  Chức vụ Đoàn
+                </Label>
+                <Input
+                  id="youthPosition"
+                  value={formData.youthPosition}
+                  onChange={(e) => setFormData({ ...formData, youthPosition: e.target.value })}
+                  disabled={!editMode}
+                  placeholder="VD: Ban chấp hành Đoàn Cơ sở"
                 />
               </div>
               <div className="space-y-2 md:col-span-2">
