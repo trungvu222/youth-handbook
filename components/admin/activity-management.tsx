@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Calendar, Plus, Users, Edit, Trash2, Eye, RefreshCw, MapPin, Clock } from "lucide-react"
+import { Calendar, Plus, Users, Edit, Trash2, Eye, RefreshCw, MapPin, Clock, AlertTriangle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL || "https://youth-handbook.onrender.com";
@@ -36,6 +36,7 @@ export default function ActivityManagement() {
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showDetailDialog, setShowDetailDialog] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null)
   const [filterStatus, setFilterStatus] = useState("all")
 
@@ -108,20 +109,41 @@ export default function ActivityManagement() {
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Xác nhận xóa?")) return
+  const openDeleteDialog = (activity: Activity) => {
+    setSelectedActivity(activity)
+    setShowDeleteDialog(true)
+  }
+
+  const handleDelete = async () => {
+    if (!selectedActivity) return
+    
     try {
       const token = localStorage.getItem("accessToken")
-      const res = await fetch(`${API_URL}/api/activities/${id}`, {
+      const res = await fetch(`${API_URL}/api/activities/${selectedActivity.id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` }
       })
       if (res.ok) {
-        toast({ title: "Đã xóa" })
+        toast({ 
+          title: "Thành công",
+          description: "Đã xóa sinh hoạt"
+        })
+        setShowDeleteDialog(false)
+        setSelectedActivity(null)
         fetchActivities()
+      } else {
+        toast({ 
+          title: "Lỗi", 
+          description: "Không thể xóa sinh hoạt",
+          variant: "destructive" 
+        })
       }
     } catch (error) {
-      toast({ title: "Lỗi", variant: "destructive" })
+      toast({ 
+        title: "Lỗi", 
+        description: "Có lỗi xảy ra",
+        variant: "destructive" 
+      })
     }
   }
 
@@ -190,7 +212,7 @@ export default function ActivityManagement() {
                 </div>
                 <div className="flex gap-1">
                   <Button variant="ghost" size="icon" onClick={() => { setSelectedActivity(activity); setShowDetailDialog(true) }}><Eye className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" className="text-red-600" onClick={() => handleDelete(activity.id)}><Trash2 className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" className="text-red-600" onClick={() => openDeleteDialog(activity)}><Trash2 className="h-4 w-4" /></Button>
                 </div>
               </div>
             </CardContent>
@@ -249,6 +271,53 @@ export default function ActivityManagement() {
               <div><Label className="text-muted-foreground">Điểm thưởng</Label><p className="font-bold text-lg">{selectedActivity.pointsReward} điểm</p></div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Xóa sinh hoạt
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {selectedActivity && (
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="font-semibold text-sm mb-1">Hoạt động:</p>
+                <p className="font-medium">{selectedActivity.title}</p>
+                {selectedActivity.startTime && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    <Clock className="h-3 w-3 inline mr-1" />
+                    {new Date(selectedActivity.startTime).toLocaleString("vi-VN")}
+                  </p>
+                )}
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              <p className="font-medium">Bạn có chắc chắn muốn xóa sinh hoạt?</p>
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm font-medium text-red-900 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  Lưu ý: Xóa xong không thể khôi phục lại được
+                </p>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowDeleteDialog(false)
+              setSelectedActivity(null)
+            }}>
+              Hủy
+            </Button>
+            <Button variant="destructive" onClick={handleDelete}>
+              Xóa
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

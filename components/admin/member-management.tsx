@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Search, Filter, Eye, Edit, Trash2, Plus, Users, UserCheck, UserX, RefreshCw, AlertTriangle } from "lucide-react"
+import { Search, Filter, Eye, Edit, Trash2, Plus, Users, UserCheck, UserX, RefreshCw, AlertTriangle, Key } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 interface Unit {
@@ -67,7 +67,12 @@ export function MemberManagement() {
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [showDetailDialog, setShowDetailDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false)
   const [selectedMember, setSelectedMember] = useState<Member | null>(null)
+  
+  // Password reset data
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   
   // Form data
   const [formData, setFormData] = useState({
@@ -382,6 +387,73 @@ export function MemberManagement() {
     }
   }
 
+  // Reset password for member (Admin only)
+  const handleResetPassword = async () => {
+    if (!selectedMember) return
+
+    if (!newPassword || newPassword.length < 6) {
+      toast({
+        title: "Lỗi",
+        description: "Mật khẩu mới phải có ít nhất 6 ký tự",
+        variant: "destructive"
+      })
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Lỗi",
+        description: "Mật khẩu xác nhận không khớp",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setLoading(true)
+    try {
+      const token = localStorage.getItem("accessToken")
+      const res = await fetch(`${API_URL}/api/users/${selectedMember.id}/password`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          newPassword: newPassword
+        })
+      })
+
+      if (res.ok) {
+        toast({
+          title: "Thành công",
+          description: `Đã đổi mật khẩu cho ${selectedMember.fullName}`
+        })
+        setShowPasswordDialog(false)
+        setNewPassword("")
+        setConfirmPassword("")
+        setSelectedMember(null)
+      } else {
+        const error = await res.json()
+        throw new Error(error.message || "Không thể đổi mật khẩu")
+      }
+    } catch (error: any) {
+      toast({
+        title: "Lỗi",
+        description: error.message || "Có lỗi xảy ra",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const openPasswordDialog = (member: Member) => {
+    setSelectedMember(member)
+    setNewPassword("")
+    setConfirmPassword("")
+    setShowPasswordDialog(true)
+  }
+
   const resetForm = () => {
     setFormData({
       fullName: "",
@@ -657,6 +729,15 @@ export function MemberManagement() {
                             title="Chỉnh sửa"
                           >
                             <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => openPasswordDialog(member)}
+                            title="Đổi mật khẩu"
+                            className="text-orange-600 hover:text-orange-700"
+                          >
+                            <Key className="h-4 w-4" />
                           </Button>
                           <Button 
                             variant="ghost" 
@@ -1361,6 +1442,76 @@ export function MemberManagement() {
             }}>
               <Edit className="h-4 w-4 mr-2" />
               Chỉnh sửa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Password Reset Dialog */}
+      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Key className="h-5 w-5 text-orange-600" />
+              Đổi mật khẩu
+            </DialogTitle>
+          </DialogHeader>
+          {selectedMember && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={selectedMember.avatarUrl} />
+                  <AvatarFallback>{selectedMember.fullName.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-semibold">{selectedMember.fullName}</p>
+                  <p className="text-sm text-muted-foreground">{selectedMember.email}</p>
+                </div>
+              </div>
+              
+              <div className="space-y-4 pt-2">
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword">Mật khẩu mới *</Label>
+                  <Input
+                    id="newPassword"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Xác nhận mật khẩu *</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Nhập lại mật khẩu mới"
+                  />
+                </div>
+                <div className="text-sm text-muted-foreground bg-blue-50 p-3 rounded-lg">
+                  <p className="font-medium text-blue-900 mb-1">Lưu ý:</p>
+                  <ul className="list-disc list-inside space-y-1 text-blue-800">
+                    <li>Mật khẩu phải có ít nhất 6 ký tự</li>
+                    <li>Đoàn viên sẽ sử dụng email <strong>{selectedMember.email}</strong> để đăng nhập</li>
+                    <li>Hãy thông báo mật khẩu mới cho đoàn viên</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setShowPasswordDialog(false)
+              setNewPassword("")
+              setConfirmPassword("")
+            }}>
+              Hủy
+            </Button>
+            <Button onClick={handleResetPassword} disabled={loading}>
+              {loading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Key className="h-4 w-4 mr-2" />}
+              Lưu thay đổi
             </Button>
           </DialogFooter>
         </DialogContent>

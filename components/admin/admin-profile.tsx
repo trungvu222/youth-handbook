@@ -315,7 +315,8 @@ export function AdminProfile({ currentUser, onUpdate }: AdminProfileProps) {
                     email: currentUser?.email || "",
                     phone: currentUser?.phone || "",
                     address: currentUser?.address || "",
-                    dateOfBirth: currentUser?.dateOfBirth ? new Date(currentUser.dateOfBirth).toISOString().split('T')[0] : ""
+                    dateOfBirth: currentUser?.dateOfBirth ? new Date(currentUser.dateOfBirth).toISOString().split('T')[0] : "",
+                    youthPosition: currentUser?.youthPosition || ""
                   })
                 }}>
                   Hủy

@@ -61,6 +61,10 @@ export default function UnitManagement() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null)
   
+  // Transfer members state for delete
+  const [transferUnitId, setTransferUnitId] = useState<string>("")
+  const [membersToTransfer, setMembersToTransfer] = useState<any[]>([])
+  
   // Form data
   const [formData, setFormData] = useState({
     name: "",
@@ -243,6 +247,50 @@ export default function UnitManagement() {
   const handleDeleteUnit = async () => {
     if (!selectedUnit) return
 
+    // Check if unit has members
+    if (selectedUnit.memberCount > 0) {
+      if (!transferUnitId) {
+        toast({
+          title: "Không thể xóa",
+          description: "Bạn cần chuyển thành viên sang chi đoàn khác trước khi xóa.",
+          variant: "destructive"
+        })
+        return
+      }
+
+      // Transfer members first
+      try {
+        const token = localStorage.getItem("accessToken")
+        
+        // Transfer all members to new unit
+        for (const member of membersToTransfer) {
+          await fetch(`${API_URL}/api/users/${member.id}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              unitId: transferUnitId
+            })
+          })
+        }
+
+        toast({
+          title: "Thành công",
+          description: `Đã chuyển ${membersToTransfer.length} thành viên sang chi đoàn khác.`
+        })
+      } catch (error) {
+        console.error("Error transferring members:", error)
+        toast({
+          title: "Lỗi",
+          description: "Không thể chuyển thành viên. Vui lòng thử lại.",
+          variant: "destructive"
+        })
+        return
+      }
+    }
+
     try {
       const token = localStorage.getItem("accessToken")
       const res = await fetch(`${API_URL}/api/units/${selectedUnit.id}`, {
@@ -259,6 +307,8 @@ export default function UnitManagement() {
         })
         setShowDeleteDialog(false)
         setSelectedUnit(null)
+        setTransferUnitId("")
+        setMembersToTransfer([])
         fetchData()
       } else {
         const error = await res.json()
@@ -318,8 +368,28 @@ export default function UnitManagement() {
     }
   }
 
-  const openDeleteDialog = (unit: Unit) => {
+  const openDeleteDialog = async (unit: Unit) => {
     setSelectedUnit(unit)
+    setTransferUnitId("")
+    
+    // Fetch members of this unit
+    if (unit.memberCount > 0) {
+      try {
+        const token = localStorage.getItem("accessToken")
+        const res = await fetch(`${API_URL}/api/users?unitId=${unit.id}`, {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setMembersToTransfer(data.users || [])
+        }
+      } catch (error) {
+        console.error("Error fetching members:", error)
+      }
+    }
+    
     setShowDeleteDialog(true)
   }
 
@@ -707,27 +777,91 @@ export default function UnitManagement() {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-5 w-5" />
               Xác nhận xóa
             </DialogTitle>
           </DialogHeader>
-          <p>
-            Bạn có chắc chắn muốn xóa chi đoàn <strong>{selectedUnit?.name}</strong>?
+          <div className="space-y-4">
+            <p>
+              Bạn có chắc chắn muốn xóa chi đoàn <strong>{selectedUnit?.name}</strong>?
+            </p>
+            
             {selectedUnit && selectedUnit.memberCount > 0 && (
-              <span className="block text-destructive mt-2">
-                Lưu ý: Chi đoàn này có {selectedUnit.memberCount} thành viên. Bạn cần chuyển họ sang chi đoàn khác trước khi xóa.
-              </span>
+              <div className="space-y-3">
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm font-medium text-red-900 mb-1">
+                    ⚠️ Chi đoàn này có {selectedUnit.memberCount} thành viên
+                  </p>
+                  <p className="text-sm text-red-700">
+                    Bạn cần chuyển họ sang chi đoàn khác trước khi xóa.
+                  </p>
+                </div>
+
+                {membersToTransfer.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Danh sách thành viên ({membersToTransfer.length}):</Label>
+                    <div className="max-h-32 overflow-y-auto border rounded-md p-2 bg-muted/50 space-y-1">
+                      {membersToTransfer.map(member => (
+                        <div key={member.id} className="text-sm flex items-center gap-2 p-1">
+                          <Users className="h-3 w-3 text-muted-foreground" />
+                          <span>{member.fullName}</span>
+                          <span className="text-xs text-muted-foreground">({member.email})</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="transferUnit" className="text-sm font-medium">
+                    Chuyển sang chi đoàn: <span className="text-red-600">*</span>
+                  </Label>
+                  <Select value={transferUnitId} onValueChange={setTransferUnitId}>
+                    <SelectTrigger id="transferUnit">
+                      <SelectValue placeholder="Chọn chi đoàn đích" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {units
+                        .filter(u => u.id !== selectedUnit.id && u.isActive)
+                        .map(unit => (
+                          <SelectItem key={unit.id} value={unit.id.toString()}>
+                            {unit.name} ({unit.memberCount || 0} thành viên)
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  {!transferUnitId && (
+                    <p className="text-xs text-muted-foreground">
+                      Vui lòng chọn chi đoàn để chuyển thành viên trước khi xóa
+                    </p>
+                  )}
+                </div>
+              </div>
             )}
-          </p>
+            
+            {selectedUnit && selectedUnit.memberCount === 0 && (
+              <p className="text-sm text-muted-foreground">
+                Hành động này không thể hoàn tác.
+              </p>
+            )}
+          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+            <Button variant="outline" onClick={() => {
+              setShowDeleteDialog(false)
+              setTransferUnitId("")
+              setMembersToTransfer([])
+            }}>
               Hủy
             </Button>
-            <Button variant="destructive" onClick={handleDeleteUnit}>
-              Xóa
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteUnit}
+              disabled={!!(selectedUnit && selectedUnit.memberCount > 0 && !transferUnitId)}
+            >
+              {selectedUnit && selectedUnit.memberCount > 0 ? "Chuyển & Xóa" : "Xóa"}
             </Button>
           </DialogFooter>
         </DialogContent>
