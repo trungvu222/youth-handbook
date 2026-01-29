@@ -1,0 +1,911 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  fullName     String   @map("full_name")
+  phone        String?
+  role         UserRole @default(MEMBER)
+  unitId       String?  @map("unit_id")
+  points       Int      @default(0)
+  avatarUrl    String?  @map("avatar_url")
+  isActive     Boolean  @default(true) @map("is_active")
+  
+  // Extended profile fields for Youth Handbook
+  dateOfBirth     DateTime? @map("date_of_birth")
+  gender          String?   // Giới tính
+  birthPlace      String?   @map("birth_place") // Quê quán
+  hometown        String?   // Quê quán (alias)
+  permanentAddress String?  @map("permanent_address") // Nơi thường trú
+  address         String?
+  province        String?
+  district        String?
+  ward            String?
+  title           String?   // Chức danh
+  dateJoined      DateTime? @map("date_joined") // Ngày vào Đoàn
+  partyJoinDate   DateTime? @map("party_join_date") // Ngày vào Đảng
+  workPlace       String?   @map("work_place") // Nơi sinh hoạt Đoàn
+  ethnicity       String?   // Dân tộc
+  religion        String?   // Tôn giáo
+  
+  // Military & Government position
+  militaryRank    String?   @map("military_rank") // Cấp bậc (Thiếu úy, Trung úy, etc.)
+  governmentPosition String? @map("government_position") // Chức vụ chính quyền
+  
+  // Education & Skills levels
+  educationLevel  String?   @map("education_level") // Trình độ văn hóa (12/12)
+  majorLevel      String?   @map("major_level") // Trình độ chuyên môn (Kỹ sư, Cử nhân, Thạc sỹ, Tiến sỹ)
+  itLevel         String?   @map("it_level") // Trình độ tin học (A, B, C)
+  languageLevel   String?   @map("language_level") // Trình độ ngoại ngữ (IELTS, TOEIC, A1, A2, B1, B2)
+  politicsLevel   String?   @map("politics_level") // Trình độ lý luận chính trị (Sơ cấp, trung cấp, cao cấp)
+  
+  // Youth Union specific
+  youthPosition   String?   @map("youth_position") // Chức vụ Đoàn (Đoàn viên, Bí thư, Phó Bí thư, Ủy viên)
+  
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  unit                     Unit?                      @relation("UnitMembers", fields: [unitId], references: [id])
+  ledUnits                 Unit[]                     @relation("UnitLeader")
+  organizedActivities      Activity[]                 @relation("ActivityOrganizer")
+  hostedActivities         Activity[]                 @relation("ActivityHost")
+  managedActivities        Activity[]                 @relation("ActivityManager")
+  participatedActivities   ActivityParticipant[]
+  createdSurveys           Survey[]                   @relation("SurveyCreator")
+  surveyResponses          SurveyResponse[]
+  posts                    Post[]
+  pointsHistory            PointsHistory[]
+  quizAttempts             QuizAttempt[]
+  activityFeedbacks        ActivityFeedback[]
+  respondedFeedbacks       ActivityFeedback[]         @relation("FeedbackResponder")
+  activityNotifications    ActivityNotification[]
+  activitySurveyResponses  ActivitySurveyResponse[]
+  
+  // Study System Relations
+  studyProgress            UserStudyProgress[]
+  materialProgress         UserMaterialProgress[]
+  userQuizAttempts         UserQuizAttempt[]
+  
+  // Document System Relations (Module 3.5)
+  authoredDocuments        Document[]              @relation("DocumentAuthor")
+  documentViews            DocumentView[]
+  documentFavorites        UserDocumentFavorite[]
+  
+  // Exam System Relations (Module 3.6)
+  createdExams             Exam[]                  @relation("ExamCreator")
+  examAttempts             ExamAttempt[]
+
+  // Rating System Relations (Module 3.7)
+  createdRatingPeriods     RatingPeriod[]          @relation("RatingPeriodCreator")
+  selfRatings              SelfRating[]            @relation("UserSelfRatings")
+  reviewedSelfRatings      SelfRating[]            @relation("ReviewerSelfRatings")
+  
+  // Suggestion System Relations (Module 3.8)
+  suggestions              Suggestion[]            @relation("UserSuggestions")
+  suggestionResponses      SuggestionResponse[]    @relation("UserSuggestionResponses")
+
+  @@map("users")
+}
+
+model Unit {
+  id           String   @id @default(cuid())
+  name         String
+  leaderId     String?  @map("leader_id")
+  parentUnitId String?  @map("parent_unit_id")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relations
+  leader       User?        @relation("UnitLeader", fields: [leaderId], references: [id])
+  members      User[]       @relation("UnitMembers")
+  parentUnit   Unit?        @relation("UnitHierarchy", fields: [parentUnitId], references: [id])
+  childUnits   Unit[]       @relation("UnitHierarchy")
+  activities   Activity[]
+  surveys      Survey[]
+  posts        Post[]
+  documents    Document[]   // Module 3.5
+  exams        Exam[]       // Module 3.6
+
+  @@map("units")
+}
+
+model Activity {
+  id           String         @id @default(cuid())
+  title        String
+  description  String?
+  type         ActivityType
+  organizerId  String         @map("organizer_id")
+  unitId       String?        @map("unit_id")
+  startTime    DateTime       @map("start_time")
+  endTime      DateTime?      @map("end_time")
+  location     String?
+  pointsReward Int            @default(0) @map("points_reward")
+  qrCode       String?        @unique @map("qr_code")
+  status       ActivityStatus @default(DRAFT)
+  
+  // Extended fields for Module 3.3 - Enhanced Activity Management
+  activityCode     String?   @map("activity_code") // Mã hoạt động
+  hostId           String?   @map("host_id")       // Chủ trì
+  managerId        String?   @map("manager_id")    // Phụ trách  
+  tasks            Json?     // Công việc (JSON array)
+  materials        String?   // Vật chất cần thiết
+  budget           Float?    // Ngân sách
+  conclusion       String?   // Kết luận cuộc họp
+  hostUnit         String?   @map("host_unit") // Đơn vị chủ trì
+  attachments      Json?     // Tệp đính kèm (JSON array of file paths)
+  
+  // Extended fields for Youth Union activities  
+  maxParticipants    Int?      @map("max_participants")
+  checkInStartTime   DateTime? @map("checkin_start_time") // Thời gian bắt đầu cho phép điểm danh
+  checkInEndTime     DateTime? @map("checkin_end_time")   // Thời gian kết thúc điểm danh
+  requiresLocation   Boolean   @default(false) @map("requires_location") // Có yêu cầu GPS không
+  reminderSent       Boolean   @default(false) @map("reminder_sent")     // Đã gửi nhắc lịch chưa
+  allowFeedback      Boolean   @default(true)  @map("allow_feedback")    // Cho phép gửi ý kiến
+  requiresPostSurvey Boolean   @default(false) @map("requires_post_survey") // Yêu cầu khảo sát sau hoạt động
+  
+  // Auto-scoring rules
+  onTimePoints       Int       @default(15) @map("ontime_points")       // Điểm đúng giờ  
+  latePoints         Int       @default(5)  @map("late_points")         // Điểm trễ
+  missedPoints       Int       @default(-10) @map("missed_points")       // Điểm vắng mặt
+  feedbackPoints     Int       @default(5)  @map("feedback_points")     // Điểm góp ý
+  
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  organizer    User                    @relation("ActivityOrganizer", fields: [organizerId], references: [id])
+  host         User?                   @relation("ActivityHost", fields: [hostId], references: [id])
+  manager      User?                   @relation("ActivityManager", fields: [managerId], references: [id])
+  unit         Unit?                   @relation(fields: [unitId], references: [id])
+  participants ActivityParticipant[]
+  pointsHistory PointsHistory[]
+  feedbacks    ActivityFeedback[]
+  notifications ActivityNotification[]
+  surveys      ActivitySurvey[]
+
+  @@map("activities")
+}
+
+model ActivityParticipant {
+  id          String                    @id @default(cuid())
+  activityId  String                    @map("activity_id")
+  userId      String                    @map("user_id")
+  status      ActivityParticipantStatus @default(REGISTERED)
+  checkInTime DateTime?                 @map("check_in_time")
+  qrData      String?                   @map("qr_data")
+  latitude    Float?
+  longitude   Float?
+  pointsEarned Int                      @default(0) @map("points_earned")
+
+  // Relations
+  activity Activity @relation(fields: [activityId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@unique([activityId, userId])
+  @@map("activity_participants")
+}
+
+model Survey {
+  id           String          @id @default(cuid())
+  title        String
+  description  String?
+  creatorId    String          @map("creator_id")
+  targetUnitId String?         @map("target_unit_id")
+  startDate    DateTime        @map("start_date")
+  endDate      DateTime        @map("end_date")
+  isAnonymous  Boolean         @default(false) @map("is_anonymous")
+  status       SurveyStatus    @default(DRAFT)
+  questions    String          // JSON string
+  createdAt    DateTime        @default(now()) @map("created_at")
+
+  // Relations
+  creator       User             @relation("SurveyCreator", fields: [creatorId], references: [id])
+  targetUnit    Unit?            @relation(fields: [targetUnitId], references: [id])
+  responses     SurveyResponse[]
+
+  @@map("surveys")
+}
+
+model SurveyResponse {
+  id          String   @id @default(cuid())
+  surveyId    String   @map("survey_id")
+  userId      String   @map("user_id")
+  answers     String   // JSON string
+  submittedAt DateTime @default(now()) @map("submitted_at")
+
+  // Relations
+  survey Survey @relation(fields: [surveyId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@unique([surveyId, userId])
+  @@map("survey_responses")
+}
+
+model Post {
+  id          String     @id @default(cuid())
+  title       String
+  content     String
+  authorId    String     @map("author_id")
+  unitId      String?    @map("unit_id")
+  status      PostStatus @default(DRAFT)
+  postType    PostType   @map("post_type")
+  publishedAt DateTime?  @map("published_at")
+  createdAt   DateTime   @default(now()) @map("created_at")
+
+  // Relations
+  author User  @relation(fields: [authorId], references: [id])
+  unit   Unit? @relation(fields: [unitId], references: [id])
+
+  @@map("posts")
+}
+
+model PointsHistory {
+  id         String           @id @default(cuid())
+  userId     String           @map("user_id")
+  activityId String?          @map("activity_id")
+  points     Int
+  reason     String
+  type       PointsChangeType
+  createdAt  DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  user     User      @relation(fields: [userId], references: [id])
+  activity Activity? @relation(fields: [activityId], references: [id])
+
+  @@map("points_history")
+}
+
+
+model StudyMaterial {
+  id            String      @id @default(cuid())
+  title         String
+  content       String
+  category      String
+  quizQuestions String?     @map("quiz_questions") // JSON string
+  pointsReward  Int         @default(0) @map("points_reward")
+  accessLevel   AccessLevel @map("access_level")
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  // Relations
+  quizAttempts QuizAttempt[]
+
+  @@map("study_materials")
+}
+
+model QuizAttempt {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  materialId   String   @map("material_id")
+  score        Int
+  answers      String   // JSON string
+  timeTaken    Int      @map("time_taken") // in seconds
+  completedAt  DateTime @default(now()) @map("completed_at")
+
+  // Relations
+  user     User          @relation(fields: [userId], references: [id])
+  material StudyMaterial @relation(fields: [materialId], references: [id])
+
+  @@map("quiz_attempts")
+}
+
+model ActivityFeedback {
+  id          String              @id @default(cuid())
+  activityId  String              @map("activity_id")
+  userId      String              @map("user_id")
+  content     String
+  type        ActivityFeedbackType @default(SUGGESTION)
+  status      FeedbackStatus       @default(PENDING)
+  response    String?              // Phản hồi từ admin/leader
+  responderId String?              @map("responder_id")
+  respondedAt DateTime?            @map("responded_at")
+  isAnonymous Boolean              @default(false) @map("is_anonymous")
+  createdAt   DateTime             @default(now()) @map("created_at")
+
+  // Relations
+  activity    Activity @relation(fields: [activityId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
+  responder   User?    @relation("FeedbackResponder", fields: [responderId], references: [id])
+
+  @@map("activity_feedbacks")
+}
+
+model ActivityNotification {
+  id         String              @id @default(cuid())
+  activityId String              @map("activity_id")
+  userId     String              @map("user_id")
+  type       NotificationType
+  title      String
+  message    String
+  isRead     Boolean             @default(false) @map("is_read")
+  scheduledAt DateTime?          @map("scheduled_at") // Thời gian gửi (cho reminder)
+  sentAt     DateTime?           @map("sent_at")
+  createdAt  DateTime            @default(now()) @map("created_at")
+
+  // Relations
+  activity   Activity @relation(fields: [activityId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@map("activity_notifications")
+}
+
+model ActivitySurvey {
+  id          String   @id @default(cuid())
+  activityId  String   @map("activity_id")
+  title       String
+  description String?
+  questions   Json     // Array of survey questions
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  activity    Activity               @relation(fields: [activityId], references: [id])
+  responses   ActivitySurveyResponse[]
+
+  @@map("activity_surveys")
+}
+
+model ActivitySurveyResponse {
+  id        String   @id @default(cuid())
+  surveyId  String   @map("survey_id")
+  userId    String   @map("user_id")
+  answers   Json     // User answers to survey questions
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  survey    ActivitySurvey @relation(fields: [surveyId], references: [id])
+  user      User          @relation(fields: [userId], references: [id])
+
+  @@unique([surveyId, userId])
+  @@map("activity_survey_responses")
+}
+
+// Study System for Module 3.4
+model StudyTopic {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  category    String   // Nghị quyết/Chính trị/Pháp luật/Tiếng Anh...
+  isActive    Boolean  @default(true) @map("is_active")
+  validFrom   DateTime @map("valid_from")
+  validTo     DateTime? @map("valid_to")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  materials   StudyTopicMaterial[]
+  progress    UserStudyProgress[]
+
+  @@map("study_topics")
+}
+
+model StudyTopicMaterial {
+  id          String            @id @default(cuid())
+  topicId     String            @map("topic_id")
+  title       String
+  type        StudyMaterialType
+  fileUrl     String?           @map("file_url")    // PDF/Video URL
+  content     String?           // Text content
+  duration    Int?              // For videos (in seconds)
+  fileSize    Int?              @map("file_size")   // File size in bytes
+  orderIndex  Int               @map("order_index") // Display order
+  isRequired  Boolean           @default(true) @map("is_required") // Must complete before quiz
+  createdAt   DateTime          @default(now()) @map("created_at")
+
+  // Relations
+  topic       StudyTopic     @relation(fields: [topicId], references: [id])
+  quiz        StudyQuiz?
+  progress    UserMaterialProgress[]
+
+  @@map("study_topic_materials")
+}
+
+model StudyQuiz {
+  id          String   @id @default(cuid())
+  materialId  String   @unique @map("material_id")
+  title       String
+  instructions String?
+  timeLimit   Int?     @map("time_limit") // in minutes
+  maxAttempts Int      @default(3) @map("max_attempts")
+  passingScore Int     @default(60) @map("passing_score") // percentage
+  showAnswers Boolean  @default(true) @map("show_answers") // Show correct answers after submit
+  questions   Json     // Array of quiz questions
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  material    StudyTopicMaterial @relation(fields: [materialId], references: [id])
+  attempts    UserQuizAttempt[]
+
+  @@map("study_quizzes")
+}
+
+model UserStudyProgress {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  topicId         String   @map("topic_id")
+  status          StudyProgressStatus @default(NOT_STARTED)
+  completedAt     DateTime? @map("completed_at")
+  lastAccessedAt  DateTime @default(now()) @map("last_accessed_at")
+  
+  // Relations
+  user            User       @relation(fields: [userId], references: [id])
+  topic           StudyTopic @relation(fields: [topicId], references: [id])
+
+  @@unique([userId, topicId])
+  @@map("user_study_progress")
+}
+
+model UserMaterialProgress {
+  id              String   @id @default(cuid())
+  userId          String   @map("user_id")
+  materialId      String   @map("material_id")
+  status          StudyProgressStatus @default(NOT_STARTED)
+  viewedDuration  Int      @default(0) @map("viewed_duration") // For videos (in seconds)
+  completedAt     DateTime? @map("completed_at")
+  lastAccessedAt  DateTime @default(now()) @map("last_accessed_at")
+  
+  // Relations
+  user            User               @relation(fields: [userId], references: [id])
+  material        StudyTopicMaterial @relation(fields: [materialId], references: [id])
+
+  @@unique([userId, materialId])
+  @@map("user_material_progress")
+}
+
+model UserQuizAttempt {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  quizId       String   @map("quiz_id")
+  attemptNumber Int     @map("attempt_number")
+  answers      Json     // User answers
+  score        Int      // Percentage score
+  passed       Boolean  @default(false)
+  timeSpent    Int      @map("time_spent") // in seconds
+  startedAt    DateTime @default(now()) @map("started_at")
+  completedAt  DateTime? @map("completed_at")
+
+  // Relations
+  user         User      @relation(fields: [userId], references: [id])
+  quiz         StudyQuiz @relation(fields: [quizId], references: [id])
+
+  @@unique([userId, quizId, attemptNumber])
+  @@map("user_quiz_attempts")
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  LEADER
+  MEMBER
+}
+
+enum ActivityType {
+  MEETING
+  VOLUNTEER
+  STUDY
+  TASK
+  SOCIAL
+  CONFERENCE
+}
+
+enum ActivityStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum ActivityParticipantStatus {
+  REGISTERED
+  CHECKED_IN
+  COMPLETED
+  ABSENT
+}
+
+enum SurveyStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+}
+
+enum PostStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PostType {
+  ANNOUNCEMENT
+  NEWS
+  SUGGESTION
+}
+
+enum PointsChangeType {
+  EARN
+  DEDUCT
+  BONUS
+  EXAM_PASSED
+}
+
+enum AccessLevel {
+  PUBLIC
+  UNIT
+  ADMIN
+}
+
+enum ActivityFeedbackType {
+  SUGGESTION     // Kiến nghị
+  COMPLAINT      // Khiếu nại
+  PRAISE         // Khen ngợi
+  QUESTION       // Câu hỏi
+  OTHER          // Khác
+}
+
+enum FeedbackStatus {
+  PENDING        // Chờ xử lý
+  REVIEWED       // Đã xem
+  RESPONDED      // Đã trả lời
+  RESOLVED       // Đã giải quyết
+  REJECTED       // Từ chối
+}
+
+enum NotificationType {
+  REMINDER       // Nhắc lịch
+  REGISTRATION   // Thông báo đăng ký
+  CHECK_IN       // Thông báo điểm danh
+  FEEDBACK       // Phản hồi ý kiến
+  ACTIVITY_UPDATE // Cập nhật sinh hoạt
+  POINTS_AWARDED  // Thông báo điểm
+}
+
+enum StudyMaterialType {
+  VIDEO          // Video học tập
+  PDF            // Tài liệu PDF
+  ARTICLE        // Bài viết
+  PRESENTATION   // Bài thuyết trình
+  AUDIO          // Audio/Podcast
+}
+
+enum StudyProgressStatus {
+  NOT_STARTED    // Chưa bắt đầu
+  IN_PROGRESS    // Đang học
+  COMPLETED      // Hoàn thành
+  EXPIRED        // Hết hạn
+}
+
+// =====================================
+// MODULE 3.5: DOCUMENT MANAGEMENT
+// =====================================
+
+enum DocumentType {
+  CIRCULAR      // Thông tư
+  DECISION      // Quyết định
+  DIRECTIVE     // Chỉ thị
+  INSTRUCTION   // Hướng dẫn
+  REGULATION    // Quy định
+  NOTICE        // Thông báo
+  LETTER        // Công văn
+  GUIDELINE     // Tài liệu hướng dẫn
+  FORM          // Biểu mẫu
+  OTHER         // Khác
+}
+
+enum DocumentStatus {
+  DRAFT         // Nháp
+  PUBLISHED     // Đã phát hành
+  ARCHIVED      // Lưu trữ
+  EXPIRED       // Hết hiệu lực
+}
+
+model Document {
+  id               String         @id @default(cuid())
+  title            String
+  documentNumber   String?        @map("document_number")     // Số/ký hiệu văn bản
+  documentType     DocumentType   @map("document_type")
+  issuer           String?        // Đơn vị ban hành
+  description      String?
+  content          String?        // Nội dung văn bản
+  fileUrl          String?        @map("file_url")           // Link file PDF/Word
+  fileName         String?        @map("file_name")          // Tên file gốc
+  fileSize         Int?           @map("file_size")          // Kích thước file (bytes)
+  status           DocumentStatus @default(DRAFT)
+  issuedDate       DateTime?      @map("issued_date")        // Ngày ban hành
+  effectiveDate    DateTime?      @map("effective_date")     // Ngày có hiệu lực
+  expiryDate       DateTime?      @map("expiry_date")        // Ngày hết hiệu lực
+  authorId         String         @map("author_id")          // Người tạo
+  unitId           String?        @map("unit_id")            // Đơn vị áp dụng
+  viewCount        Int            @default(0) @map("view_count") // Lượt xem
+  downloadCount    Int            @default(0) @map("download_count") // Lượt tải
+  tags             String?        // Tags phân loại (JSON array)
+  isNotificationSent Boolean      @default(false) @map("is_notification_sent") // Đã gửi thông báo
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  author       User                    @relation("DocumentAuthor", fields: [authorId], references: [id])
+  unit         Unit?                   @relation(fields: [unitId], references: [id])
+  views        DocumentView[]
+  favorites    UserDocumentFavorite[]
+
+  @@map("documents")
+}
+
+model DocumentView {
+  id         String   @id @default(cuid())
+  documentId String   @map("document_id")
+  userId     String   @map("user_id")
+  viewedAt   DateTime @default(now()) @map("viewed_at")
+
+  // Relations
+  document Document @relation(fields: [documentId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@unique([documentId, userId, viewedAt])
+  @@map("document_views")
+}
+
+model UserDocumentFavorite {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  documentId String   @map("document_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user     User     @relation(fields: [userId], references: [id])
+  document Document @relation(fields: [documentId], references: [id])
+
+  @@unique([userId, documentId])
+  @@map("user_document_favorites")
+}
+
+// =====================================
+// MODULE 3.6: EXAM SYSTEM
+// =====================================
+
+enum ExamStatus {
+  DRAFT         // Nháp
+  PUBLISHED     // Đã phát hành
+  ACTIVE        // Đang diễn ra
+  COMPLETED     // Đã kết thúc
+  CANCELLED     // Đã hủy
+}
+
+enum ExamQuestionType {
+  SINGLE_CHOICE    // Một đáp án đúng
+  MULTIPLE_CHOICE  // Nhiều đáp án đúng
+  TRUE_FALSE       // Đúng/Sai
+}
+
+enum ExamAttemptStatus {
+  IN_PROGRESS   // Đang làm bài
+  SUBMITTED     // Đã nộp bài
+  TIMEOUT       // Hết giờ
+  CANCELLED     // Đã hủy
+}
+
+model Exam {
+  id              String      @id @default(cuid())
+  title           String
+  description     String?
+  instructions    String?     // Hướng dẫn làm bài
+  duration        Int?        // Thời gian làm bài (phút)
+  totalQuestions  Int         @map("total_questions") // Tổng số câu hỏi
+  passingScore    Int         @default(60) @map("passing_score") // Điểm đạt (%)
+  maxAttempts     Int         @default(1) @map("max_attempts") // Số lần làm tối đa
+  pointsAwarded   Int         @default(0) @map("points_awarded") // Điểm thưởng khi đạt
+  status          ExamStatus  @default(DRAFT)
+  startTime       DateTime?   @map("start_time")     // Thời gian bắt đầu
+  endTime         DateTime?   @map("end_time")       // Thời gian kết thúc
+  showResults     Boolean     @default(true) @map("show_results") // Hiển thị kết quả sau khi làm
+  showAnswers     Boolean     @default(false) @map("show_answers") // Hiển thị đáp án đúng
+  shuffleQuestions Boolean    @default(false) @map("shuffle_questions") // Trộn câu hỏi
+  shuffleAnswers  Boolean     @default(false) @map("shuffle_answers") // Trộn đáp án
+  creatorId       String      @map("creator_id")
+  unitId          String?     @map("unit_id")        // Đơn vị tổ chức
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  creator     User           @relation("ExamCreator", fields: [creatorId], references: [id])
+  unit        Unit?          @relation(fields: [unitId], references: [id])
+  questions   ExamQuestion[]
+  attempts    ExamAttempt[]
+
+  @@map("exams")
+}
+
+model ExamQuestion {
+  id            String           @id @default(cuid())
+  examId        String           @map("exam_id")
+  questionText  String           @map("question_text")
+  questionType  ExamQuestionType @map("question_type")
+  answers       Json             // Array of answer options with isCorrect flag
+  explanation   String?          // Giải thích đáp án
+  points        Int              @default(1) // Điểm cho câu hỏi này
+  orderIndex    Int              @map("order_index") // Thứ tự câu hỏi
+  isActive      Boolean          @default(true) @map("is_active")
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  exam Exam @relation(fields: [examId], references: [id])
+
+  @@map("exam_questions")
+}
+
+model ExamAttempt {
+  id           String            @id @default(cuid())
+  examId       String            @map("exam_id")
+  userId       String            @map("user_id")
+  attemptNumber Int              @map("attempt_number") // Lần thử thứ mấy
+  status       ExamAttemptStatus @default(IN_PROGRESS)
+  startedAt    DateTime          @default(now()) @map("started_at")
+  submittedAt  DateTime?         @map("submitted_at")
+  timeSpent    Int?              @map("time_spent")     // Thời gian làm bài (giây)
+  answers      Json?             // User's answers
+  score        Float?            // Điểm số (%)
+  pointsEarned Int               @default(0) @map("points_earned") // Điểm thưởng nhận được
+  isPassed     Boolean?          @map("is_passed")      // Đã đạt yêu cầu chưa
+  createdAt    DateTime          @default(now()) @map("created_at")
+
+  // Relations
+  exam Exam @relation(fields: [examId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([examId, userId, attemptNumber])
+  @@map("exam_attempts")
+}
+
+// =====================================
+// MODULE 3.7: SELF QUALITY RATING
+// =====================================
+
+enum RatingPeriodStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum RatingLevel {
+  EXCELLENT
+  GOOD
+  AVERAGE
+  POOR
+}
+
+enum SelfRatingStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  NEEDS_REVISION
+}
+
+model RatingPeriod {
+  id              String               @id @default(cuid())
+  title           String
+  description     String?
+  startDate       DateTime             @map("start_date")
+  endDate         DateTime             @map("end_date")
+  criteria        Json                 // Array of criteria objects
+  status          RatingPeriodStatus   @default(DRAFT)
+  targetAudience  String               @default("ALL") @map("target_audience") // ALL, UNIT_SPECIFIC, ROLE_SPECIFIC
+  unitIds         Json?                @map("unit_ids")    // Array of unit IDs if UNIT_SPECIFIC
+  roles           Json?                // Array of roles if ROLE_SPECIFIC
+  createdBy       String               @map("created_by")
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
+
+  // Relations
+  creator      User         @relation("RatingPeriodCreator", fields: [createdBy], references: [id])
+  selfRatings  SelfRating[]
+
+  @@map("rating_periods")
+}
+
+model SelfRating {
+  id                  String           @id @default(cuid())
+  periodId           String           @map("period_id")
+  userId             String           @map("user_id")
+  criteriaResponses  Json             @map("criteria_responses") // Array of criteria responses
+  suggestedRating    RatingLevel      @map("suggested_rating")
+  selfAssessment     String?          @map("self_assessment")
+  status             SelfRatingStatus @default(DRAFT)
+  finalRating        RatingLevel?     @map("final_rating")
+  adminNotes         String?          @map("admin_notes")
+  pointsAwarded      Int?             @map("points_awarded")
+  submittedAt        DateTime?        @map("submitted_at")
+  reviewedAt         DateTime?        @map("reviewed_at")
+  reviewedBy         String?          @map("reviewed_by")
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  period     RatingPeriod @relation(fields: [periodId], references: [id])
+  user       User         @relation("UserSelfRatings", fields: [userId], references: [id])
+  reviewer   User?        @relation("ReviewerSelfRatings", fields: [reviewedBy], references: [id])
+
+  @@unique([periodId, userId])
+  @@map("self_ratings")
+}
+
+// =====================================
+// MODULE 3.8: PERSONAL SUGGESTIONS
+// =====================================
+
+enum SuggestionCategory {
+  IMPROVEMENT
+  COMPLAINT
+  IDEA
+  QUESTION
+  OTHER
+}
+
+enum SuggestionPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum SuggestionStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  IN_PROGRESS
+  RESOLVED
+  REJECTED
+}
+
+model Suggestion {
+  id           String              @id @default(cuid())
+  title        String
+  content      String
+  category     SuggestionCategory
+  priority     SuggestionPriority  @default(MEDIUM)
+  status       SuggestionStatus    @default(SUBMITTED)
+  isAnonymous  Boolean             @default(false) @map("is_anonymous")
+  userId       String?             @map("user_id") // Null if anonymous
+  fileUrls     Json?               @map("file_urls") // Array of file URLs
+  tags         String?             // Comma-separated tags
+  submittedAt  DateTime            @default(now()) @map("submitted_at")
+  resolvedAt   DateTime?           @map("resolved_at")
+  viewCount    Int                 @default(0) @map("view_count")
+  createdAt    DateTime            @default(now()) @map("created_at")
+  updatedAt    DateTime            @updatedAt @map("updated_at")
+
+  // Relations
+  user      User?                @relation("UserSuggestions", fields: [userId], references: [id])
+  responses SuggestionResponse[]
+
+  @@map("suggestions")
+}
+
+model SuggestionResponse {
+  id           String   @id @default(cuid())
+  suggestionId String   @map("suggestion_id")
+  content      String
+  isPublic     Boolean  @default(true) @map("is_public")
+  responderId  String   @map("responder_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relations
+  suggestion Suggestion @relation(fields: [suggestionId], references: [id])
+  responder  User       @relation("UserSuggestionResponses", fields: [responderId], references: [id])
+
+  @@map("suggestion_responses")
+}
