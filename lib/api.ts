@@ -1,9 +1,7 @@
 // API service for Youth Handbook Frontend
-// Luôn sử dụng URL tuyệt đối cho cả web và mobile (Capacitor)
+// Production: Sử dụng PostgreSQL trên Render
 const BACKEND_URL = 'https://youth-handbook.onrender.com';
-const RAW_API_URL = (typeof window !== 'undefined' && (window as any).Capacitor) 
-  ? BACKEND_URL 
-  : (process.env.NEXT_PUBLIC_API_URL || BACKEND_URL);
+const RAW_API_URL = BACKEND_URL;
 // Đảm bảo API_BASE_URL luôn kết thúc bằng /api (không có duplicate)
 const API_BASE_URL = RAW_API_URL.replace(/\/api\/?$/, '') + '/api';
 
@@ -907,6 +905,88 @@ export const activityApi = {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(data),
+    });
+  },
+
+  // ==================== ATTENDANCE MANAGEMENT ====================
+  
+  // Get attendance list (Admin/Leader)
+  async getAttendanceList(activityId: string, params?: {
+    status?: string;
+    search?: string;
+  }): Promise<ApiResponse<any>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    const searchParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          searchParams.append(key, value.toString());
+        }
+      });
+    }
+
+    return apiCall(`/activities/${activityId}/attendance?${searchParams.toString()}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+
+  // Report absence (User)
+  async reportAbsent(activityId: string, reason: string): Promise<ApiResponse<any>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall(`/activities/${activityId}/report-absent`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ reason }),
+    });
+  },
+
+  // Update attendance status (Admin/Leader)
+  async updateAttendanceStatus(activityId: string, participantId: string, data: {
+    status: string;
+    absentReason?: string;
+  }): Promise<ApiResponse<any>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall(`/activities/${activityId}/attendance/${participantId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Batch check-in (Admin/Leader)
+  async batchCheckIn(activityId: string, userIds: string[]): Promise<ApiResponse<any>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall(`/activities/${activityId}/batch-checkin`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ userIds }),
     });
   }
 };

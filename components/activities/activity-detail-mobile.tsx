@@ -13,7 +13,12 @@ import {
   Award,
   ArrowLeft,
   User,
+  X,
+  XCircle,
+  Clock3,
+  Send
 } from "lucide-react"
+import { activityApi } from "@/lib/api"
 
 interface ActivityDetailMobileProps {
   activityId: string
@@ -23,11 +28,16 @@ interface ActivityDetailMobileProps {
 export default function ActivityDetailMobile({ activityId, onBack }: ActivityDetailMobileProps) {
   const [activity, setActivity] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [showCheckInModal, setShowCheckInModal] = useState(false)
+  const [showAbsentModal, setShowAbsentModal] = useState(false)
+  const [qrCode, setQrCode] = useState('')
+  const [absentReason, setAbsentReason] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [location, setLocation] = useState<{latitude?: number, longitude?: number}>({})
 
   const loadActivity = async () => {
     setLoading(true)
     try {
-      const { activityApi } = await import('@/lib/api')
       const result = await activityApi.getActivity(activityId)
       
       if (result.success && result.data) {
@@ -47,6 +57,11 @@ export default function ActivityDetailMobile({ activityId, onBack }: ActivityDet
           missedPoints: -3,
           participants: [],
           maxParticipants: 50,
+          userParticipation: {
+            status: 'REGISTERED',
+            checkInTime: null,
+            absentReason: null
+          }
         })
       }
     } catch (error) {
@@ -62,6 +77,9 @@ export default function ActivityDetailMobile({ activityId, onBack }: ActivityDet
         onTimePoints: 5,
         latePoints: 2,
         missedPoints: -3,
+        userParticipation: {
+          status: 'REGISTERED'
+        }
       })
     } finally {
       setLoading(false)
@@ -73,6 +91,111 @@ export default function ActivityDetailMobile({ activityId, onBack }: ActivityDet
       loadActivity()
     }
   }, [activityId])
+
+  // Get user location
+  useEffect(() => {
+    if (activity?.requiresLocation && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
+          })
+        },
+        (error) => console.error('Error getting location:', error)
+      )
+    }
+  }, [activity])
+
+  // Handle check-in
+  const handleCheckIn = async () => {
+    if (!qrCode.trim()) {
+      alert('Vui lòng nhập mã QR')
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      const result = await activityApi.checkInActivity(activityId, {
+        qrCode: qrCode.trim(),
+        ...location
+      })
+      
+      if (result.success) {
+        alert(`Điểm danh thành công! Bạn được +${result.data?.pointsEarned || 5} điểm.`)
+        setShowCheckInModal(false)
+        setQrCode('')
+        await loadActivity()
+      } else {
+        alert(result.error || 'Có lỗi xảy ra khi điểm danh')
+      }
+    } catch (error) {
+      console.error('Error checking in:', error)
+      alert('Có lỗi xảy ra khi điểm danh')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Handle report absent
+  const handleReportAbsent = async () => {
+    if (!absentReason.trim()) {
+      alert('Vui lòng nhập lý do vắng')
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      const result = await activityApi.reportAbsent(activityId, absentReason.trim())
+      
+      if (result.success) {
+        alert('Đã báo vắng thành công!')
+        setShowAbsentModal(false)
+        setAbsentReason('')
+        await loadActivity()
+      } else {
+        alert(result.error || 'Có lỗi xảy ra')
+      }
+    } catch (error) {
+      console.error('Error reporting absent:', error)
+      alert('Có lỗi xảy ra')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  // Helper functions for status
+  const getParticipationStatus = () => {
+    if (!activity?.userParticipation) return null
+    const status = activity.userParticipation.status
+    
+    switch (status) {
+      case 'CHECKED_IN':
+        return { text: 'Đã điểm danh', bg: '#d1fae5', color: '#065f46', icon: CheckCircle }
+      case 'REGISTERED':
+        return { text: 'Chưa điểm danh', bg: '#fef3c7', color: '#92400e', icon: Clock3 }
+      case 'ABSENT':
+        return { text: 'Báo vắng', bg: '#fee2e2', color: '#991b1b', icon: XCircle }
+      default:
+        return null
+    }
+  }
+
+  const canCheckIn = () => {
+    if (!activity?.userParticipation) return false
+    if (activity.userParticipation.status !== 'REGISTERED') return false
+    
+    const now = new Date()
+    const checkInStart = new Date(activity.checkInStartTime || activity.startTime)
+    const checkInEnd = activity.checkInEndTime ? new Date(activity.checkInEndTime) : null
+    
+    return now >= checkInStart && (!checkInEnd || now <= checkInEnd)
+  }
+
+  const canReportAbsent = () => {
+    if (!activity?.userParticipation) return false
+    return activity.userParticipation.status === 'REGISTERED'
+  }
 
   // ===== INLINE STYLES =====
   const containerStyle: React.CSSProperties = {
@@ -291,16 +414,24 @@ export default function ActivityDetailMobile({ activityId, onBack }: ActivityDet
         </span>
 
         {activity.userParticipation && (
-          <span style={{ 
-            ...badgeStyle, 
-            backgroundColor: '#d1fae5', 
-            color: '#065f46',
-            display: 'inline-flex',
-            alignItems: 'center',
-          }}>
-            <CheckCircle style={{ width: '12px', height: '12px', marginRight: '4px' }} />
-            Đã đăng ký
-          </span>
+          (() => {
+            const status = getParticipationStatus()
+            if (status) {
+              return (
+                <span style={{ 
+                  ...badgeStyle, 
+                  backgroundColor: status.bg, 
+                  color: status.color,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                }}>
+                  <status.icon style={{ width: '12px', height: '12px', marginRight: '4px' }} />
+                  {status.text}
+                </span>
+              )
+            }
+            return null
+          })()
         )}
 
         {activity.description && (
@@ -391,18 +522,113 @@ export default function ActivityDetailMobile({ activityId, onBack }: ActivityDet
             Điểm danh
           </div>
 
+          {/* Participation Status Badge */}
+          {(() => {
+            const status = getParticipationStatus()
+            if (status) {
+              return (
+                <div style={{ 
+                  display: 'inline-flex', 
+                  alignItems: 'center',
+                  padding: '6px 12px',
+                  backgroundColor: status.bg,
+                  color: status.color,
+                  borderRadius: '20px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  marginBottom: '16px',
+                }}>
+                  <status.icon style={{ width: '16px', height: '16px', marginRight: '6px' }} />
+                  {status.text}
+                </div>
+              )
+            }
+            return null
+          })()}
+
           {activity.userParticipation.status === 'CHECKED_IN' ? (
             <div style={{ textAlign: 'center', padding: '16px' }}>
-              <CheckCircle style={{ width: '48px', height: '48px', color: '#10b981', margin: '0 auto 12px' }} />
-              <p style={{ color: '#065f46', fontWeight: 600, marginBottom: '8px' }}>Đã điểm danh thành công</p>
-              <p style={{ color: '#6b7280', fontSize: '13px' }}>
-                Điểm nhận được: +{activity.userParticipation.pointsEarned || 5}
+              <CheckCircle style={{ width: '56px', height: '56px', color: '#10b981', margin: '0 auto 12px' }} />
+              <p style={{ color: '#065f46', fontWeight: 600, fontSize: '16px', marginBottom: '8px' }}>
+                Đã điểm danh thành công
+              </p>
+              {activity.userParticipation.checkInTime && (
+                <p style={{ color: '#6b7280', fontSize: '13px', marginBottom: '4px' }}>
+                  Thời gian: {formatDateTime(activity.userParticipation.checkInTime)}
+                </p>
+              )}
+              <p style={{ color: '#10b981', fontSize: '14px', fontWeight: 600 }}>
+                +{activity.userParticipation.pointsEarned || activity.onTimePoints || 5} điểm
               </p>
             </div>
-          ) : (
+          ) : activity.userParticipation.status === 'ABSENT' ? (
             <div style={{ textAlign: 'center', padding: '16px' }}>
-              <Clock style={{ width: '48px', height: '48px', color: '#9ca3af', margin: '0 auto 12px' }} />
-              <p style={{ color: '#6b7280', fontSize: '14px' }}>Chờ điểm danh từ quản trị viên</p>
+              <XCircle style={{ width: '56px', height: '56px', color: '#ef4444', margin: '0 auto 12px' }} />
+              <p style={{ color: '#991b1b', fontWeight: 600, fontSize: '16px', marginBottom: '8px' }}>
+                Đã báo vắng
+              </p>
+              {activity.userParticipation.absentReason && (
+                <p style={{ color: '#6b7280', fontSize: '13px', padding: '12px', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
+                  Lý do: {activity.userParticipation.absentReason}
+                </p>
+              )}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {/* Check-in Button */}
+              <button
+                style={{
+                  width: '100%',
+                  padding: '14px 20px',
+                  borderRadius: '12px',
+                  fontSize: '15px',
+                  fontWeight: 600,
+                  border: 'none',
+                  cursor: canCheckIn() ? 'pointer' : 'default',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  backgroundColor: canCheckIn() ? '#10b981' : '#d1d5db',
+                  color: canCheckIn() ? '#ffffff' : '#6b7280',
+                }}
+                onClick={() => canCheckIn() && setShowCheckInModal(true)}
+                disabled={!canCheckIn()}
+              >
+                <QrCode style={{ width: '20px', height: '20px' }} />
+                {canCheckIn() ? 'Điểm danh ngay' : 'Chưa đến giờ điểm danh'}
+              </button>
+
+              {/* Report Absent Button */}
+              {canReportAbsent() && (
+                <button
+                  style={{
+                    width: '100%',
+                    padding: '14px 20px',
+                    borderRadius: '12px',
+                    fontSize: '15px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    backgroundColor: '#ffffff',
+                    color: '#ef4444',
+                    border: '2px solid #fecaca',
+                  }}
+                  onClick={() => setShowAbsentModal(true)}
+                >
+                  <XCircle style={{ width: '20px', height: '20px' }} />
+                  Báo vắng
+                </button>
+              )}
+
+              {!canCheckIn() && activity.checkInStartTime && (
+                <p style={{ textAlign: 'center', color: '#6b7280', fontSize: '13px' }}>
+                  Điểm danh bắt đầu từ: {formatDateTime(activity.checkInStartTime)}
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -462,8 +688,234 @@ export default function ActivityDetailMobile({ activityId, onBack }: ActivityDet
                 {participant.status === 'CHECKED_IN' && (
                   <CheckCircle style={{ width: '18px', height: '18px', color: '#10b981' }} />
                 )}
+                {participant.status === 'ABSENT' && (
+                  <XCircle style={{ width: '18px', height: '18px', color: '#ef4444' }} />
+                )}
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Check-in Modal */}
+      {showCheckInModal && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '16px',
+          }} 
+          onClick={() => setShowCheckInModal(false)}
+        >
+          <div 
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '16px',
+              width: '100%',
+              maxWidth: '400px',
+              maxHeight: '80vh',
+              overflow: 'auto',
+            }} 
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '16px',
+              borderBottom: '1px solid #e5e7eb',
+            }}>
+              <span style={{ fontSize: '18px', fontWeight: 600 }}>Điểm danh</span>
+              <button 
+                style={{ background: 'none', border: 'none', padding: '4px', cursor: 'pointer' }}
+                onClick={() => setShowCheckInModal(false)}
+              >
+                <X style={{ width: '24px', height: '24px', color: '#6b7280' }} />
+              </button>
+            </div>
+            <div style={{ padding: '16px' }}>
+              <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '16px' }}>
+                Nhập mã QR hoặc quét mã để điểm danh
+              </p>
+              <input
+                type="text"
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  border: '1px solid #d1d5db',
+                  fontSize: '15px',
+                  marginBottom: '16px',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+                placeholder="Nhập mã QR..."
+                value={qrCode}
+                onChange={(e) => setQrCode(e.target.value)}
+                autoFocus
+              />
+              {activity?.requiresLocation && (
+                <p style={{ color: '#6b7280', fontSize: '12px', marginBottom: '16px' }}>
+                  📍 Vị trí địa lý sẽ được ghi nhận
+                </p>
+              )}
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  style={{
+                    flex: 1,
+                    padding: '14px 20px',
+                    borderRadius: '12px',
+                    fontSize: '15px',
+                    fontWeight: 600,
+                    border: 'none',
+                    cursor: 'pointer',
+                    backgroundColor: '#f3f4f6',
+                    color: '#374151',
+                  }}
+                  onClick={() => setShowCheckInModal(false)}
+                >
+                  Hủy
+                </button>
+                <button
+                  style={{
+                    flex: 1,
+                    padding: '14px 20px',
+                    borderRadius: '12px',
+                    fontSize: '15px',
+                    fontWeight: 600,
+                    border: 'none',
+                    cursor: 'pointer',
+                    backgroundColor: '#10b981',
+                    color: '#ffffff',
+                    opacity: submitting ? 0.7 : 1,
+                  }}
+                  onClick={handleCheckIn}
+                  disabled={submitting}
+                >
+                  {submitting ? 'Đang xử lý...' : 'Xác nhận'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Report Absent Modal */}
+      {showAbsentModal && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '16px',
+          }} 
+          onClick={() => setShowAbsentModal(false)}
+        >
+          <div 
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '16px',
+              width: '100%',
+              maxWidth: '400px',
+              maxHeight: '80vh',
+              overflow: 'auto',
+            }} 
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '16px',
+              borderBottom: '1px solid #e5e7eb',
+            }}>
+              <span style={{ fontSize: '18px', fontWeight: 600 }}>Báo vắng</span>
+              <button 
+                style={{ background: 'none', border: 'none', padding: '4px', cursor: 'pointer' }}
+                onClick={() => setShowAbsentModal(false)}
+              >
+                <X style={{ width: '24px', height: '24px', color: '#6b7280' }} />
+              </button>
+            </div>
+            <div style={{ padding: '16px' }}>
+              <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '16px' }}>
+                Vui lòng nhập lý do vắng mặt
+              </p>
+              <textarea
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  border: '1px solid #d1d5db',
+                  fontSize: '15px',
+                  marginBottom: '16px',
+                  outline: 'none',
+                  minHeight: '100px',
+                  resize: 'vertical',
+                  boxSizing: 'border-box',
+                }}
+                placeholder="Nhập lý do vắng..."
+                value={absentReason}
+                onChange={(e) => setAbsentReason(e.target.value)}
+                autoFocus
+              />
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  style={{
+                    flex: 1,
+                    padding: '14px 20px',
+                    borderRadius: '12px',
+                    fontSize: '15px',
+                    fontWeight: 600,
+                    border: 'none',
+                    cursor: 'pointer',
+                    backgroundColor: '#f3f4f6',
+                    color: '#374151',
+                  }}
+                  onClick={() => setShowAbsentModal(false)}
+                >
+                  Hủy
+                </button>
+                <button
+                  style={{
+                    flex: 1,
+                    padding: '14px 20px',
+                    borderRadius: '12px',
+                    fontSize: '15px',
+                    fontWeight: 600,
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    backgroundColor: '#ef4444',
+                    color: '#ffffff',
+                    opacity: submitting ? 0.7 : 1,
+                  }}
+                  onClick={handleReportAbsent}
+                  disabled={submitting}
+                >
+                  <Send style={{ width: '18px', height: '18px' }} />
+                  {submitting ? 'Đang gửi...' : 'Gửi báo vắng'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

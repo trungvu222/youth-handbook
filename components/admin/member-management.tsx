@@ -50,8 +50,8 @@ interface Member {
   politicsLevel?: string
 }
 
-// HARDCODED for local development - change back for production
-const API_URL = "http://localhost:3001";
+// Production PostgreSQL on Render
+const API_URL = "https://youth-handbook.onrender.com";
 
 export function MemberManagement() {
   const { toast } = useToast()
@@ -126,17 +126,24 @@ export function MemberManagement() {
       }
 
       // Fetch members
-      console.log("[MemberManagement] Fetching users...")
+      console.log("[MemberManagement] Fetching users from:", `${API_URL}/api/users`)
       const membersRes = await fetch(`${API_URL}/api/users`, { headers })
+      console.log("[MemberManagement] Response status:", membersRes.status, membersRes.ok)
+      
       if (membersRes.ok) {
         const data = await membersRes.json()
+        console.log("[MemberManagement] Users data:", data)
         setMembers(data.users || data || [])
+      } else {
+        const errorData = await membersRes.json().catch(() => ({}))
+        console.error("[MemberManagement] Fetch users failed:", membersRes.status, errorData)
       }
 
       // Fetch units
       const unitsRes = await fetch(`${API_URL}/api/units`, { headers })
       if (unitsRes.ok) {
         const unitsData = await unitsRes.json()
+        console.log("[MemberManagement] Units data:", unitsData)
         setUnits(unitsData.units || unitsData || [])
       }
     } catch (error) {

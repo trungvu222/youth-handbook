@@ -14,7 +14,12 @@ const {
   checkInWithGPS,
   getActivitySurveys,
   submitSurveyResponse,
-  getEnhancedActivityStats
+  getEnhancedActivityStats,
+  // Attendance management
+  getAttendanceList,
+  reportAbsent,
+  updateAttendanceStatus,
+  batchCheckIn
 } = require('../controllers/activityController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -36,6 +41,12 @@ router.route('/:id')
 // Activity participation
 router.post('/:id/join', joinActivity);
 router.post('/:id/checkin', checkInActivity);
+
+// Attendance management
+router.get('/:id/attendance', authorize('ADMIN', 'LEADER'), getAttendanceList);
+router.post('/:id/report-absent', reportAbsent);
+router.put('/:id/attendance/:participantId', authorize('ADMIN', 'LEADER'), updateAttendanceStatus);
+router.post('/:id/batch-checkin', authorize('ADMIN', 'LEADER'), batchCheckIn);
 
 // Activity statistics (Admin/Leader only)
 router.get('/:id/stats', authorize('ADMIN', 'LEADER'), getActivityStats);

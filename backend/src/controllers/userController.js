@@ -316,7 +316,7 @@ const changeUserRole = async (req, res, next) => {
     const { passwordHash, ...userWithoutPassword } = updatedUser;
 
     res.status(200).json({
-      success: true,
+      success: true, 
       data: userWithoutPassword
     });
   } catch (error) {

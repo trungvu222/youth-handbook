@@ -1214,6 +1214,387 @@ const deleteActivity = async (req, res, next) => {
   }
 };
 
+// ==================== ATTENDANCE MANAGEMENT ====================
+
+// @desc    Get attendance list for an activity (Admin/Leader)
+// @route   GET /api/activities/:id/attendance
+// @access  Private (Admin/Leader)
+const getAttendanceList = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status, search } = req.query;
+    const currentUser = req.user;
+
+    // Check permission
+    if (currentUser.role === 'MEMBER') {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. Only Admin and Leader can view attendance.'
+      });
+    }
+
+    const activity = await prisma.activity.findUnique({
+      where: { id },
+      include: {
+        unit: true,
+        organizer: {
+          select: { id: true, fullName: true }
+        }
+      }
+    });
+
+    if (!activity) {
+      return res.status(404).json({
+        success: false,
+        error: 'Activity not found'
+      });
+    }
+
+    // Leader can only view attendance for their unit's activities
+    if (currentUser.role === 'LEADER' && activity.unitId !== currentUser.unitId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. You can only view attendance for your unit.'
+      });
+    }
+
+    // Build where clause for participants
+    let participantWhere = { activityId: id };
+    
+    if (status) {
+      participantWhere.status = status;
+    }
+
+    // Get all participants with user info
+    const participants = await prisma.activityParticipant.findMany({
+      where: participantWhere,
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            phone: true,
+            email: true,
+            avatarUrl: true,
+            youthPosition: true,
+            unit: {
+              select: { id: true, name: true }
+            }
+          }
+        }
+      },
+      orderBy: [
+        { status: 'asc' },
+        { user: { fullName: 'asc' } }
+      ]
+    });
+
+    // Filter by search if provided
+    let filteredParticipants = participants;
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filteredParticipants = participants.filter(p => 
+        p.user.fullName.toLowerCase().includes(searchLower) ||
+        p.user.phone?.includes(search) ||
+        p.user.email?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Calculate statistics
+    const stats = {
+      total: participants.length,
+      checkedIn: participants.filter(p => p.status === 'CHECKED_IN').length,
+      registered: participants.filter(p => p.status === 'REGISTERED').length,
+      absent: participants.filter(p => p.status === 'ABSENT').length,
+      completed: participants.filter(p => p.status === 'COMPLETED').length
+    };
+
+    res.status(200).json({
+      success: true,
+      data: {
+        activity: {
+          id: activity.id,
+          title: activity.title,
+          type: activity.type,
+          status: activity.status,
+          startTime: activity.startTime,
+          endTime: activity.endTime,
+          unit: activity.unit,
+          organizer: activity.organizer
+        },
+        participants: filteredParticipants,
+        stats
+      }
+    });
+  } catch (error) {
+    console.error('Get attendance list error:', error);
+    next(error);
+  }
+};
+
+// @desc    Report absence for an activity (User)
+// @route   POST /api/activities/:id/report-absent
+// @access  Private
+const reportAbsent = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const currentUser = req.user;
+
+    if (!reason || !reason.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Absence reason is required'
+      });
+    }
+
+    const activity = await prisma.activity.findUnique({
+      where: { id }
+    });
+
+    if (!activity) {
+      return res.status(404).json({
+        success: false,
+        error: 'Activity not found'
+      });
+    }
+
+    // Check if user has participation record
+    const participation = await prisma.activityParticipant.findUnique({
+      where: {
+        activityId_userId: {
+          activityId: id,
+          userId: currentUser.id
+        }
+      }
+    });
+
+    if (!participation) {
+      return res.status(400).json({
+        success: false,
+        error: 'You are not registered for this activity'
+      });
+    }
+
+    if (participation.status === 'CHECKED_IN') {
+      return res.status(400).json({
+        success: false,
+        error: 'Cannot report absence after checking in'
+      });
+    }
+
+    if (participation.status === 'ABSENT') {
+      return res.status(400).json({
+        success: false,
+        error: 'You have already reported absence'
+      });
+    }
+
+    // Update participation to ABSENT
+    const updated = await prisma.activityParticipant.update({
+      where: {
+        activityId_userId: {
+          activityId: id,
+          userId: currentUser.id
+        }
+      },
+      data: {
+        status: 'ABSENT',
+        absentReason: reason.trim()
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Đã báo vắng thành công',
+      data: updated
+    });
+  } catch (error) {
+    console.error('Report absent error:', error);
+    next(error);
+  }
+};
+
+// @desc    Update attendance status (Admin/Leader)
+// @route   PUT /api/activities/:id/attendance/:participantId
+// @access  Private (Admin/Leader)
+const updateAttendanceStatus = async (req, res, next) => {
+  try {
+    const { id, participantId } = req.params;
+    const { status, absentReason } = req.body;
+    const currentUser = req.user;
+
+    // Check permission
+    if (currentUser.role === 'MEMBER') {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. Only Admin and Leader can update attendance.'
+      });
+    }
+
+    const validStatuses = ['REGISTERED', 'CHECKED_IN', 'ABSENT', 'COMPLETED'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid status. Must be one of: REGISTERED, CHECKED_IN, ABSENT, COMPLETED'
+      });
+    }
+
+    const activity = await prisma.activity.findUnique({
+      where: { id }
+    });
+
+    if (!activity) {
+      return res.status(404).json({
+        success: false,
+        error: 'Activity not found'
+      });
+    }
+
+    // Leader can only update attendance for their unit's activities
+    if (currentUser.role === 'LEADER' && activity.unitId !== currentUser.unitId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied. You can only update attendance for your unit.'
+      });
+    }
+
+    const participant = await prisma.activityParticipant.findUnique({
+      where: { id: participantId },
+      include: { user: true }
+    });
+
+    if (!participant || participant.activityId !== id) {
+      return res.status(404).json({
+        success: false,
+        error: 'Participant not found'
+      });
+    }
+
+    // Prepare update data
+    const updateData = { status };
+    
+    if (status === 'ABSENT' && absentReason) {
+      updateData.absentReason = absentReason;
+    }
+    
+    if (status === 'CHECKED_IN' && !participant.checkInTime) {
+      updateData.checkInTime = new Date();
+      updateData.pointsEarned = activity.onTimePoints;
+      
+      // Add points to user
+      await prisma.user.update({
+        where: { id: participant.userId },
+        data: { points: { increment: activity.onTimePoints } }
+      });
+      
+      // Create points history
+      await prisma.pointsHistory.create({
+        data: {
+          userId: participant.userId,
+          activityId: id,
+          points: activity.onTimePoints,
+          reason: `Điểm danh thủ công bởi Admin: ${activity.title}`,
+          type: 'EARN'
+        }
+      });
+    }
+
+    const updated = await prisma.activityParticipant.update({
+      where: { id: participantId },
+      data: updateData,
+      include: {
+        user: {
+          select: { id: true, fullName: true, phone: true, email: true }
+        }
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Attendance updated successfully',
+      data: updated
+    });
+  } catch (error) {
+    console.error('Update attendance status error:', error);
+    next(error);
+  }
+};
+
+// @desc    Admin batch check-in multiple users
+// @route   POST /api/activities/:id/batch-checkin
+// @access  Private (Admin/Leader)
+const batchCheckIn = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { userIds } = req.body;
+    const currentUser = req.user;
+
+    if (currentUser.role === 'MEMBER') {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied'
+      });
+    }
+
+    if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'userIds array is required'
+      });
+    }
+
+    const activity = await prisma.activity.findUnique({ where: { id } });
+    if (!activity) {
+      return res.status(404).json({
+        success: false,
+        error: 'Activity not found'
+      });
+    }
+
+    const results = [];
+    for (const userId of userIds) {
+      try {
+        const participant = await prisma.activityParticipant.findUnique({
+          where: {
+            activityId_userId: { activityId: id, userId }
+          }
+        });
+
+        if (participant && participant.status !== 'CHECKED_IN') {
+          await prisma.activityParticipant.update({
+            where: { activityId_userId: { activityId: id, userId } },
+            data: {
+              status: 'CHECKED_IN',
+              checkInTime: new Date(),
+              pointsEarned: activity.onTimePoints
+            }
+          });
+
+          await prisma.user.update({
+            where: { id: userId },
+            data: { points: { increment: activity.onTimePoints } }
+          });
+
+          results.push({ userId, success: true });
+        } else {
+          results.push({ userId, success: false, reason: 'Not found or already checked in' });
+        }
+      } catch (err) {
+        results.push({ userId, success: false, reason: err.message });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      data: results
+    });
+  } catch (error) {
+    console.error('Batch check-in error:', error);
+    next(error);
+  }
+};
+
 module.exports = {
   getActivities,
   getActivity,
@@ -1230,5 +1611,11 @@ module.exports = {
   checkInWithGPS,
   getActivitySurveys,
   submitSurveyResponse,
-  getEnhancedActivityStats
+  getEnhancedActivityStats,
+  
+  // Attendance management
+  getAttendanceList,
+  reportAbsent,
+  updateAttendanceStatus,
+  batchCheckIn
 };

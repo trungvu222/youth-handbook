@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -141,9 +141,9 @@ model Activity {
   hostId           String?   @map("host_id")       // Chủ trì
   managerId        String?   @map("manager_id")    // Phụ trách  
   tasks            Json?     // Công việc (JSON array)
-  materials        String?   // Vật chất cần thiết
+  materials        String?   @db.Text   // Vật chất cần thiết
   budget           Float?    // Ngân sách
-  conclusion       String?   // Kết luận cuộc họp
+  conclusion       String?   @db.Text   // Kết luận cuộc họp
   hostUnit         String?   @map("host_unit") // Đơn vị chủ trì
   attachments      Json?     // Tệp đính kèm (JSON array of file paths)
   
@@ -185,6 +185,7 @@ model ActivityParticipant {
   userId      String                    @map("user_id")
   status      ActivityParticipantStatus @default(REGISTERED)
   checkInTime DateTime?                 @map("check_in_time")
+  absentReason String?                  @map("absent_reason") // Lý do vắng mặt
   qrData      String?                   @map("qr_data")
   latitude    Float?
   longitude   Float?
