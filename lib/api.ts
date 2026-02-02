@@ -1,12 +1,14 @@
 // API service for Youth Handbook Frontend
-// Production: Sử dụng PostgreSQL trên Render
-const BACKEND_URL = 'https://youth-handbook.onrender.com';
+// Auto-detect: Development (localhost) vs Production (Render)
+const isDevelopment = process.env.NODE_ENV === 'development' || typeof window !== 'undefined' && window.location.hostname === 'localhost';
+const BACKEND_URL = isDevelopment ? 'http://localhost:3001' : 'https://youth-handbook.onrender.com';
 const RAW_API_URL = BACKEND_URL;
 // Đảm bảo API_BASE_URL luôn kết thúc bằng /api (không có duplicate)
 const API_BASE_URL = RAW_API_URL.replace(/\/api\/?$/, '') + '/api';
 
 // Debug log for mobile
 if (typeof window !== 'undefined') {
+  console.log('[API] Environment:', isDevelopment ? 'Development' : 'Production');
   console.log('[API] Using API URL:', API_BASE_URL);
   console.log('[API] Is Capacitor:', !!(window as any).Capacitor);
 }

@@ -655,40 +655,42 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Youth Handbook Backend running on port ${PORT}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
-  
-  // Auto-seed admin user in background (non-blocking)
-  setImmediate(async () => {
-    try {
-      const bcrypt = require('bcryptjs');
-      const { PrismaClient } = require('@prisma/client');
-      const prisma = new PrismaClient();
-      
-      const existingAdmin = await prisma.user.findFirst({ where: { role: 'ADMIN' } });
-      if (!existingAdmin) {
-        const passwordHash = await bcrypt.hash('123456', 10);
-        await prisma.user.create({
-          data: {
-            email: 'admin@youth.com',
-            username: 'admin',
-            passwordHash,
-            fullName: 'Administrator',
-            role: 'ADMIN',
-            phone: '0123456789',
-            youthPosition: 'Ban chấp hành Đoàn Cơ sở'
-          }
-        });
-        console.log('✅ Auto-seeded admin user: admin@youth.com / 123456');
-      } else {
-        console.log('✅ Admin user exists');
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Youth Handbook Backend running on port ${PORT}`);
+    console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+    
+    // Auto-seed admin user in background (non-blocking)
+    setImmediate(async () => {
+      try {
+        const bcrypt = require('bcryptjs');
+        const { PrismaClient } = require('@prisma/client');
+        const prisma = new PrismaClient();
+        
+        const existingAdmin = await prisma.user.findFirst({ where: { role: 'ADMIN' } });
+        if (!existingAdmin) {
+          const passwordHash = await bcrypt.hash('123456', 10);
+          await prisma.user.create({
+            data: {
+              email: 'admin@youth.com',
+              username: 'admin',
+              passwordHash,
+              fullName: 'Administrator',
+              role: 'ADMIN',
+              phone: '0123456789',
+              youthPosition: 'Ban chấp hành Đoàn Cơ sở'
+            }
+          });
+          console.log('✅ Auto-seeded admin user: admin@youth.com / 123456');
+        } else {
+          console.log('✅ Admin user exists');
+        }
+        await prisma.$disconnect();
+      } catch (error) {
+        console.log('⚠️ Auto-seed skipped:', error.message);
       }
-      await prisma.$disconnect();
-    } catch (error) {
-      console.log('⚠️ Auto-seed skipped:', error.message);
-    }
+    });
   });
-});
+}
 
 module.exports = app;
