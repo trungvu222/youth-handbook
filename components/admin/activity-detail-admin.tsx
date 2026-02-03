@@ -66,9 +66,13 @@ interface Participant {
 interface AttendanceStats {
   total: number
   checkedIn: number
+  onTime: number
+  late: number
   registered: number
   absent: number
   completed: number
+  attendanceRate: string
+  onTimeRate: string
 }
 
 export default function ActivityDetailAdmin({ activityId, onBack, onEdit, onDelete }: ActivityDetailAdminProps) {
@@ -440,21 +444,28 @@ export default function ActivityDetailAdmin({ activityId, onBack, onEdit, onDele
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-green-600" />
-                      Đã điểm danh
+                      Đúng giờ
                     </span>
-                    <span className="font-bold text-green-600">{attendanceStats?.checkedIn || 0}</span>
+                    <span className="font-bold text-green-600">{attendanceStats?.onTime || 0}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-2">
-                      <Clock3 className="w-4 h-4 text-yellow-600" />
+                      <Clock3 className="w-4 h-4 text-orange-600" />
+                      Đến trễ
+                    </span>
+                    <span className="font-bold text-orange-600">{attendanceStats?.late || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <Clock3 className="w-4 h-4 text-blue-600" />
                       Chưa điểm danh
                     </span>
-                    <span className="font-bold text-yellow-600">{attendanceStats?.registered || 0}</span>
+                    <span className="font-bold text-blue-600">{attendanceStats?.registered || 0}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-2">
                       <XCircle className="w-4 h-4 text-red-600" />
-                      Báo vắng
+                      Vắng mặt
                     </span>
                     <span className="font-bold text-red-600">{attendanceStats?.absent || 0}</span>
                   </div>
@@ -495,8 +506,11 @@ export default function ActivityDetailAdmin({ activityId, onBack, onEdit, onDele
                     <p className="text-sm text-gray-600 mt-2">
                       Đoàn viên đã điểm danh/ Tổng số Đoàn viên
                     </p>
-                    <p className="text-xs text-blue-600">
-                      Tỷ lệ {attendanceStats?.total ? Math.round((attendanceStats.checkedIn / attendanceStats.total) * 100) : 0}%
+                    <p className="text-xs text-blue-600 font-semibold">
+                      Tỷ lệ điểm danh: {attendanceStats?.attendanceRate || '0.0'}%
+                    </p>
+                    <p className="text-xs text-green-600">
+                      Đúng giờ: {attendanceStats?.onTimeRate || '0.0'}%
                     </p>
                   </div>
                 </CardContent>
@@ -508,26 +522,39 @@ export default function ActivityDetailAdmin({ activityId, onBack, onEdit, onDele
         {/* Tab: Danh sách điểm danh */}
         <TabsContent value="attendance" className="space-y-6">
           {/* Attendance Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card className="border-l-4 border-l-green-500">
               <CardContent className="pt-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600">Đã điểm danh</p>
-                    <p className="text-2xl font-bold text-green-600">{attendanceStats?.checkedIn || 0}</p>
+                    <p className="text-sm text-gray-600">Đúng giờ</p>
+                    <p className="text-2xl font-bold text-green-600">{attendanceStats?.onTime || 0}</p>
+                    <p className="text-xs text-gray-500 mt-1">{attendanceStats?.onTimeRate || '0.0'}% đã điểm danh</p>
                   </div>
                   <CheckCircle2 className="w-8 h-8 text-green-500" />
                 </div>
               </CardContent>
             </Card>
-            <Card className="border-l-4 border-l-yellow-500">
+            <Card className="border-l-4 border-l-orange-500">
+              <CardContent className="pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Đến trễ</p>
+                    <p className="text-2xl font-bold text-orange-600">{attendanceStats?.late || 0}</p>
+                    <p className="text-xs text-gray-500 mt-1">{attendanceStats?.attendanceRate || '0.0'}% tổng</p>
+                  </div>
+                  <Clock3 className="w-8 h-8 text-orange-500" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-l-4 border-l-blue-500">
               <CardContent className="pt-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600">Chưa điểm danh</p>
-                    <p className="text-2xl font-bold text-yellow-600">{attendanceStats?.registered || 0}</p>
+                    <p className="text-2xl font-bold text-blue-600">{attendanceStats?.registered || 0}</p>
                   </div>
-                  <Clock3 className="w-8 h-8 text-yellow-500" />
+                  <Clock3 className="w-8 h-8 text-blue-500" />
                 </div>
               </CardContent>
             </Card>
@@ -535,7 +562,7 @@ export default function ActivityDetailAdmin({ activityId, onBack, onEdit, onDele
               <CardContent className="pt-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600">Báo vắng</p>
+                    <p className="text-sm text-gray-600">Vắng mặt</p>
                     <p className="text-2xl font-bold text-red-600">{attendanceStats?.absent || 0}</p>
                   </div>
                   <XCircle className="w-8 h-8 text-red-500" />
