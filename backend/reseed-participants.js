@@ -7,24 +7,21 @@ async function reseedParticipants() {
     console.log('🗑️  Xóa tất cả participants cũ...');
     await prisma.activityParticipant.deleteMany();
     
-    // Lấy activity theo thứ tự giống API (startTime desc)
+    // Lấy TẤT CẢ activities
     const activities = await prisma.activity.findMany({
       orderBy: { startTime: 'desc' }
     });
     
-    const activity = activities[0];
-    
-    if (!activity) {
-      console.log('❌ Không tìm thấy hoạt động!');
+    if (activities.length === 0) {
+      console.log('❌ Không tìm thấy hoạt động nào!');
       return;
     }
     
-    console.log(`\n📌 Activity: ${activity.title} (${activity.id})`);
+    console.log(`\n📋 Tìm thấy ${activities.length} hoạt động`);
     
     // Lấy danh sách users
-    const users = await prisma.user.findMany({
-      where: { role: 'MEMBER' },
-      take: 15
+    let users = await prisma.user.findMany({
+      where: { role: 'MEMBER' }
     });
     
     if (users.length < 15) {
@@ -52,23 +49,28 @@ async function reseedParticipants() {
       }
     }
     
-    console.log(`\n👥 Đăng ký ${users.length} người tham gia vào activity đầu tiên...`);
+    console.log(`\n👥 Đăng ký ${users.length} người vào TẤT CẢ ${activities.length} hoạt động...\n`);
     
-    // Đăng ký tất cả users vào activity
-    for (const user of users) {
-      await prisma.activityParticipant.create({
-        data: {
-          activityId: activity.id,
-          userId: user.id,
-          status: 'REGISTERED'
-        }
-      });
-      console.log(`   ✅ ${user.username} đã đăng ký`);
+    // Đăng ký users vào TẤT CẢ activities
+    for (const activity of activities) {
+      console.log(`📌 ${activity.title}`);
+      
+      // Đăng ký tất cả users vào activity này
+      for (const user of users) {
+        await prisma.activityParticipant.create({
+          data: {
+            activityId: activity.id,
+            userId: user.id,
+            status: 'REGISTERED'
+          }
+        });
+      }
+      console.log(`   ✅ Đã đăng ký ${users.length} người\n`);
     }
     
-    console.log('\n🎉 Hoàn thành! Có thể chạy test script giờ.');
-    console.log(`   Activity: ${activity.title}`);
-    console.log(`   Số người tham gia: ${users.length}`);
+    console.log('🎉 Hoàn thành! Tất cả hoạt động đã có participants.');
+    console.log(`   Tổng số hoạt động: ${activities.length}`);
+    console.log(`   Mỗi hoạt động có: ${users.length} người đăng ký`);
     
   } catch (error) {
     console.error('❌ Lỗi:', error);

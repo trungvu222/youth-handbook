@@ -1301,12 +1301,27 @@ const getAttendanceList = async (req, res, next) => {
     }
 
     // Calculate statistics
+    const checkedInParticipants = participants.filter(p => p.status === 'CHECKED_IN');
+    const lateThreshold = new Date(activity.startTime.getTime() + 15 * 60000); // 15 minutes after start
+    
+    const onTime = checkedInParticipants.filter(p => {
+      return p.checkInTime && p.checkInTime <= lateThreshold;
+    }).length;
+    
+    const late = checkedInParticipants.filter(p => {
+      return p.checkInTime && p.checkInTime > lateThreshold;
+    }).length;
+    
     const stats = {
       total: participants.length,
-      checkedIn: participants.filter(p => p.status === 'CHECKED_IN').length,
+      checkedIn: checkedInParticipants.length,
+      onTime,
+      late,
       registered: participants.filter(p => p.status === 'REGISTERED').length,
       absent: participants.filter(p => p.status === 'ABSENT').length,
-      completed: participants.filter(p => p.status === 'COMPLETED').length
+      completed: participants.filter(p => p.status === 'COMPLETED').length,
+      attendanceRate: participants.length > 0 ? ((checkedInParticipants.length / participants.length) * 100).toFixed(1) : '0.0',
+      onTimeRate: checkedInParticipants.length > 0 ? ((onTime / checkedInParticipants.length) * 100).toFixed(1) : '0.0'
     };
 
     res.status(200).json({
@@ -1421,7 +1436,7 @@ const reportAbsent = async (req, res, next) => {
 const updateAttendanceStatus = async (req, res, next) => {
   try {
     const { id, participantId } = req.params;
-    const { status, absentReason } = req.body;
+    const { status, absentReason, checkInTime } = req.body;
     const currentUser = req.user;
 
     // Check permission
@@ -1479,13 +1494,17 @@ const updateAttendanceStatus = async (req, res, next) => {
     }
     
     if (status === 'CHECKED_IN' && !participant.checkInTime) {
-      updateData.checkInTime = new Date();
-      updateData.pointsEarned = activity.onTimePoints;
+      updateData.checkInTime = checkInTime ? new Date(checkInTime) : new Date();
+      
+      // Calculate points based on check-in time
+      const actualCheckInTime = updateData.checkInTime;
+      const lateThreshold = new Date(activity.startTime.getTime() + 15 * 60000);
+      updateData.pointsEarned = actualCheckInTime <= lateThreshold ? activity.onTimePoints : activity.latePoints;
       
       // Add points to user
       await prisma.user.update({
         where: { id: participant.userId },
-        data: { points: { increment: activity.onTimePoints } }
+        data: { points: { increment: updateData.pointsEarned } }
       });
       
       // Create points history
@@ -1493,8 +1512,8 @@ const updateAttendanceStatus = async (req, res, next) => {
         data: {
           userId: participant.userId,
           activityId: id,
-          points: activity.onTimePoints,
-          reason: `Điểm danh thủ công bởi Admin: ${activity.title}`,
+          points: updateData.pointsEarned,
+          reason: `Điểm danh ${actualCheckInTime <= lateThreshold ? 'đúng giờ' : 'trễ'}: ${activity.title}`,
           type: 'EARN'
         }
       });
