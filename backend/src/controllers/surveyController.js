@@ -449,6 +449,47 @@ const getSurveyResponses = async (req, res, next) => {
   }
 };
 
+// @desc    Submit survey response (user)
+// @route   POST /api/surveys/:id/submit
+// @access  Private
+const submitSurveyResponse = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const { answers } = req.body;
+
+    // Check survey exists and is active
+    const survey = await prisma.survey.findUnique({ where: { id } });
+    if (!survey) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy khảo sát' });
+    }
+    if (survey.status !== 'ACTIVE') {
+      return res.status(400).json({ success: false, error: 'Khảo sát không còn hoạt động' });
+    }
+
+    // Check if already responded
+    const existing = await prisma.surveyResponse.findUnique({
+      where: { surveyId_userId: { surveyId: id, userId } }
+    });
+    if (existing) {
+      return res.status(400).json({ success: false, error: 'Bạn đã trả lời khảo sát này rồi' });
+    }
+
+    const response = await prisma.surveyResponse.create({
+      data: {
+        surveyId: id,
+        userId,
+        answers: JSON.stringify(answers)
+      }
+    });
+
+    res.status(201).json({ success: true, data: response });
+  } catch (error) {
+    console.error('Submit survey response error:', error);
+    next(error);
+  }
+};
+
 module.exports = {
   getSurveys,
   getSurvey,
@@ -456,5 +497,6 @@ module.exports = {
   updateSurvey,
   deleteSurvey,
   getSurveyStats,
-  getSurveyResponses
+  getSurveyResponses,
+  submitSurveyResponse
 };

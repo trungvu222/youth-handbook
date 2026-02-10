@@ -6,7 +6,8 @@ const {
   updateSurvey,
   deleteSurvey,
   getSurveyStats,
-  getSurveyResponses
+  getSurveyResponses,
+  submitSurveyResponse
 } = require('../controllers/surveyController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -28,6 +29,9 @@ router.route('/:id')
   .delete(authorize('ADMIN'), deleteSurvey);
 
 router.get('/:id/responses', authorize('ADMIN', 'LEADER'), getSurveyResponses);
+
+// Submit survey response (all users)
+router.post('/:id/submit', submitSurveyResponse);
 
 module.exports = router;
 

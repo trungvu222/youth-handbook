@@ -2,130 +2,6 @@
 
 import { useState, useEffect } from "react"
 
-// Mock documents - fallback when API fails
-const MOCK_DOCUMENTS = [
-  {
-    id: '1',
-    title: 'Điều lệ Đoàn TNCS Hồ Chí Minh',
-    documentNumber: '01/ĐL-TWĐ',
-    documentType: 'REGULATION',
-    issuer: 'Trung ương Đoàn',
-    description: 'Điều lệ chính thức của Đoàn Thanh niên Cộng sản Hồ Chí Minh',
-    content: 'Đoàn Thanh niên Cộng sản Hồ Chí Minh là tổ chức chính trị - xã hội của thanh niên Việt Nam do Đảng Cộng sản Việt Nam và Chủ tịch Hồ Chí Minh sáng lập, lãnh đạo và rèn luyện.\n\nĐoàn bao gồm những thanh niên tiên tiến, phấn đấu vì mục tiêu, lý tưởng của Đảng là độc lập dân tộc gắn liền với chủ nghĩa xã hội, dân giàu, nước mạnh, dân chủ, công bằng, văn minh.',
-    status: 'PUBLISHED',
-    issuedDate: '2024-01-15',
-    viewCount: 1250,
-  },
-  {
-    id: '2',
-    title: 'Hướng dẫn tổ chức Đại hội Đoàn các cấp',
-    documentNumber: '15/HD-TWĐ',
-    documentType: 'GUIDELINE',
-    issuer: 'Ban Tổ chức Trung ương Đoàn',
-    description: 'Hướng dẫn chi tiết quy trình tổ chức Đại hội Đoàn từ cơ sở đến trung ương',
-    content: 'Đại hội đại biểu Đoàn các cấp được tổ chức theo nhiệm kỳ 5 năm một lần.\n\nNội dung chính của Đại hội:\n- Tổng kết công tác nhiệm kỳ qua\n- Xây dựng phương hướng nhiệm kỳ mới\n- Bầu Ban Chấp hành mới',
-    status: 'PUBLISHED',
-    issuedDate: '2024-02-20',
-    viewCount: 856,
-  },
-  {
-    id: '3',
-    title: 'Quy chế hoạt động của Chi đoàn',
-    documentNumber: '08/QC-TWĐ',
-    documentType: 'REGULATION',
-    issuer: 'Trung ương Đoàn',
-    description: 'Quy chế về tổ chức và hoạt động của Chi đoàn cơ sở',
-    content: 'Chi đoàn là tổ chức tế bào của Đoàn, được thành lập theo địa bàn dân cư, theo đơn vị học tập, công tác, lao động, sản xuất, kinh doanh, chiến đấu.',
-    status: 'PUBLISHED',
-    issuedDate: '2024-03-10',
-    viewCount: 432,
-  },
-  {
-    id: '4',
-    title: 'Luật Thanh niên 2020',
-    documentNumber: '57/2020/QH14',
-    documentType: 'CIRCULAR',
-    issuer: 'Quốc hội',
-    description: 'Luật quy định về quyền, nghĩa vụ và trách nhiệm của thanh niên',
-    content: 'Luật này quy định về quyền, nghĩa vụ và trách nhiệm của thanh niên; chính sách của Nhà nước đối với thanh niên; trách nhiệm của cơ quan, tổ chức, gia đình và cá nhân đối với thanh niên.',
-    status: 'PUBLISHED',
-    issuedDate: '2020-06-16',
-    viewCount: 2150,
-  },
-  {
-    id: '5',
-    title: 'Hướng dẫn đánh giá, xếp loại Đoàn viên',
-    documentNumber: '22/HD-TWĐ',
-    documentType: 'GUIDELINE',
-    issuer: 'Ban Tổ chức Trung ương Đoàn',
-    description: 'Tiêu chí và quy trình đánh giá, xếp loại Đoàn viên hàng năm',
-    content: 'Việc đánh giá, xếp loại Đoàn viên được thực hiện định kỳ hàng năm, dựa trên các tiêu chí:\n\n1. Ý thức chính trị, tư tưởng\n2. Đạo đức, lối sống\n3. Vai trò của Đoàn viên\n4. Kết quả học tập, công tác\n5. Tham gia hoạt động Đoàn',
-    status: 'PUBLISHED',
-    issuedDate: '2024-01-05',
-    viewCount: 1876,
-  },
-  {
-    id: '6',
-    title: 'Quy định về kết nạp Đoàn viên mới',
-    documentNumber: '05/QĐ-TWĐ',
-    documentType: 'DECISION',
-    issuer: 'Trung ương Đoàn',
-    description: 'Điều kiện, thủ tục và quy trình kết nạp Đoàn viên mới',
-    content: 'Thanh niên Việt Nam từ 16 đến 30 tuổi, tích cực học tập, lao động, tán thành Điều lệ Đoàn, tự nguyện hoạt động trong tổ chức cơ sở của Đoàn, được một Đoàn viên chính thức giới thiệu, được Chi đoàn xét và đề nghị kết nạp.',
-    status: 'PUBLISHED',
-    issuedDate: '2023-12-01',
-    viewCount: 1543,
-  },
-  {
-    id: '7',
-    title: 'Mẫu báo cáo hoạt động Chi đoàn',
-    documentNumber: 'MB-01/TWĐ',
-    documentType: 'FORM',
-    issuer: 'Văn phòng Trung ương Đoàn',
-    description: 'Biểu mẫu báo cáo hoạt động định kỳ của Chi đoàn cơ sở',
-    content: 'Mẫu báo cáo bao gồm các phần:\n\n1. Thông tin chung về Chi đoàn\n2. Tình hình Đoàn viên\n3. Kết quả hoạt động trong kỳ\n4. Phương hướng kỳ tới\n5. Đề xuất, kiến nghị',
-    status: 'PUBLISHED',
-    issuedDate: '2024-01-10',
-    viewCount: 987,
-  },
-  {
-    id: '8',
-    title: 'Chỉ thị về công tác Đoàn năm 2024',
-    documentNumber: '01/CT-TWĐ',
-    documentType: 'DIRECTIVE',
-    issuer: 'Ban Bí thư Trung ương Đoàn',
-    description: 'Định hướng và nhiệm vụ trọng tâm công tác Đoàn năm 2024',
-    content: 'Năm 2024, toàn Đoàn tập trung thực hiện các nhiệm vụ:\n\n1. Nâng cao chất lượng Đoàn viên\n2. Đổi mới phương thức hoạt động\n3. Tăng cường ứng dụng công nghệ\n4. Phát triển phong trào tình nguyện\n5. Hỗ trợ thanh niên khởi nghiệp',
-    status: 'PUBLISHED',
-    issuedDate: '2024-01-02',
-    viewCount: 2340,
-  },
-  {
-    id: '9',
-    title: 'Hướng dẫn công tác thi đua khen thưởng',
-    documentNumber: '18/HD-TWĐ',
-    documentType: 'GUIDELINE',
-    issuer: 'Ban Tổ chức Trung ương Đoàn',
-    description: 'Quy định về tiêu chuẩn, quy trình thi đua khen thưởng trong Đoàn',
-    content: 'Công tác thi đua khen thưởng nhằm động viên, khích lệ tổ chức Đoàn và Đoàn viên phấn đấu hoàn thành xuất sắc nhiệm vụ.\n\nCác hình thức khen thưởng:\n- Giấy khen\n- Bằng khen\n- Huy chương\n- Danh hiệu vinh dự',
-    status: 'PUBLISHED',
-    issuedDate: '2024-02-15',
-    viewCount: 765,
-  },
-  {
-    id: '10',
-    title: 'Sổ tay Đoàn viên',
-    documentNumber: 'ST-01/TWĐ',
-    documentType: 'GUIDELINE',
-    issuer: 'Trung ương Đoàn',
-    description: 'Tài liệu hướng dẫn cơ bản dành cho Đoàn viên mới',
-    content: 'Sổ tay Đoàn viên cung cấp những kiến thức cơ bản về:\n\n1. Lịch sử Đoàn TNCS Hồ Chí Minh\n2. Điều lệ Đoàn\n3. Quyền và nghĩa vụ Đoàn viên\n4. Sinh hoạt Chi đoàn\n5. Các hoạt động Đoàn\n6. Kỹ năng công tác Đoàn',
-    status: 'PUBLISHED',
-    issuedDate: '2024-03-01',
-    viewCount: 3210,
-  }
-]
-
 const documentTypes: Record<string, string> = {
   'CIRCULAR': 'Thông tư',
   'DECISION': 'Quyết định',
@@ -168,13 +44,13 @@ export default function DocumentsScreenMobile() {
         }
         
         // Use API data if available, otherwise fallback to mock
-        setDocuments(docsData.length > 0 ? docsData : MOCK_DOCUMENTS)
+        setDocuments(docsData)
       } else {
-        setDocuments(MOCK_DOCUMENTS)
+        setDocuments([])
       }
     } catch (error) {
       console.error('Error loading documents:', error)
-      setDocuments(MOCK_DOCUMENTS) // Fallback to mock data
+      setDocuments([])
     } finally {
       setLoading(false)
     }

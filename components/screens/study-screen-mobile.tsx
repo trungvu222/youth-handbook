@@ -2,100 +2,6 @@
 
 import { useState, useEffect } from 'react'
 
-// Mock topics - fallback when API fails
-const MOCK_TOPICS = [
-  {
-    id: '1',
-    title: 'Điều lệ Đoàn TNCS Hồ Chí Minh',
-    description: 'Tìm hiểu về tổ chức, cơ cấu và quy định của Đoàn',
-    category: 'Nghị quyết',
-    totalMaterials: 5,
-    hasQuiz: true,
-    status: 'IN_PROGRESS'
-  },
-  {
-    id: '2',
-    title: 'Kỹ năng làm việc nhóm',
-    description: 'Phát triển kỹ năng giao tiếp và phối hợp hiệu quả',
-    category: 'Kỹ năng',
-    totalMaterials: 8,
-    hasQuiz: true,
-    status: 'NOT_STARTED'
-  },
-  {
-    id: '3',
-    title: 'Luật Thanh niên 2020',
-    description: 'Quyền và nghĩa vụ của thanh niên Việt Nam',
-    category: 'Pháp luật',
-    totalMaterials: 4,
-    hasQuiz: false,
-    status: 'COMPLETED'
-  },
-  {
-    id: '4',
-    title: 'Lịch sử Đoàn TNCS Hồ Chí Minh',
-    description: 'Quá trình hình thành và phát triển của Đoàn qua các thời kỳ',
-    category: 'Nghị quyết',
-    totalMaterials: 10,
-    hasQuiz: true,
-    status: 'NOT_STARTED'
-  },
-  {
-    id: '5',
-    title: 'Kỹ năng thuyết trình',
-    description: 'Cách trình bày ý tưởng trước đám đông một cách tự tin',
-    category: 'Kỹ năng',
-    totalMaterials: 6,
-    hasQuiz: true,
-    status: 'IN_PROGRESS'
-  },
-  {
-    id: '6',
-    title: 'Luật Giáo dục 2019',
-    description: 'Quy định về quyền và nghĩa vụ của người học',
-    category: 'Pháp luật',
-    totalMaterials: 5,
-    hasQuiz: true,
-    status: 'NOT_STARTED'
-  },
-  {
-    id: '7',
-    title: 'Kỹ năng quản lý thời gian',
-    description: 'Phương pháp sắp xếp công việc hiệu quả',
-    category: 'Kỹ năng',
-    totalMaterials: 4,
-    hasQuiz: false,
-    status: 'COMPLETED'
-  },
-  {
-    id: '8',
-    title: 'Nghị quyết Đại hội Đoàn XII',
-    description: 'Phương hướng nhiệm vụ công tác Đoàn giai đoạn 2022-2027',
-    category: 'Nghị quyết',
-    totalMaterials: 7,
-    hasQuiz: true,
-    status: 'NOT_STARTED'
-  },
-  {
-    id: '9',
-    title: 'Kỹ năng lãnh đạo',
-    description: 'Phát triển năng lực lãnh đạo và điều hành',
-    category: 'Kỹ năng',
-    totalMaterials: 9,
-    hasQuiz: true,
-    status: 'IN_PROGRESS'
-  },
-  {
-    id: '10',
-    title: 'Luật Lao động 2019',
-    description: 'Quyền lợi và nghĩa vụ của người lao động',
-    category: 'Pháp luật',
-    totalMaterials: 6,
-    hasQuiz: true,
-    status: 'NOT_STARTED'
-  }
-]
-
 export default function StudyScreenMobile() {
   const [topics, setTopics] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -123,14 +29,13 @@ export default function StudyScreenMobile() {
           topicsData = result.data.topics
         }
         
-        // Use API data if available, otherwise fallback to mock
-        setTopics(topicsData.length > 0 ? topicsData : MOCK_TOPICS)
+        setTopics(topicsData)
       } else {
-        setTopics(MOCK_TOPICS)
+        setTopics([])
       }
     } catch (error) {
       console.error('Error loading topics:', error)
-      setTopics(MOCK_TOPICS) // Fallback to mock data
+      setTopics([])
     } finally {
       setLoading(false)
     }

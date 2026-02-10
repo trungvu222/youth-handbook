@@ -313,10 +313,13 @@ async function apiCall<T>(
       ...data
     };
   } catch (error) {
-    console.warn('[API] Real API failed, falling back to mock API:', error);
+    console.warn('[API] API call failed:', error);
     
-    // Fallback to mock API if real API fails
-    return mockApiCall<T>(endpoint, options);
+    // Return error instead of mock data
+    return {
+      success: false,
+      error: 'Không thể kết nối đến server. Vui lòng thử lại sau.'
+    };
   }
 }
 
@@ -2654,6 +2657,54 @@ export const surveyApi = {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
+    });
+  },
+
+  async submitResponse(surveyId: string, answers: any[]): Promise<ApiResponse<any>> {
+    const token = getAuthToken();
+    if (!token) return { success: false, error: 'Không có token' };
+
+    return apiCall(`/surveys/${surveyId}/submit`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ answers }),
+    });
+  },
+};
+
+// =====================================
+// POINTS API
+// =====================================
+
+export const pointsApi = {
+  async getLeaderboard(params?: { unitId?: string; search?: string; sortBy?: string; sortOrder?: string }): Promise<ApiResponse<any>> {
+    const token = getAuthToken();
+    if (!token) return { success: false, error: 'Không có token' };
+    const searchParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) searchParams.append(key, value.toString());
+      });
+    }
+    return apiCall(`/points/leaderboard?${searchParams.toString()}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+  },
+
+  async getHistory(params?: { userId?: string; page?: number; limit?: number }): Promise<ApiResponse<any>> {
+    const token = getAuthToken();
+    if (!token) return { success: false, error: 'Không có token' };
+    const searchParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) searchParams.append(key, value.toString());
+      });
+    }
+    return apiCall(`/points/history?${searchParams.toString()}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
     });
   },
 };

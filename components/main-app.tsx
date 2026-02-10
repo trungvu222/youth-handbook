@@ -61,16 +61,7 @@ export function MainApp({ onLogout }: MainAppProps) {
 
   const renderScreen = () => {
     if (showPoints) {
-      return (
-        <div style={{ padding: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <button style={backButtonStyle} onClick={() => setShowPoints(false)}>
-              ← Quay lại
-            </button>
-          </div>
-          <PointsDashboard />
-        </div>
-      )
+      return <PointsDashboard onBack={() => setShowPoints(false)} />
     }
 
     if (showAdmin) {

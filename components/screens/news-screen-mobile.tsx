@@ -2,110 +2,6 @@
 
 import { useState, useEffect } from "react"
 
-// Mock posts - fallback when API fails
-const MOCK_POSTS = [
-  {
-    id: '1',
-    title: 'Thông báo về Đại hội Đoàn cấp cơ sở năm 2024',
-    content: 'Ban Thường vụ Đoàn trường thông báo kế hoạch tổ chức Đại hội Đoàn cấp Chi đoàn và cấp Liên chi đoàn năm 2024.\n\nThời gian: Từ ngày 15/03 đến 30/04/2024\n\nCác Chi đoàn hoàn thành hồ sơ và nộp về Văn phòng Đoàn trường trước ngày 10/03/2024.',
-    postType: 'ANNOUNCEMENT',
-    status: 'PUBLISHED',
-    publishedAt: '2024-03-01T10:00:00Z',
-    createdAt: '2024-03-01T09:00:00Z',
-    author: { id: '1', fullName: 'Nguyễn Văn Admin', role: 'ADMIN' }
-  },
-  {
-    id: '2',
-    title: 'Kết quả Cuộc thi Ý tưởng sáng tạo trẻ 2024',
-    content: 'Chúc mừng các đội thi đã đạt giải trong Cuộc thi Ý tưởng sáng tạo trẻ năm 2024!\n\n🥇 Giải Nhất: Đội "Green Future" - Liên chi đoàn Khoa CNTT\n🥈 Giải Nhì: Đội "Smart City" - Liên chi đoàn Khoa Điện tử\n🥉 Giải Ba: Đội "Eco Life" - Liên chi đoàn Khoa Môi trường',
-    postType: 'NEWS',
-    status: 'PUBLISHED',
-    publishedAt: '2024-02-28T14:30:00Z',
-    createdAt: '2024-02-28T14:00:00Z',
-    author: { id: '2', fullName: 'Trần Thị Bình', role: 'LEADER' }
-  },
-  {
-    id: '3',
-    title: 'Đăng ký tham gia chiến dịch Mùa hè xanh 2024',
-    content: 'Đoàn trường mở đợt đăng ký tham gia chiến dịch tình nguyện Mùa hè xanh 2024.\n\n📍 Địa điểm: Các xã vùng sâu, vùng xa tỉnh Quảng Ngãi\n⏰ Thời gian: 01/07 - 31/07/2024\n📝 Đăng ký: Trước 15/05/2024\n\nQuyền lợi:\n- Được cấp giấy chứng nhận\n- Cộng điểm rèn luyện\n- Hỗ trợ đi lại, ăn ở',
-    postType: 'ANNOUNCEMENT',
-    status: 'PUBLISHED',
-    publishedAt: '2024-02-25T08:00:00Z',
-    createdAt: '2024-02-25T07:30:00Z',
-    author: { id: '1', fullName: 'Nguyễn Văn Admin', role: 'ADMIN' }
-  },
-  {
-    id: '4',
-    title: 'Hội nghị đối thoại giữa lãnh đạo và Đoàn viên',
-    content: 'Đoàn trường tổ chức Hội nghị đối thoại giữa Ban Giám hiệu với Đoàn viên, sinh viên.\n\n📅 Thời gian: 14h00 ngày 20/03/2024\n📍 Địa điểm: Hội trường A, Tầng 3\n\nNội dung:\n- Giải đáp thắc mắc về học tập\n- Cơ sở vật chất, ký túc xá\n- Hoạt động ngoại khóa\n- Việc làm, thực tập',
-    postType: 'ANNOUNCEMENT',
-    status: 'PUBLISHED',
-    publishedAt: '2024-03-10T09:00:00Z',
-    createdAt: '2024-03-10T08:30:00Z',
-    author: { id: '3', fullName: 'Lê Văn Cường', role: 'LEADER' }
-  },
-  {
-    id: '5',
-    title: 'Khai mạc Tháng Thanh niên 2024',
-    content: 'Đoàn trường long trọng tổ chức Lễ khai mạc Tháng Thanh niên năm 2024 với chủ đề "Tuổi trẻ tiên phong - Xung kích - Sáng tạo".\n\nCác hoạt động chính:\n🌟 Ngày hội hiến máu nhân đạo\n🌟 Chiến dịch làm sạch môi trường\n🌟 Cuộc thi sáng tạo công nghệ\n🌟 Giải bóng đá sinh viên',
-    postType: 'NEWS',
-    status: 'PUBLISHED',
-    publishedAt: '2024-03-05T07:00:00Z',
-    createdAt: '2024-03-05T06:00:00Z',
-    author: { id: '1', fullName: 'Nguyễn Văn Admin', role: 'ADMIN' }
-  },
-  {
-    id: '6',
-    title: 'Tuyển tình nguyện viên hỗ trợ thi THPT Quốc gia',
-    content: 'Đoàn trường tuyển 200 tình nguyện viên hỗ trợ kỳ thi THPT Quốc gia 2024.\n\n📋 Yêu cầu:\n- Sinh viên năm 2, 3, 4\n- Có tinh thần trách nhiệm cao\n- Sức khỏe tốt\n\n🎁 Quyền lợi:\n- Giấy chứng nhận\n- Cộng 5 điểm rèn luyện\n- Hỗ trợ ăn trưa',
-    postType: 'ANNOUNCEMENT',
-    status: 'PUBLISHED',
-    publishedAt: '2024-05-01T10:00:00Z',
-    createdAt: '2024-05-01T09:00:00Z',
-    author: { id: '2', fullName: 'Trần Thị Bình', role: 'LEADER' }
-  },
-  {
-    id: '7',
-    title: 'Giải bóng đá Đoàn viên mở rộng 2024',
-    content: 'Đoàn trường phối hợp Trung tâm TDTT tổ chức Giải bóng đá Đoàn viên mở rộng năm 2024.\n\n⚽ Thể thức: Sân 7 người\n📅 Thời gian: 01/04 - 30/04/2024\n🏆 Giải thưởng:\n- Vô địch: 5.000.000đ\n- Á quân: 3.000.000đ\n- Hạng 3: 2.000.000đ',
-    postType: 'NEWS',
-    status: 'PUBLISHED',
-    publishedAt: '2024-03-20T08:00:00Z',
-    createdAt: '2024-03-20T07:30:00Z',
-    author: { id: '4', fullName: 'Phạm Minh Đức', role: 'MEMBER' }
-  },
-  {
-    id: '8',
-    title: 'Chương trình học bổng "Thắp sáng ước mơ" 2024',
-    content: 'Quỹ học bổng "Thắp sáng ước mơ" tiếp nhận hồ sơ xét cấp học bổng năm 2024.\n\n💰 Mức học bổng: 5-10 triệu đồng/suất\n📝 Đối tượng: Sinh viên có hoàn cảnh khó khăn, học tập tốt\n📅 Hạn nộp: 15/04/2024\n\nHồ sơ gồm:\n- Đơn xin học bổng\n- Bảng điểm\n- Xác nhận hoàn cảnh',
-    postType: 'ANNOUNCEMENT',
-    status: 'PUBLISHED',
-    publishedAt: '2024-03-15T14:00:00Z',
-    createdAt: '2024-03-15T13:30:00Z',
-    author: { id: '1', fullName: 'Nguyễn Văn Admin', role: 'ADMIN' }
-  },
-  {
-    id: '9',
-    title: 'Lễ kết nạp Đoàn viên mới đợt 26/3',
-    content: 'Nhân kỷ niệm 93 năm ngày thành lập Đoàn TNCS Hồ Chí Minh, Đoàn trường tổ chức Lễ kết nạp Đoàn viên mới.\n\n📅 Thời gian: 19h00 ngày 26/03/2024\n📍 Địa điểm: Sân vận động trường\n\n🎉 Chào mừng 150 Đoàn viên mới!',
-    postType: 'NEWS',
-    status: 'PUBLISHED',
-    publishedAt: '2024-03-26T20:00:00Z',
-    createdAt: '2024-03-26T19:00:00Z',
-    author: { id: '3', fullName: 'Lê Văn Cường', role: 'LEADER' }
-  },
-  {
-    id: '10',
-    title: 'Workshop "Kỹ năng phỏng vấn xin việc"',
-    content: 'CLB Kỹ năng mềm tổ chức Workshop "Chinh phục nhà tuyển dụng".\n\n👨‍💼 Diễn giả: Anh Nguyễn Hoàng - HR Manager FPT Software\n📅 Thời gian: 14h00 ngày 05/04/2024\n📍 Địa điểm: Phòng B201\n\nNội dung:\n- Chuẩn bị CV ấn tượng\n- Kỹ năng trả lời phỏng vấn\n- Đàm phán lương thưởng',
-    postType: 'NEWS',
-    status: 'PUBLISHED',
-    publishedAt: '2024-04-01T09:00:00Z',
-    createdAt: '2024-04-01T08:30:00Z',
-    author: { id: '5', fullName: 'Hoàng Thị Mai', role: 'MEMBER' }
-  }
-]
-
 export default function NewsScreenMobile() {
   const [posts, setPosts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -133,14 +29,13 @@ export default function NewsScreenMobile() {
           postsData = (result.data as any).posts
         }
         
-        // Use API data if available, otherwise fallback to mock
-        setPosts(postsData.length > 0 ? postsData : MOCK_POSTS)
+        setPosts(postsData)
       } else {
-        setPosts(MOCK_POSTS)
+        setPosts([])
       }
     } catch (error) {
       console.error('Error loading posts:', error)
-      setPosts(MOCK_POSTS) // Fallback to mock data
+      setPosts([])
     } finally {
       setLoading(false)
     }

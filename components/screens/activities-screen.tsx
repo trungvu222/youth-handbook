@@ -4,14 +4,35 @@ import { useState, useEffect } from "react"
 import { Calendar, RefreshCw } from "lucide-react"
 import ActivityListMobile from "@/components/activities/activity-list-mobile"
 import ActivityDetailMobile from "@/components/activities/activity-detail-mobile"
+import { activityApi, getStoredUser } from "@/lib/api"
 
 export default function ActivitiesScreen() {
   const [selectedActivity, setSelectedActivity] = useState<string | null>(null)
   const [isReady, setIsReady] = useState(false)
+  const [stats, setStats] = useState({ total: 0, joined: 0, points: 0 })
 
   useEffect(() => {
     setIsReady(true)
+    loadStats()
   }, [])
+
+  async function loadStats() {
+    try {
+      const result = await activityApi.getActivities({ limit: 100 })
+      const user = getStoredUser()
+      if (result.success && result.data) {
+        const activities = Array.isArray(result.data) ? result.data : (result.data as any).data || []
+        const total = activities.length
+        const joined = activities.filter((a: any) => 
+          a.participants?.some((p: any) => p.userId === user?.id || p.id === user?.id)
+        ).length
+        setStats({ total, joined, points: user?.points || 0 })
+      }
+    } catch (err) {
+      const user = getStoredUser()
+      setStats({ total: 0, joined: 0, points: user?.points || 0 })
+    }
+  }
 
   const handleActivitySelect = (activity: any) => {
     setSelectedActivity(activity.id)
@@ -148,17 +169,17 @@ export default function ActivitiesScreen() {
         <div style={statsCardStyle}>
           <div style={statsRowStyle}>
             <div style={statItemStyle}>
-              <div style={statNumberStyle}>3</div>
+              <div style={statNumberStyle}>{stats.total}</div>
               <div style={statLabelStyle}>Hoạt động</div>
             </div>
             <div style={{ width: '1px', backgroundColor: 'rgba(255,255,255,0.2)' }} />
             <div style={statItemStyle}>
-              <div style={statNumberStyle}>0</div>
+              <div style={statNumberStyle}>{stats.joined}</div>
               <div style={statLabelStyle}>Đã tham gia</div>
             </div>
             <div style={{ width: '1px', backgroundColor: 'rgba(255,255,255,0.2)' }} />
             <div style={statItemStyle}>
-              <div style={statNumberStyle}>850</div>
+              <div style={statNumberStyle}>{stats.points}</div>
               <div style={statLabelStyle}>Điểm</div>
             </div>
           </div>
