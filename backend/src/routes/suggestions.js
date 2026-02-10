@@ -1,12 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const { protect: auth } = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-
-const prisma = new PrismaClient();
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -510,7 +508,15 @@ router.post('/:id/respond', auth, async (req, res) => {
   try {
     const { role } = req.user;
     
+    console.log('📝 [Backend] Received respond request:', {
+      suggestionId: req.params.id,
+      userId: req.user.id,
+      userRole: role,
+      body: req.body
+    });
+    
     if (role !== 'ADMIN' && role !== 'LEADER') {
+      console.log('❌ [Backend] Access denied - role:', role);
       return res.status(403).json({
         success: false,
         error: 'Không có quyền phản hồi'
@@ -539,6 +545,8 @@ router.post('/:id/respond', auth, async (req, res) => {
       }
     });
 
+    console.log('✅ [Backend] Response created:', response.id);
+
     // Update suggestion status if provided
     if (newStatus) {
       await prisma.suggestion.update({
@@ -548,11 +556,53 @@ router.post('/:id/respond', auth, async (req, res) => {
           resolvedAt: newStatus === 'RESOLVED' ? new Date() : null
         }
       });
+      console.log('✅ [Backend] Suggestion status updated to:', newStatus);
     }
+
+    // Send notification to user if sendNotification is true
+    let notificationSent = 0;
+    if (sendNotification) {
+      try {
+        // Get the suggestion to find the user
+        const suggestion = await prisma.suggestion.findUnique({
+          where: { id },
+          select: { userId: true, title: true }
+        });
+        
+        if (suggestion?.userId) {
+          // Get status label for notification
+          const statusLabels = {
+            'UNDER_REVIEW': 'Đang xem xét',
+            'IN_PROGRESS': 'Đang xử lý',
+            'RESOLVED': 'Đã giải quyết',
+            'REJECTED': 'Bị từ chối'
+          };
+          const statusLabel = statusLabels[newStatus] || newStatus;
+          
+          await prisma.notification.create({
+            data: {
+              userId: suggestion.userId,
+              title: '📝 Phản hồi kiến nghị',
+              message: `Kiến nghị "${suggestion.title}" của bạn đã được phản hồi. Trạng thái: ${statusLabel}`,
+              type: 'SUGGESTION',
+              relatedId: id
+            }
+          });
+          notificationSent = 1;
+          console.log('📧 [Backend] Notification sent to user:', suggestion.userId);
+        }
+      } catch (notifError) {
+        console.error('❌ [Backend] Error sending notification:', notifError);
+      }
+    }
+
+    console.log('📤 [Backend] Sending success response');
 
     res.json({
       success: true,
-      data: response
+      data: response,
+      newStatus: newStatus,
+      notificationSent: notificationSent
     });
   } catch (error) {
     console.error('Respond to suggestion error:', error);
@@ -599,6 +649,35 @@ router.put('/:id/status', auth, async (req, res) => {
       }
     });
 
+    // Send notification to user about status change
+    let notificationSent = 0;
+    if (suggestion.user?.id) {
+      try {
+        const statusLabels = {
+          'SUBMITTED': 'Đã gửi',
+          'UNDER_REVIEW': 'Đang xem xét',
+          'IN_PROGRESS': 'Đang xử lý',
+          'RESOLVED': 'Đã giải quyết',
+          'REJECTED': 'Bị từ chối'
+        };
+        const statusLabel = statusLabels[status] || status;
+        
+        await prisma.notification.create({
+          data: {
+            userId: suggestion.user.id,
+            title: '📝 Cập nhật trạng thái kiến nghị',
+            message: `Kiến nghị "${suggestion.title}" của bạn đã chuyển sang trạng thái: ${statusLabel}`,
+            type: 'SUGGESTION',
+            relatedId: id
+          }
+        });
+        notificationSent = 1;
+        console.log('📧 [Backend] Status notification sent to user:', suggestion.user.id);
+      } catch (notifError) {
+        console.error('❌ [Backend] Error sending status notification:', notifError);
+      }
+    }
+
     res.json({
       success: true,
       data: {
@@ -607,7 +686,8 @@ router.put('/:id/status', auth, async (req, res) => {
           ...suggestion.user,
           unitName: suggestion.user.unit?.name
         } : null
-      }
+      },
+      notificationSent: notificationSent
     });
   } catch (error) {
     console.error('Update suggestion status error:', error);

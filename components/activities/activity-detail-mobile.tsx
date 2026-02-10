@@ -43,44 +43,12 @@ export default function ActivityDetailMobile({ activityId, onBack }: ActivityDet
       if (result.success && result.data) {
         setActivity(result.data)
       } else {
-        // Mock data nếu không có API
-        setActivity({
-          id: activityId,
-          title: 'Sinh hoạt Chi đoàn tháng 12',
-          description: 'Tổng kết hoạt động và triển khai phương hướng mới',
-          type: 'MEETING',
-          startTime: new Date().toISOString(),
-          endTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-          location: 'Hội trường A1',
-          onTimePoints: 5,
-          latePoints: 2,
-          missedPoints: -3,
-          participants: [],
-          maxParticipants: 50,
-          userParticipation: {
-            status: 'REGISTERED',
-            checkInTime: null,
-            absentReason: null
-          }
-        })
+        console.error('Failed to load activity:', result.error)
+        alert('Không thể tải thông tin hoạt động. Vui lòng thử lại sau.')
       }
     } catch (error) {
       console.error('Error loading activity:', error)
-      // Mock fallback
-      setActivity({
-        id: activityId,
-        title: 'Sinh hoạt Chi đoàn',
-        description: 'Chi tiết sinh hoạt',
-        type: 'MEETING',
-        startTime: new Date().toISOString(),
-        location: 'Hội trường',
-        onTimePoints: 5,
-        latePoints: 2,
-        missedPoints: -3,
-        userParticipation: {
-          status: 'REGISTERED'
-        }
-      })
+      alert('Lỗi kết nối. Vui lòng kiểm tra kết nối mạng và thử lại.')
     } finally {
       setLoading(false)
     }

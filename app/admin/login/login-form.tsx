@@ -25,7 +25,7 @@ export default function LoginForm() {
     setLoading(true);
 
     try {
-      const response = await authApi.login({
+      const response = await authApi.adminLogin({
         username: formData.email,
         password: formData.password
       });
@@ -33,21 +33,13 @@ export default function LoginForm() {
       if (response.success && response.user) {
         const user = response.user;
         
-        // Kiểm tra quyền admin
-        if (user.role !== 'ADMIN') {
-          setError('Bạn không có quyền truy cập trang quản trị');
-          setLoading(false);
-          return;
-        }
-
-        // Lưu thông tin đăng nhập
-        localStorage.setItem('currentUser', JSON.stringify(user));
-        localStorage.setItem('accessToken', response.token);
-
-        // Chuyển hướng đến dashboard
-        router.push('/admin');
+        // Admin login endpoint already validates ADMIN role
+        // Redirect to admin dashboard
+        const searchParams = new URLSearchParams(window.location.search);
+        const redirect = searchParams.get('redirect') || '/admin';
+        router.push(redirect);
       } else {
-        setError(response.error || 'Email hoặc mật khẩu không đúng');
+        setError(response.error || 'Email hoặc mật khẩu không đúng hoặc bạn không có quyền admin');
       }
     } catch (error) {
       console.error('Login error:', error);

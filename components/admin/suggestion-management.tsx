@@ -28,7 +28,8 @@ import {
   FileText,
   TrendingUp
 } from 'lucide-react'
-import { toast } from '../ui/use-toast'
+import { useToast } from '@/hooks/use-toast'
+import { Toaster } from '../ui/toaster'
 
 interface Suggestion {
   id: string;
@@ -51,9 +52,11 @@ interface Suggestion {
 }
 
 export default function SuggestionManagement() {
+  const { toast } = useToast()
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [sendingResponse, setSendingResponse] = useState(false)
   const [activeTab, setActiveTab] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
@@ -137,14 +140,37 @@ export default function SuggestionManagement() {
       return
     }
 
+    console.log('📝 Responding to suggestion:', selectedSuggestion.id)
+    console.log('📝 Response data:', responseData)
+
+    setSendingResponse(true)
     try {
       const response = await suggestionApi.respondToSuggestion(selectedSuggestion.id, responseData)
 
+      console.log('📥 Response result:', response)
+
       if (response.success) {
+        // Get status label
+        const statusLabels: Record<string, string> = {
+          'UNDER_REVIEW': 'Đang xem xét',
+          'IN_PROGRESS': 'Đang xử lý',
+          'RESOLVED': 'Đã giải quyết',
+          'REJECTED': 'Bị từ chối'
+        }
+        const statusLabel = statusLabels[responseData.newStatus] || responseData.newStatus
+        const notifSent = response.notificationSent || 0
+        
+        // Show success toast
         toast({
-          title: 'Thành công',
-          description: 'Đã gửi phản hồi'
+          title: 'Gửi phản hồi thành công',
+          description: notifSent > 0 
+            ? `Đã gửi thông báo đến ${notifSent} người dùng. Trạng thái: ${statusLabel}`
+            : `Đã cập nhật trạng thái: ${statusLabel}`,
+          variant: 'success' as any,
+          duration: 4000
         })
+        
+        // Close dialog and reload
         setShowResponseDialog(false)
         setSelectedSuggestion(null)
         resetResponseForm()
@@ -157,12 +183,14 @@ export default function SuggestionManagement() {
         })
       }
     } catch (error) {
-      console.error('Error responding to suggestion:', error)
+      console.error('❌ Error responding to suggestion:', error)
       toast({
         title: 'Lỗi',
         description: 'Không thể gửi phản hồi',
         variant: 'destructive'
       })
+    } finally {
+      setSendingResponse(false)
     }
   }
 
@@ -171,9 +199,22 @@ export default function SuggestionManagement() {
       const response = await suggestionApi.updateSuggestionStatus(suggestionId, newStatus)
 
       if (response.success) {
+        const statusLabels: Record<string, string> = {
+          'UNDER_REVIEW': 'Đang xem xét',
+          'IN_PROGRESS': 'Đang xử lý',
+          'RESOLVED': 'Đã giải quyết',
+          'REJECTED': 'Bị từ chối'
+        }
+        const statusLabel = statusLabels[newStatus] || newStatus
+        const notifSent = (response as any).notificationSent || 0
+        
         toast({
-          title: 'Thành công',
-          description: 'Đã cập nhật trạng thái'
+          title: 'Cập nhật trạng thái thành công',
+          description: notifSent > 0 
+            ? `Đã gửi thông báo đến ${notifSent} người dùng. Trạng thái: ${statusLabel}`
+            : `Đã cập nhật trạng thái: ${statusLabel}`,
+          variant: 'success' as any,
+          duration: 4000
         })
         loadData()
       } else {
@@ -287,6 +328,11 @@ export default function SuggestionManagement() {
     })
   }
 
+  // Calculate counts for each tab
+  const pendingCount = suggestions.filter(s => ['SUBMITTED', 'UNDER_REVIEW'].includes(s.status)).length
+  const processingCount = suggestions.filter(s => s.status === 'IN_PROGRESS').length
+  const completedCount = suggestions.filter(s => ['RESOLVED', 'REJECTED'].includes(s.status)).length
+
   const filteredSuggestions = suggestions.filter(suggestion => {
     if (activeTab === 'pending') {
       return ['SUBMITTED', 'UNDER_REVIEW'].includes(suggestion.status)
@@ -295,58 +341,71 @@ export default function SuggestionManagement() {
     } else if (activeTab === 'completed') {
       return ['RESOLVED', 'REJECTED'].includes(suggestion.status)
     }
-    return true // 'all' tab
+    return true
   })
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Quản lý kiến nghị</h1>
-          <p className="text-muted-foreground">
-            Xem, phản hồi và theo dõi tiến độ xử lý kiến nghị
+      {/* Header - Modern Design */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-2xl p-6 shadow-lg">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full -ml-24 -mb-24" />
+        <div className="relative">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2.5 bg-white/20 rounded-xl backdrop-blur-sm">
+              <MessageSquare className="h-6 w-6 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold text-white">Quản lý kiến nghị</h1>
+          </div>
+          <p className="text-blue-100 ml-14">
+            Xem, phản hồi và theo dõi tiến độ xử lý kiến nghị từ đoàn viên
           </p>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="all" className="flex items-center gap-2">
+        <TabsList className="grid w-full grid-cols-4 p-1 bg-gray-100/80 rounded-xl h-auto">
+          <TabsTrigger value="all" className="flex items-center gap-2 py-2.5 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md transition-all">
             <FileText className="h-4 w-4" />
-            Tất cả ({suggestions.length})
+            <span className="font-medium">Tất cả</span>
+            <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full font-semibold">{suggestions.length}</span>
           </TabsTrigger>
-          <TabsTrigger value="pending" className="flex items-center gap-2">
+          <TabsTrigger value="pending" className="flex items-center gap-2 py-2.5 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md transition-all">
             <Clock className="h-4 w-4" />
-            Chờ xử lý ({filteredSuggestions.length})
+            <span className="font-medium">Chờ xử lý</span>
+            <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full font-semibold">{pendingCount}</span>
           </TabsTrigger>
-          <TabsTrigger value="processing" className="flex items-center gap-2">
+          <TabsTrigger value="processing" className="flex items-center gap-2 py-2.5 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md transition-all">
             <AlertTriangle className="h-4 w-4" />
-            Đang xử lý
+            <span className="font-medium">Đang xử lý</span>
+            <span className="bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full font-semibold">{processingCount}</span>
           </TabsTrigger>
-          <TabsTrigger value="completed" className="flex items-center gap-2">
+          <TabsTrigger value="completed" className="flex items-center gap-2 py-2.5 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md transition-all">
             <CheckCircle className="h-4 w-4" />
-            Đã xong
+            <span className="font-medium">Đã xong</span>
+            <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-semibold">{completedCount}</span>
           </TabsTrigger>
         </TabsList>
 
-        {/* Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-          <div className="relative lg:col-span-2">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Tìm kiếm kiến nghị..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+        {/* Filters - Modern Style */}
+        <Card className="shadow-sm border-0 bg-white/80 backdrop-blur-sm">
+          <CardContent className="p-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+              <div className="relative lg:col-span-2">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Tìm kiếm kiến nghị..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-gray-50 border-gray-200 focus:bg-white transition-colors"
+                />
+              </div>
 
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Danh mục" />
-            </SelectTrigger>
-            <SelectContent>
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="bg-gray-50 border-gray-200 hover:bg-white transition-colors">
+                  <SelectValue placeholder="Danh mục" />
+                </SelectTrigger>
+                <SelectContent>
               <SelectItem value="all">Tất cả danh mục</SelectItem>
               <SelectItem value="IMPROVEMENT">Cải tiến</SelectItem>
               <SelectItem value="COMPLAINT">Phản ánh</SelectItem>
@@ -357,7 +416,7 @@ export default function SuggestionManagement() {
           </Select>
 
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger>
+            <SelectTrigger className="bg-gray-50 border-gray-200 hover:bg-white transition-colors">
               <SelectValue placeholder="Trạng thái" />
             </SelectTrigger>
             <SelectContent>
@@ -371,7 +430,7 @@ export default function SuggestionManagement() {
           </Select>
 
           <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-            <SelectTrigger>
+            <SelectTrigger className="bg-gray-50 border-gray-200 hover:bg-white transition-colors">
               <SelectValue placeholder="Ưu tiên" />
             </SelectTrigger>
             <SelectContent>
@@ -384,7 +443,7 @@ export default function SuggestionManagement() {
           </Select>
 
           <Select value={dateFilter} onValueChange={setDateFilter}>
-            <SelectTrigger>
+            <SelectTrigger className="bg-gray-50 border-gray-200 hover:bg-white transition-colors">
               <SelectValue placeholder="Thời gian" />
             </SelectTrigger>
             <SelectContent>
@@ -394,63 +453,92 @@ export default function SuggestionManagement() {
               <SelectItem value="month">30 ngày qua</SelectItem>
             </SelectContent>
           </Select>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Statistics */}
+        {/* Statistics - Modern Design */}
         {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-blue-600">
-                  {stats.total || 0}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            {/* Tổng kiến nghị */}
+            <Card className="relative overflow-hidden bg-gradient-to-br from-blue-50 to-blue-100 border-0 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-blue-200/30 rounded-full -mr-10 -mt-10 group-hover:scale-110 transition-transform duration-300" />
+              <div className="absolute bottom-0 left-0 w-16 h-16 bg-blue-300/20 rounded-full -ml-8 -mb-8" />
+              <CardContent className="p-5 relative">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-semibold text-blue-800">Tổng kiến nghị</span>
+                  <div className="p-2.5 bg-blue-500/15 rounded-xl backdrop-blur-sm">
+                    <FileText className="h-5 w-5 text-blue-600" />
+                  </div>
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  Tổng kiến nghị
-                </div>
+                <div className="text-4xl font-bold text-blue-700 mb-1">{stats.total || 0}</div>
+                <p className="text-xs text-blue-600/70">Tổng số đã nhận</p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-yellow-600">
-                  {stats.pending || 0}
+            {/* Chờ xử lý */}
+            <Card className="relative overflow-hidden bg-gradient-to-br from-amber-50 to-amber-100 border-0 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-amber-200/30 rounded-full -mr-10 -mt-10 group-hover:scale-110 transition-transform duration-300" />
+              <div className="absolute bottom-0 left-0 w-16 h-16 bg-amber-300/20 rounded-full -ml-8 -mb-8" />
+              <CardContent className="p-5 relative">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-semibold text-amber-800">Chờ xử lý</span>
+                  <div className="p-2.5 bg-amber-500/15 rounded-xl backdrop-blur-sm">
+                    <Clock className="h-5 w-5 text-amber-600" />
+                  </div>
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  Chờ xử lý
-                </div>
+                <div className="text-4xl font-bold text-amber-700 mb-1">{stats.pending || 0}</div>
+                <p className="text-xs text-amber-600/70">Đang chờ phản hồi</p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-orange-600">
-                  {stats.inProgress || 0}
+            {/* Đang xử lý */}
+            <Card className="relative overflow-hidden bg-gradient-to-br from-orange-50 to-orange-100 border-0 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-orange-200/30 rounded-full -mr-10 -mt-10 group-hover:scale-110 transition-transform duration-300" />
+              <div className="absolute bottom-0 left-0 w-16 h-16 bg-orange-300/20 rounded-full -ml-8 -mb-8" />
+              <CardContent className="p-5 relative">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-semibold text-orange-800">Đang xử lý</span>
+                  <div className="p-2.5 bg-orange-500/15 rounded-xl backdrop-blur-sm">
+                    <AlertTriangle className="h-5 w-5 text-orange-600" />
+                  </div>
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  Đang xử lý
-                </div>
+                <div className="text-4xl font-bold text-orange-700 mb-1">{stats.inProgress || 0}</div>
+                <p className="text-xs text-orange-600/70">Đang tiến hành</p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-green-600">
-                  {stats.resolved || 0}
+            {/* Đã giải quyết */}
+            <Card className="relative overflow-hidden bg-gradient-to-br from-green-50 to-green-100 border-0 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-green-200/30 rounded-full -mr-10 -mt-10 group-hover:scale-110 transition-transform duration-300" />
+              <div className="absolute bottom-0 left-0 w-16 h-16 bg-green-300/20 rounded-full -ml-8 -mb-8" />
+              <CardContent className="p-5 relative">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-semibold text-green-800">Đã giải quyết</span>
+                  <div className="p-2.5 bg-green-500/15 rounded-xl backdrop-blur-sm">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                  </div>
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  Đã giải quyết
-                </div>
+                <div className="text-4xl font-bold text-green-700 mb-1">{stats.resolved || 0}</div>
+                <p className="text-xs text-green-600/70">Hoàn thành xử lý</p>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-purple-600">
+            {/* Tỷ lệ hoàn thành */}
+            <Card className="relative overflow-hidden bg-gradient-to-br from-purple-50 to-purple-100 border-0 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-purple-200/30 rounded-full -mr-10 -mt-10 group-hover:scale-110 transition-transform duration-300" />
+              <div className="absolute bottom-0 left-0 w-16 h-16 bg-purple-300/20 rounded-full -ml-8 -mb-8" />
+              <CardContent className="p-5 relative">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-semibold text-purple-800">Tỷ lệ hoàn thành</span>
+                  <div className="p-2.5 bg-purple-500/15 rounded-xl backdrop-blur-sm">
+                    <TrendingUp className="h-5 w-5 text-purple-600" />
+                  </div>
+                </div>
+                <div className="text-4xl font-bold text-purple-700 mb-1">
                   {Math.round((stats.resolved / (stats.total || 1)) * 100)}%
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  Tỷ lệ hoàn thành
-                </div>
+                <p className="text-xs text-purple-600/70">Hiệu suất xử lý</p>
               </CardContent>
             </Card>
           </div>
@@ -464,85 +552,95 @@ export default function SuggestionManagement() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
             ) : filteredSuggestions.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center">
-                  <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">Không có kiến nghị nào</p>
+              <Card className="border-0 shadow-lg bg-gradient-to-br from-gray-50 to-white">
+                <CardContent className="py-16 text-center">
+                  <div className="w-20 h-20 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
+                    <MessageSquare className="h-10 w-10 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-2">Không có kiến nghị nào</h3>
+                  <p className="text-gray-500 max-w-md mx-auto">
+                    Hiện tại không có kiến nghị nào phù hợp với bộ lọc của bạn. Hãy thử thay đổi điều kiện tìm kiếm.
+                  </p>
                 </CardContent>
               </Card>
             ) : (
               filteredSuggestions.map(suggestion => (
-                <Card key={suggestion.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between gap-4">
+                <Card key={suggestion.id} className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 border-l-4 border-l-transparent hover:border-l-blue-500 bg-white">
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between gap-6">
                       <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 mb-3">
-                          <Badge className={getCategoryColor(suggestion.category)}>
+                        {/* Badges row */}
+                        <div className="flex flex-wrap items-center gap-2 mb-4">
+                          <Badge className={`${getCategoryColor(suggestion.category)} shadow-sm`}>
                             {getCategoryLabel(suggestion.category)}
                           </Badge>
 
-                          <Badge className={getStatusColor(suggestion.status)}>
+                          <Badge className={`${getStatusColor(suggestion.status)} shadow-sm`}>
                             {getStatusIcon(suggestion.status)}
                             <span className="ml-1">{getStatusLabel(suggestion.status)}</span>
                           </Badge>
 
                           <Badge 
                             variant="outline" 
-                            className={getPriorityColor(suggestion.priority)}
+                            className={`${getPriorityColor(suggestion.priority)} shadow-sm`}
                           >
                             {getPriorityLabel(suggestion.priority)}
                           </Badge>
 
                           {suggestion.isAnonymous && (
-                            <Badge variant="secondary" className="text-xs">
+                            <Badge variant="secondary" className="text-xs shadow-sm">
                               Ẩn danh
                             </Badge>
                           )}
                         </div>
 
-                        <h3 className="font-semibold text-lg mb-2 line-clamp-1">
+                        {/* Title */}
+                        <h3 className="font-bold text-lg mb-2 line-clamp-1 text-gray-900 group-hover:text-blue-700 transition-colors">
                           {suggestion.title}
                         </h3>
 
-                        <p className="text-muted-foreground mb-3 line-clamp-2">
+                        {/* Content preview */}
+                        <p className="text-gray-600 mb-4 line-clamp-2 leading-relaxed">
                           {suggestion.content}
                         </p>
 
-                        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
+                        {/* Meta info with icons */}
+                        <div className="flex flex-wrap items-center gap-5 text-sm">
+                          <span className="flex items-center gap-1.5 text-gray-500 bg-gray-50 px-2.5 py-1 rounded-full">
+                            <Calendar className="h-3.5 w-3.5" />
                             {formatDate(suggestion.submittedAt)}
                           </span>
 
                           {!suggestion.isAnonymous && suggestion.user && (
-                            <span className="flex items-center gap-1">
-                              <User className="h-3 w-3" />
+                            <span className="flex items-center gap-1.5 text-gray-500 bg-gray-50 px-2.5 py-1 rounded-full">
+                              <User className="h-3.5 w-3.5" />
                               {suggestion.user.fullName}
-                              {suggestion.user.unitName && ` (${suggestion.user.unitName})`}
+                              {suggestion.user.unitName && <span className="text-gray-400">({suggestion.user.unitName})</span>}
                             </span>
                           )}
 
                           {suggestion.responses && suggestion.responses.length > 0 && (
-                            <span className="flex items-center gap-1">
-                              <MessageSquare className="h-3 w-3" />
+                            <span className="flex items-center gap-1.5 text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">
+                              <MessageSquare className="h-3.5 w-3.5" />
                               {suggestion.responses.length} phản hồi
                             </span>
                           )}
 
-                          <span className="flex items-center gap-1">
-                            <Eye className="h-3 w-3" />
+                          <span className="flex items-center gap-1.5 text-gray-500 bg-gray-50 px-2.5 py-1 rounded-full">
+                            <Eye className="h-3.5 w-3.5" />
                             {suggestion.viewCount} lượt xem
                           </span>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      {/* Actions */}
+                      <div className="flex flex-col items-end gap-3">
                         {/* Status Update */}
                         <Select
                           value={suggestion.status}
                           onValueChange={(value) => handleUpdateStatus(suggestion.id, value)}
                         >
-                          <SelectTrigger className="w-40">
+                          <SelectTrigger className="w-36 h-9 text-sm bg-gray-50 border-gray-200 hover:bg-white transition-colors">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -557,6 +655,7 @@ export default function SuggestionManagement() {
                         <Button
                           variant="outline"
                           size="sm"
+                          className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:text-blue-800 transition-all"
                           onClick={() => {
                             setSelectedSuggestion(suggestion)
                             setShowResponseDialog(true)
@@ -574,17 +673,228 @@ export default function SuggestionManagement() {
           </div>
         </TabsContent>
 
-        {/* Other tab contents would be similar but filtered */}
-        <TabsContent value="pending">
-          {/* Similar to 'all' but filtered for pending suggestions */}
+        {/* Pending Tab */}
+        <TabsContent value="pending" className="space-y-4">
+          <div className="space-y-4">
+            {loading ? (
+              <div className="flex justify-center py-12">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-500"></div>
+              </div>
+            ) : filteredSuggestions.length === 0 ? (
+              <Card className="border-0 shadow-lg bg-gradient-to-br from-amber-50 to-white">
+                <CardContent className="py-16 text-center">
+                  <div className="w-20 h-20 mx-auto mb-6 bg-amber-100 rounded-full flex items-center justify-center">
+                    <Clock className="h-10 w-10 text-amber-500" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-2">Không có kiến nghị chờ xử lý</h3>
+                  <p className="text-gray-500">Tất cả kiến nghị đã được tiếp nhận và xử lý</p>
+                </CardContent>
+              </Card>
+            ) : (
+              filteredSuggestions.map(suggestion => (
+                <Card key={suggestion.id} className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 border-l-4 border-l-amber-500 bg-white">
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between gap-6">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-4">
+                          <Badge className={`${getCategoryColor(suggestion.category)} shadow-sm`}>
+                            {getCategoryLabel(suggestion.category)}
+                          </Badge>
+                          <Badge className={`${getStatusColor(suggestion.status)} shadow-sm`}>
+                            {getStatusIcon(suggestion.status)}
+                            <span className="ml-1">{getStatusLabel(suggestion.status)}</span>
+                          </Badge>
+                          <Badge variant="outline" className={`${getPriorityColor(suggestion.priority)} shadow-sm`}>
+                            {getPriorityLabel(suggestion.priority)}
+                          </Badge>
+                          {suggestion.isAnonymous && (
+                            <Badge variant="secondary" className="text-xs shadow-sm">Ẩn danh</Badge>
+                          )}
+                        </div>
+                        <h3 className="font-bold text-lg mb-2 line-clamp-1 text-gray-900 group-hover:text-amber-700 transition-colors">{suggestion.title}</h3>
+                        <p className="text-gray-600 mb-4 line-clamp-2 leading-relaxed">{suggestion.content}</p>
+                        <div className="flex flex-wrap items-center gap-5 text-sm">
+                          <span className="flex items-center gap-1.5 text-gray-500 bg-gray-50 px-2.5 py-1 rounded-full">
+                            <Calendar className="h-3.5 w-3.5" />
+                            {formatDate(suggestion.submittedAt)}
+                          </span>
+                          {!suggestion.isAnonymous && suggestion.user && (
+                            <span className="flex items-center gap-1.5 text-gray-500 bg-gray-50 px-2.5 py-1 rounded-full">
+                              <User className="h-3.5 w-3.5" />
+                              {suggestion.user.fullName}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-3">
+                        <Select value={suggestion.status} onValueChange={(value) => handleUpdateStatus(suggestion.id, value)}>
+                          <SelectTrigger className="w-36 h-9 text-sm bg-gray-50 border-gray-200 hover:bg-white transition-colors"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="SUBMITTED">Đã gửi</SelectItem>
+                            <SelectItem value="UNDER_REVIEW">Đang xem xét</SelectItem>
+                            <SelectItem value="IN_PROGRESS">Đang xử lý</SelectItem>
+                            <SelectItem value="RESOLVED">Đã giải quyết</SelectItem>
+                            <SelectItem value="REJECTED">Bị từ chối</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button variant="outline" size="sm" className="bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 hover:text-amber-800 transition-all" onClick={() => { setSelectedSuggestion(suggestion); setShowResponseDialog(true); }}>
+                          <MessageSquare className="h-4 w-4 mr-1" />Phản hồi
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
         </TabsContent>
 
-        <TabsContent value="processing">
-          {/* Similar to 'all' but filtered for in-progress suggestions */}
+        {/* Processing Tab */}
+        <TabsContent value="processing" className="space-y-4">
+          <div className="space-y-4">
+            {loading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
+              </div>
+            ) : filteredSuggestions.length === 0 ? (
+              <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-white">
+                <CardContent className="py-16 text-center">
+                  <div className="w-20 h-20 mx-auto mb-6 bg-blue-100 rounded-full flex items-center justify-center">
+                    <AlertTriangle className="h-10 w-10 text-blue-500" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-2">Không có kiến nghị đang xử lý</h3>
+                  <p className="text-gray-500">Chưa có kiến nghị nào trong trạng thái đang xử lý</p>
+                </CardContent>
+              </Card>
+            ) : (
+              filteredSuggestions.map(suggestion => (
+                <Card key={suggestion.id} className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 border-l-4 border-l-blue-500 bg-white">
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between gap-6">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-4">
+                          <Badge className={`${getCategoryColor(suggestion.category)} shadow-sm`}>
+                            {getCategoryLabel(suggestion.category)}
+                          </Badge>
+                          <Badge className={`${getStatusColor(suggestion.status)} shadow-sm`}>
+                            {getStatusIcon(suggestion.status)}
+                            <span className="ml-1">{getStatusLabel(suggestion.status)}</span>
+                          </Badge>
+                          <Badge variant="outline" className={`${getPriorityColor(suggestion.priority)} shadow-sm`}>
+                            {getPriorityLabel(suggestion.priority)}
+                          </Badge>
+                          {suggestion.isAnonymous && (
+                            <Badge variant="secondary" className="text-xs shadow-sm">Ẩn danh</Badge>
+                          )}
+                        </div>
+                        <h3 className="font-bold text-lg mb-2 line-clamp-1 text-gray-900 group-hover:text-blue-700 transition-colors">{suggestion.title}</h3>
+                        <p className="text-gray-600 mb-4 line-clamp-2 leading-relaxed">{suggestion.content}</p>
+                        <div className="flex flex-wrap items-center gap-5 text-sm">
+                          <span className="flex items-center gap-1.5 text-gray-500 bg-gray-50 px-2.5 py-1 rounded-full">
+                            <Calendar className="h-3.5 w-3.5" />
+                            {formatDate(suggestion.submittedAt)}
+                          </span>
+                          {!suggestion.isAnonymous && suggestion.user && (
+                            <span className="flex items-center gap-1.5 text-gray-500 bg-gray-50 px-2.5 py-1 rounded-full">
+                              <User className="h-3.5 w-3.5" />
+                              {suggestion.user.fullName}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-3">
+                        <Select value={suggestion.status} onValueChange={(value) => handleUpdateStatus(suggestion.id, value)}>
+                          <SelectTrigger className="w-36 h-9 text-sm bg-gray-50 border-gray-200 hover:bg-white transition-colors"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="SUBMITTED">Đã gửi</SelectItem>
+                            <SelectItem value="UNDER_REVIEW">Đang xem xét</SelectItem>
+                            <SelectItem value="IN_PROGRESS">Đang xử lý</SelectItem>
+                            <SelectItem value="RESOLVED">Đã giải quyết</SelectItem>
+                            <SelectItem value="REJECTED">Bị từ chối</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button variant="outline" size="sm" className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:text-blue-800 transition-all" onClick={() => { setSelectedSuggestion(suggestion); setShowResponseDialog(true); }}>
+                          <MessageSquare className="h-4 w-4 mr-1" />Phản hồi
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
         </TabsContent>
 
-        <TabsContent value="completed">
-          {/* Similar to 'all' but filtered for completed suggestions */}
+        {/* Completed Tab */}
+        <TabsContent value="completed" className="space-y-4">
+          <div className="space-y-4">
+            {loading ? (
+              <div className="flex justify-center py-12">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-500"></div>
+              </div>
+            ) : filteredSuggestions.length === 0 ? (
+              <Card className="border-0 shadow-lg bg-gradient-to-br from-green-50 to-white">
+                <CardContent className="py-16 text-center">
+                  <div className="w-20 h-20 mx-auto mb-6 bg-green-100 rounded-full flex items-center justify-center">
+                    <CheckCircle className="h-10 w-10 text-green-500" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-700 mb-2">Không có kiến nghị đã hoàn thành</h3>
+                  <p className="text-gray-500">Chưa có kiến nghị nào được giải quyết xong</p>
+                </CardContent>
+              </Card>
+            ) : (
+              filteredSuggestions.map(suggestion => (
+                <Card key={suggestion.id} className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 border-l-4 border-l-green-500 bg-white">
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between gap-6">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-4">
+                          <Badge className={`${getCategoryColor(suggestion.category)} shadow-sm`}>
+                            {getCategoryLabel(suggestion.category)}
+                          </Badge>
+                          <Badge className={`${getStatusColor(suggestion.status)} shadow-sm`}>
+                            {getStatusIcon(suggestion.status)}
+                            <span className="ml-1">{getStatusLabel(suggestion.status)}</span>
+                          </Badge>
+                          <Badge variant="outline" className={`${getPriorityColor(suggestion.priority)} shadow-sm`}>
+                            {getPriorityLabel(suggestion.priority)}
+                          </Badge>
+                          {suggestion.isAnonymous && (
+                            <Badge variant="secondary" className="text-xs shadow-sm">Ẩn danh</Badge>
+                          )}
+                        </div>
+                        <h3 className="font-bold text-lg mb-2 line-clamp-1 text-gray-900 group-hover:text-green-700 transition-colors">{suggestion.title}</h3>
+                        <p className="text-gray-600 mb-4 line-clamp-2 leading-relaxed">{suggestion.content}</p>
+                        <div className="flex flex-wrap items-center gap-5 text-sm">
+                          <span className="flex items-center gap-1.5 text-gray-500 bg-gray-50 px-2.5 py-1 rounded-full">
+                            <Calendar className="h-3.5 w-3.5" />
+                            {formatDate(suggestion.submittedAt)}
+                          </span>
+                          {!suggestion.isAnonymous && suggestion.user && (
+                            <span className="flex items-center gap-1.5 text-gray-500 bg-gray-50 px-2.5 py-1 rounded-full">
+                              <User className="h-3.5 w-3.5" />
+                              {suggestion.user.fullName}
+                            </span>
+                          )}
+                          {suggestion.resolvedAt && (
+                            <span className="flex items-center gap-1.5 text-green-600 bg-green-50 px-2.5 py-1 rounded-full font-medium">
+                              <CheckCircle className="h-3.5 w-3.5" />
+                              Hoàn thành: {formatDate(suggestion.resolvedAt)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-3">
+                        <Button variant="outline" size="sm" className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:text-green-800 transition-all" onClick={() => { setSelectedSuggestion(suggestion); setShowResponseDialog(true); }}>
+                          <Eye className="h-4 w-4 mr-1" />Xem chi tiết
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
         </TabsContent>
       </Tabs>
 
@@ -683,19 +993,32 @@ export default function SuggestionManagement() {
                 setSelectedSuggestion(null)
                 resetResponseForm()
               }}
+              disabled={sendingResponse}
             >
               Hủy
             </Button>
             <Button
               onClick={handleRespond}
-              disabled={!responseData.content.trim()}
+              disabled={!responseData.content.trim() || sendingResponse}
             >
-              <Send className="h-4 w-4 mr-2" />
-              Gửi phản hồi
+              {sendingResponse ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  Đang gửi...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Gửi phản hồi
+                </>
+              )}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
+      
+      {/* Toast Notifications */}
+      <Toaster />
     </div>
   )
 }

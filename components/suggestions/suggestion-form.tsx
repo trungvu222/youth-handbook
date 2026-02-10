@@ -22,7 +22,7 @@ import {
   Lock,
   Eye
 } from 'lucide-react'
-import { toast } from '../ui/use-toast'
+import { toast } from '@/hooks/use-toast'
 
 interface SuggestionFormProps {
   onComplete: () => void;

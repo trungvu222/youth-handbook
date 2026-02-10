@@ -19,6 +19,8 @@ interface ApiResponse<T = any> {
   data?: T;
   error?: string;
   token?: string;
+  accessToken?: string;
+  refreshToken?: string;
   user?: User;
 }
 
@@ -364,7 +366,7 @@ async function mockApiCall<T>(
   }
 
   if (url === 'auth/me' && method === 'GET') {
-    const authHeader = options.headers?.['Authorization'] as string;
+    const authHeader = (options.headers as any)?.[' Authorization'] as string | undefined;
     const token = authHeader?.replace('Bearer ', '');
 
     if (typeof window !== 'undefined') {
@@ -518,7 +520,7 @@ async function mockApiCall<T>(
     console.log('[Mock] Activity joined');
     return {
       success: true,
-      data: { message: 'Đăng ký thành công' }
+      data: { message: 'Đăng ký thành công' } as any
     };
   }
 
@@ -527,7 +529,7 @@ async function mockApiCall<T>(
     console.log('[Mock] Returning empty data for:', url);
     return {
       success: true,
-      data: []
+      data: [] as any
     };
   }
 
@@ -599,6 +601,70 @@ export const authApi = {
     return result;
   },
 
+  // Admin login - only for admin role
+  async adminLogin(credentials: LoginCredentials): Promise<ApiResponse> {
+    const result = await apiCall('/auth/admin/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(credentials),
+    });
+
+    // Save tokens and user to localStorage on successful login
+    if (result.success && result.accessToken && result.user) {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('accessToken', result.accessToken);
+        localStorage.setItem('auth_token', result.accessToken);
+        localStorage.setItem('refreshToken', result.refreshToken || '');
+        localStorage.setItem('currentUser', JSON.stringify(result.user));
+        localStorage.setItem('user', JSON.stringify(result.user));
+        
+        // Set cookie for middleware
+        document.cookie = `accessToken=${result.accessToken}; path=/; max-age=${30 * 60}`; // 30 minutes
+        
+        // Trigger storage event to notify other components
+        window.dispatchEvent(new Event('storage'));
+        
+        // Also trigger custom event for immediate updates
+        window.dispatchEvent(new CustomEvent('auth_changed', { 
+          detail: { authenticated: true, user: result.user } 
+        }));
+      }
+    }
+
+    return result;
+  },
+
+  // Refresh access token
+  async refreshToken(): Promise<ApiResponse> {
+    const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
+    if (!refreshToken) {
+      return { success: false, error: 'No refresh token' };
+    }
+
+    const result = await apiCall('/auth/refresh', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ refreshToken }),
+    });
+
+    // Update access token
+    if (result.success && result.accessToken) {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('accessToken', result.accessToken);
+        localStorage.setItem('auth_token', result.accessToken);
+        
+        // Update cookie
+        document.cookie = `accessToken=${result.accessToken}; path=/; max-age=${30 * 60}`;
+      }
+    }
+
+    return result;
+  },
+
   // Register user
   async register(userData: RegisterData): Promise<ApiResponse> {
     return apiCall('/auth/register', {
@@ -626,7 +692,27 @@ export const authApi = {
 
   // Logout user
   async logout(): Promise<void> {
+    // Call backend logout to clear refresh token cookie
+    try {
+      const token = getAuthToken();
+      if (token) {
+        await apiCall('/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+    
     clearAuth();
+    
+    // Clear cookie
+    if (typeof window !== 'undefined') {
+      document.cookie = 'accessToken=; path=/; max-age=0';
+    }
   }
 };
 
@@ -1497,6 +1583,33 @@ export const ratingApi = {
     });
   },
 
+  async deleteRating(id: string): Promise<ApiResponse<void>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall(`/rating/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+
+  async getMyRatingStats(): Promise<ApiResponse<any>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall('/rating/my-stats', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+
   // Admin methods
   async createRatingPeriod(periodData: {
     title: string;
@@ -1534,6 +1647,20 @@ export const ratingApi = {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(periodData),
+    });
+  },
+
+  async deletePeriod(id: string): Promise<ApiResponse<void>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall(`/rating/periods/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
     });
   },
 
@@ -1598,7 +1725,7 @@ export const ratingApi = {
     const params = new URLSearchParams();
     if (periodId) params.append('periodId', periodId);
 
-    return apiCall(`/rating/stats?${params.toString()}`, {
+    return apiCall(`/rating/admin/stats?${params.toString()}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
@@ -1613,6 +1740,45 @@ export const ratingApi = {
 
     return apiCall(`/rating/periods/${periodId}/remind`, {
       method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+
+  async getPeriodAllRatings(periodId: string): Promise<ApiResponse<any>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall(`/rating/periods/${periodId}/all-ratings`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+
+  async getPeriodStats(periodId: string): Promise<ApiResponse<any>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall(`/rating/periods/${periodId}/stats`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+
+  async getPeriodRatings(periodId: string): Promise<ApiResponse<any>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall(`/rating/periods/${periodId}/ratings`, {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
@@ -1806,13 +1972,18 @@ export const suggestionApi = {
 
   async respondToSuggestion(id: string, responseData: {
     content: string;
+    isPublic?: boolean;
+    newStatus?: string;
+    sendNotification?: boolean;
   }): Promise<ApiResponse<SuggestionResponse>> {
     const token = getAuthToken();
     if (!token) {
       return { success: false, error: 'Không có token' };
     }
 
-    return apiCall(`/suggestions/${id}/responses`, {
+    console.log('📤 [API] Sending response to suggestion:', id, responseData);
+
+    return apiCall(`/suggestions/${id}/respond`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -1847,7 +2018,7 @@ export const suggestionApi = {
     const params = new URLSearchParams();
     if (timeRange) params.append('timeRange', timeRange);
 
-    return apiCall(`/suggestions/stats?${params.toString()}`, {
+    return apiCall(`/suggestions/admin/stats?${params.toString()}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
@@ -2012,6 +2183,111 @@ export const documentApi = {
     }
 
     return apiCall(`/documents/${id}/download`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+
+  async uploadDocumentFile(file: File, onProgress?: (progress: number) => void): Promise<ApiResponse<{fileUrl: string; fileName: string; fileSize: number}>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/documents/upload/document`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        return { success: false, error: error.message || 'Upload failed' };
+      }
+
+      const data = await response.json();
+      return { success: true, data };
+    } catch (error: any) {
+      return { success: false, error: error.message || 'Upload failed' };
+    }
+  },
+
+  async createDocument(data: any): Promise<ApiResponse<Document>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall('/documents', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updateDocument(id: string, data: any): Promise<ApiResponse<Document>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall(`/documents/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteDocument(id: string): Promise<ApiResponse<void>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall(`/documents/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+
+  async sendNotification(id: string, recipients?: { type: 'all' | 'specific'; userIds?: string[] }): Promise<ApiResponse<void>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall(`/documents/${id}/notify`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(recipients || { type: 'all' }),
+    });
+  },
+
+  async getDocumentStats(): Promise<ApiResponse<any>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall('/documents/admin/stats', {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
@@ -2187,6 +2463,249 @@ export const examApi = {
 
     const params = examId ? `?examId=${examId}` : '';
     return apiCall(`/exams/leaderboard${params}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+
+  async createExam(data: any): Promise<ApiResponse<Exam>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall('/exams', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updateExam(id: string, data: any): Promise<ApiResponse<Exam>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall(`/exams/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteExam(id: string): Promise<ApiResponse<void>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall(`/exams/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+
+  async getExamStats(): Promise<ApiResponse<any>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall('/exams/admin/stats', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+
+  async getExamAttempts(examId: string): Promise<ApiResponse<any[]>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall(`/exams/${examId}/attempts`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+};
+
+// =====================================
+// SURVEY API
+// =====================================
+
+export const surveyApi = {
+  async getSurveys(params?: {
+    status?: string;
+    limit?: number;
+  }): Promise<ApiResponse<any[]>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    const searchParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          searchParams.append(key, value.toString());
+        }
+      });
+    }
+
+    return apiCall(`/surveys?${searchParams.toString()}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+
+  async getSurvey(id: string): Promise<ApiResponse<any>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall(`/surveys/${id}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+
+  async createSurvey(data: any): Promise<ApiResponse<any>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall('/surveys', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updateSurvey(id: string, data: any): Promise<ApiResponse<any>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall(`/surveys/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteSurvey(id: string): Promise<ApiResponse<void>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall(`/surveys/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+
+  async getSurveyStats(): Promise<ApiResponse<any>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall('/surveys/admin/stats', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+
+  async getSurveyResponses(surveyId: string): Promise<ApiResponse<any[]>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall(`/surveys/${surveyId}/responses`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+};
+
+// =====================================
+// NOTIFICATION API
+// =====================================
+
+export const notificationApi = {
+  async sendNotification(data: {
+    title: string;
+    message: string;
+    type?: string;
+    relatedId?: string;
+    recipients: 'all' | string[];
+  }): Promise<ApiResponse<any>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall('/notifications/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+  },
+
+  async getNotifications(): Promise<ApiResponse<any[]>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall('/notifications', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+
+  async markAsRead(id: string): Promise<ApiResponse<any>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall(`/notifications/${id}/read`, {
+      method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,
       },

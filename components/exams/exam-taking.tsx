@@ -16,7 +16,7 @@ import {
   Brain,
   Timer
 } from 'lucide-react'
-import { toast } from '../ui/use-toast'
+import { toast } from '@/hooks/use-toast'
 
 interface ExamQuestion {
   id: string;

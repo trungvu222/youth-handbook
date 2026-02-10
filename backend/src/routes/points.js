@@ -5,7 +5,9 @@ const {
   addPoints,
   subtractPoints,
   getPointsHistory,
-  getUnits
+  getUnits,
+  getPointsConfig,
+  updatePointsConfig
 } = require('../controllers/pointsController');
 
 const router = express.Router();
@@ -20,6 +22,12 @@ router.get('/history', getPointsHistory);
 
 // Get units list
 router.get('/units', getUnits);
+
+// Get points config (Admin only)
+router.get('/config', authorize('ADMIN'), getPointsConfig);
+
+// Update points config (Admin only)
+router.put('/config', authorize('ADMIN'), updatePointsConfig);
 
 // Add points (Admin/Leader only)
 router.post('/add', addPoints);

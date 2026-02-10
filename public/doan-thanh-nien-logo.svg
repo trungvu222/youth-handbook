@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300">
+  <defs>
+    <linearGradient id="flagRed" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#dc2626"/>
+      <stop offset="100%" style="stop-color:#b91c1c"/>
+    </linearGradient>
+    <linearGradient id="flagYellow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#fbbf24"/>
+      <stop offset="100%" style="stop-color:#f59e0b"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" style="stop-color:#fef3c7;stop-opacity:0.3"/>
+      <stop offset="100%" style="stop-color:#fef3c7;stop-opacity:0"/>
+    </radialGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+  
+  <!-- Outer red circle border -->
+  <circle cx="150" cy="150" r="143" fill="none" stroke="#dc2626" stroke-width="4"/>
+  <circle cx="150" cy="150" r="138" fill="none" stroke="#dc2626" stroke-width="1.5"/>
+  
+  <!-- Inner white background -->
+  <circle cx="150" cy="150" r="136" fill="white"/>
+  
+  <!-- Subtle glow -->
+  <circle cx="150" cy="120" r="80" fill="url(#glow)"/>
+  
+  <!-- Top text arc: ĐOÀN THANH NIÊN CỘNG SẢN HỒ CHÍ MINH -->
+  <path id="topTextPath" d="M 35,150 A 115,115 0 0,1 265,150" fill="none"/>
+  <text font-size="13.5" fill="#dc2626" font-weight="bold" font-family="Arial, Helvetica, sans-serif" letter-spacing="1">
+    <textPath href="#topTextPath" startOffset="50%" text-anchor="middle">ĐOÀN THANH NIÊN CỘNG SẢN HỒ CHÍ MINH</textPath>
+  </text>
+  
+  <!-- Flag pole -->
+  <line x1="118" y1="65" x2="118" y2="220" stroke="#7c3a12" stroke-width="4.5" stroke-linecap="round" filter="url(#shadow)"/>
+  
+  <!-- Flag pole top sphere -->
+  <circle cx="118" cy="63" r="5" fill="#f59e0b" stroke="#d97706" stroke-width="1"/>
+  
+  <!-- Red flag - waving shape -->
+  <path d="M 118,68 C 150,60 175,75 195,70 C 200,80 198,100 195,110 C 175,115 150,100 118,108 Z" 
+        fill="url(#flagRed)" filter="url(#shadow)">
+    <animate attributeName="d" dur="4s" repeatCount="indefinite"
+      values="M 118,68 C 150,60 175,75 195,70 C 200,80 198,100 195,110 C 175,115 150,100 118,108 Z;
+              M 118,68 C 155,62 178,78 198,72 C 203,82 200,102 197,112 C 178,117 155,102 118,108 Z;
+              M 118,68 C 150,60 175,75 195,70 C 200,80 198,100 195,110 C 175,115 150,100 118,108 Z"/>
+  </path>
+  
+  <!-- Yellow star on flag -->
+  <g transform="translate(155, 88) scale(0.9)" filter="url(#shadow)">
+    <polygon points="0,-14 4,-4 14,-4 6,3 9,14 0,8 -9,14 -6,3 -14,-4 -4,-4" fill="#fbbf24"/>
+  </g>
+  
+  <!-- Raised arm - skin color -->
+  <path d="M 100,215 Q 95,195 92,175 Q 90,165 95,155 Q 100,148 108,150 L 115,145 Q 118,140 118,135" 
+        fill="none" stroke="#f59e0b" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Hand gripping pole -->
+  <ellipse cx="117" cy="138" rx="10" ry="7" fill="#fbbf24" transform="rotate(-5, 117, 138)"/>
+  <path d="M 108,135 Q 112,128 118,130 Q 124,132 126,138 Q 124,144 118,146 Q 112,144 108,140 Z" fill="#f59e0b"/>
+  
+  <!-- Green laurel wreath - left side -->
+  <path d="M 85,235 Q 60,210 55,185 Q 52,168 58,152 Q 62,140 72,135" 
+        fill="none" stroke="#16a34a" stroke-width="5" stroke-linecap="round"/>
+  <!-- Leaves left -->
+  <ellipse cx="58" cy="195" rx="10" ry="4" fill="#22c55e" transform="rotate(-50, 58, 195)"/>
+  <ellipse cx="55" cy="178" rx="9" ry="3.5" fill="#22c55e" transform="rotate(-40, 55, 178)"/>
+  <ellipse cx="57" cy="162" rx="8" ry="3" fill="#22c55e" transform="rotate(-30, 57, 162)"/>
+  <ellipse cx="63" cy="148" rx="7" ry="3" fill="#22c55e" transform="rotate(-20, 63, 148)"/>
+  <ellipse cx="65" cy="208" rx="10" ry="4" fill="#22c55e" transform="rotate(-60, 65, 208)"/>
+  
+  <!-- Green laurel wreath - right side -->
+  <path d="M 175,235 Q 200,210 205,185 Q 208,168 202,152 Q 198,140 188,135" 
+        fill="none" stroke="#16a34a" stroke-width="5" stroke-linecap="round"/>
+  <!-- Leaves right -->
+  <ellipse cx="202" cy="195" rx="10" ry="4" fill="#22c55e" transform="rotate(50, 202, 195)"/>
+  <ellipse cx="205" cy="178" rx="9" ry="3.5" fill="#22c55e" transform="rotate(40, 205, 178)"/>
+  <ellipse cx="203" cy="162" rx="8" ry="3" fill="#22c55e" transform="rotate(30, 203, 162)"/>
+  <ellipse cx="197" cy="148" rx="7" ry="3" fill="#22c55e" transform="rotate(20, 197, 148)"/>
+  <ellipse cx="195" cy="208" rx="10" ry="4" fill="#22c55e" transform="rotate(60, 195, 208)"/>
+  
+  <!-- Red ribbon/banner at bottom -->
+  <path d="M 90,240 Q 130,248 150,248 Q 170,248 210,240" fill="none" stroke="#dc2626" stroke-width="4" stroke-linecap="round"/>
+  
+  <!-- Gear/cog outline behind (representing worker) -->
+  <circle cx="150" cy="175" r="35" fill="none" stroke="#e5e7eb" stroke-width="1.5" stroke-dasharray="8,4"/>
+  
+  <!-- Book at bottom center -->
+  <g transform="translate(150, 245)">
+    <path d="M -15,-5 L -15,5 Q 0,2 15,5 L 15,-5 Q 0,-8 -15,-5 Z" fill="#3b82f6" opacity="0.6"/>
+    <line x1="0" y1="-7" x2="0" y2="4" stroke="#1e40af" stroke-width="0.8" opacity="0.5"/>
+  </g>
+</svg>

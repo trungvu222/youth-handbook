@@ -1,165 +1,56 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-
-// Mock exams - fallback when API fails
-const MOCK_EXAMS = [
-  {
-    id: '1',
-    title: 'Kiểm tra Điều lệ Đoàn',
-    description: 'Bài kiểm tra kiến thức về Điều lệ Đoàn TNCS Hồ Chí Minh',
-    category: 'Nghị quyết',
-    duration: 30,
-    totalQuestions: 20,
-    passingScore: 70,
-    maxAttempts: 3,
-    pointsReward: 50,
-    attemptCount: 0
-  },
-  {
-    id: '2',
-    title: 'Kiểm tra Luật Thanh niên',
-    description: 'Bài kiểm tra về quyền và nghĩa vụ của thanh niên theo Luật Thanh niên 2020',
-    category: 'Pháp luật',
-    duration: 45,
-    totalQuestions: 30,
-    passingScore: 60,
-    maxAttempts: 2,
-    pointsReward: 80,
-    attemptCount: 1
-  },
-  {
-    id: '3',
-    title: 'Kỹ năng mềm cơ bản',
-    description: 'Đánh giá các kỹ năng giao tiếp, làm việc nhóm và thuyết trình',
-    category: 'Kỹ năng',
-    duration: 20,
-    totalQuestions: 15,
-    passingScore: 50,
-    maxAttempts: 5,
-    pointsReward: 30,
-    attemptCount: 2
-  },
-  {
-    id: '4',
-    title: 'Lịch sử Đoàn TNCS Hồ Chí Minh',
-    description: 'Kiểm tra kiến thức về lịch sử hình thành và phát triển của Đoàn',
-    category: 'Nghị quyết',
-    duration: 40,
-    totalQuestions: 25,
-    passingScore: 65,
-    maxAttempts: 3,
-    pointsReward: 60,
-    attemptCount: 0
-  },
-  {
-    id: '5',
-    title: 'Kiểm tra Luật Lao động',
-    description: 'Bài kiểm tra về quyền lợi và nghĩa vụ của người lao động',
-    category: 'Pháp luật',
-    duration: 35,
-    totalQuestions: 20,
-    passingScore: 60,
-    maxAttempts: 3,
-    pointsReward: 55,
-    attemptCount: 0
-  },
-  {
-    id: '6',
-    title: 'Kỹ năng lãnh đạo',
-    description: 'Đánh giá năng lực lãnh đạo và điều hành công việc',
-    category: 'Kỹ năng',
-    duration: 25,
-    totalQuestions: 18,
-    passingScore: 55,
-    maxAttempts: 4,
-    pointsReward: 45,
-    attemptCount: 1
-  },
-  {
-    id: '7',
-    title: 'Nghị quyết Đại hội Đoàn XII',
-    description: 'Kiểm tra hiểu biết về phương hướng công tác Đoàn 2022-2027',
-    category: 'Nghị quyết',
-    duration: 30,
-    totalQuestions: 20,
-    passingScore: 70,
-    maxAttempts: 2,
-    pointsReward: 70,
-    attemptCount: 0
-  },
-  {
-    id: '8',
-    title: 'Kiểm tra Luật Giáo dục',
-    description: 'Bài kiểm tra về quyền và nghĩa vụ của người học',
-    category: 'Pháp luật',
-    duration: 30,
-    totalQuestions: 20,
-    passingScore: 60,
-    maxAttempts: 3,
-    pointsReward: 50,
-    attemptCount: 0
-  },
-  {
-    id: '9',
-    title: 'Kỹ năng quản lý thời gian',
-    description: 'Đánh giá khả năng sắp xếp và quản lý thời gian hiệu quả',
-    category: 'Kỹ năng',
-    duration: 15,
-    totalQuestions: 12,
-    passingScore: 50,
-    maxAttempts: 5,
-    pointsReward: 25,
-    attemptCount: 0
-  },
-  {
-    id: '10',
-    title: 'Tổng hợp kiến thức Đoàn viên',
-    description: 'Bài kiểm tra tổng hợp dành cho Đoàn viên mới',
-    category: 'Nghị quyết',
-    duration: 60,
-    totalQuestions: 40,
-    passingScore: 65,
-    maxAttempts: 2,
-    pointsReward: 100,
-    attemptCount: 0
-  }
-]
+import { ExamTaking } from '../exams/exam-taking'
+import { examApi } from '../../lib/api'
 
 export default function ExamsScreenMobile() {
   const [exams, setExams] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchText, setSearchText] = useState('')
+  const [selectedExam, setSelectedExam] = useState<any>(null)
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [takingExam, setTakingExam] = useState(false)
+  const [error, setError] = useState<string>('')
 
-  // Load exams from API with fallback to mock data
+  // Load exams from API
   useEffect(() => {
     loadExams()
   }, [])
 
   const loadExams = async () => {
     setLoading(true)
+    setError('')
     try {
-      const { examApi } = await import('@/lib/api')
-      const result: any = await examApi.getExams()
+      const result = await examApi.getExams()
+      
+      console.log('Exam API Response:', result) // Debug log
 
       if (result.success && result.data) {
         let examsData: any[] = []
+        
+        // Handle different response structures
         if (Array.isArray(result.data)) {
           examsData = result.data
-        } else if (result.data.data && Array.isArray(result.data.data)) {
-          examsData = result.data.data
-        } else if (result.data.exams && Array.isArray(result.data.exams)) {
-          examsData = result.data.exams
+        } else if ((result.data as any).data && Array.isArray((result.data as any).data)) {
+          examsData = (result.data as any).data
+        } else if ((result.data as any).exams && Array.isArray((result.data as any).exams)) {
+          examsData = (result.data as any).exams
         }
         
-        // Use API data if available, otherwise fallback to mock
-        setExams(examsData.length > 0 ? examsData : MOCK_EXAMS)
+        console.log('Processed exams data:', examsData) // Debug log
+        
+        if (examsData.length > 0) {
+          setExams(examsData)
+        } else {
+          setError('Chưa có kỳ thi nào được tạo. Vui lòng liên hệ admin.')
+        }
       } else {
-        setExams(MOCK_EXAMS)
+        setError(result.error || 'Không thể tải danh sách kỳ thi')
       }
     } catch (error) {
       console.error('Error loading exams:', error)
-      setExams(MOCK_EXAMS) // Fallback to mock data
+      setError('Lỗi kết nối đến server. Vui lòng thử lại sau.')
     } finally {
       setLoading(false)
     }
@@ -238,13 +129,93 @@ export default function ExamsScreenMobile() {
     return mins > 0 ? hours + 'h ' + mins + 'm' : hours + 'h'
   }
 
+  const handleStartExam = (exam: any) => {
+    setSelectedExam(exam)
+    setShowConfirmDialog(true)
+  }
+
+  const handleConfirmStart = () => {
+    setShowConfirmDialog(false)
+    setTakingExam(true)
+  }
+
+  const handleExamComplete = () => {
+    setTakingExam(false)
+    setSelectedExam(null)
+    loadExams() // Reload exams to update attempt counts
+  }
+
+  const handleBackFromExam = () => {
+    setTakingExam(false)
+    setSelectedExam(null)
+  }
+
+  // If taking exam, show exam taking component
+  if (takingExam && selectedExam) {
+    return (
+      <ExamTaking 
+        exam={selectedExam}
+        onComplete={handleExamComplete}
+        onBack={handleBackFromExam}
+      />
+    )
+  }
+
   // Show loading state
   if (loading) {
     return (
       <div style={{ ...containerStyle, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: '48px', marginBottom: '16px' }}>⏳</div>
-          <div style={{ color: '#6b7280' }}>Đang tải...</div>
+          <div style={{ color: '#6b7280' }}>Đang tải kỳ thi...</div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div style={containerStyle}>
+        <div style={headerStyle}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
+            <span style={{ fontSize: '24px' }}>🏆</span>
+            <span style={{ fontSize: '18px', fontWeight: 600 }}>Kỳ thi trực tuyến</span>
+          </div>
+          <p style={{ textAlign: 'center', fontSize: '13px', color: 'rgba(255,255,255,0.8)' }}>
+            Tham gia các kỳ thi và kiểm tra kiến thức
+          </p>
+        </div>
+        
+        <div style={{ padding: '40px 16px', textAlign: 'center' }}>
+          <div style={{ 
+            backgroundColor: '#fef2f2', 
+            border: '2px solid #fca5a5', 
+            borderRadius: '12px', 
+            padding: '24px',
+            marginBottom: '20px'
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
+            <div style={{ fontSize: '16px', fontWeight: 600, color: '#dc2626', marginBottom: '8px' }}>
+              {error}
+            </div>
+            <button
+              onClick={loadExams}
+              style={{
+                marginTop: '16px',
+                padding: '12px 24px',
+                background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              🔄 Thử lại
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -253,9 +224,10 @@ export default function ExamsScreenMobile() {
   const filteredExams = exams.filter((exam) => {
     if (!searchText) return true
     const search = searchText.toLowerCase()
+    const category = exam.category || ''
     return exam.title.toLowerCase().includes(search) || 
-           exam.description.toLowerCase().includes(search) ||
-           exam.category.toLowerCase().includes(search)
+           (exam.description || '').toLowerCase().includes(search) ||
+           category.toLowerCase().includes(search)
   })
 
   return (
@@ -288,23 +260,35 @@ export default function ExamsScreenMobile() {
       {/* Exams List */}
       {filteredExams.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 16px' }}>
-          <span style={{ fontSize: '48px', display: 'block', marginBottom: '16px' }}>📝</span>
-          <p style={{ color: '#6b7280', fontSize: '15px' }}>
-            {searchText ? 'Không tìm thấy kỳ thi phù hợp' : 'Chưa có kỳ thi nào'}
-          </p>
+          <div style={{ 
+            backgroundColor: '#f9fafb', 
+            border: '2px dashed #d1d5db', 
+            borderRadius: '12px', 
+            padding: '32px 16px'
+          }}>
+            <span style={{ fontSize: '64px', display: 'block', marginBottom: '16px' }}>📝</span>
+            <p style={{ color: '#374151', fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>
+              {searchText ? 'Không tìm thấy kỳ thi phù hợp' : 'Chưa có kỳ thi nào'}
+            </p>
+            <p style={{ color: '#6b7280', fontSize: '13px' }}>
+              {searchText ? 'Thử tìm kiếm với từ khóa khác' : 'Admin chưa tạo kỳ thi. Vui lòng quay lại sau.'}
+            </p>
+          </div>
         </div>
       ) : (
         <div style={{ paddingBottom: '20px' }}>
           {filteredExams.map((exam) => {
-            const canTakeExam = exam.attemptCount < exam.maxAttempts
+            const attemptCount = exam.userAttempts || exam.attemptCount || 0
+            const canTakeExam = attemptCount < exam.maxAttempts
+            const category = exam.category || 'Chưa phân loại'
 
             return (
               <div key={exam.id} style={cardStyle}>
                 {/* Badges */}
                 <div style={{ marginBottom: '8px' }}>
-                  <span style={badgeStyle('#f3f4f6', '#374151')}>{exam.category}</span>
+                  <span style={badgeStyle('#f3f4f6', '#374151')}>{category}</span>
                   <span style={badgeStyle('#dbeafe', '#1e40af')}>{exam.totalQuestions} câu</span>
-                  <span style={badgeStyle('#e9d5ff', '#6b21a8')}>+{exam.pointsReward} điểm</span>
+                  <span style={badgeStyle('#e9d5ff', '#6b21a8')}>+{exam.pointsReward || exam.pointsAwarded || 0} điểm</span>
                 </div>
 
                 {/* Title */}
@@ -325,7 +309,7 @@ export default function ExamsScreenMobile() {
                 </div>
 
                 {/* Attempts info */}
-                {exam.attemptCount > 0 && (
+                {attemptCount > 0 && (
                   <div style={{
                     padding: '10px',
                     backgroundColor: '#f9fafb',
@@ -334,7 +318,7 @@ export default function ExamsScreenMobile() {
                     fontSize: '13px',
                   }}>
                     <span style={{ color: '#374151', fontWeight: 500 }}>
-                      Đã thi: {exam.attemptCount}/{exam.maxAttempts} lần
+                      Đã thi: {attemptCount}/{exam.maxAttempts} lần
                     </span>
                   </div>
                 )}
@@ -349,15 +333,210 @@ export default function ExamsScreenMobile() {
                   disabled={!canTakeExam}
                   onClick={() => {
                     if (canTakeExam) {
-                      alert('Chức năng thi đang được phát triển. Vui lòng thử lại sau!')
+                      handleStartExam({...exam, attemptCount})
                     }
                   }}
                 >
-                  {!canTakeExam ? 'Đã hết lượt thi' : exam.attemptCount > 0 ? 'Thi lại ▶' : 'Bắt đầu thi ▶'}
+                  {!canTakeExam ? 'Đã hết lượt thi' : attemptCount > 0 ? 'Thi lại ▶' : 'Bắt đầu thi ▶'}
                 </button>
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Confirm Dialog */}
+      {showConfirmDialog && selectedExam && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 50,
+          padding: '16px',
+        }}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '16px',
+            maxWidth: '500px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflow: 'auto',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+          }}>
+            {/* Header */}
+            <div style={{
+              background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+              padding: '24px',
+              borderTopLeftRadius: '16px',
+              borderTopRightRadius: '16px',
+              color: '#ffffff',
+            }}>
+              <div style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px' }}>
+                Xác nhận bắt đầu thi
+              </div>
+              <div style={{ fontSize: '14px', opacity: 0.9 }}>
+                Vui lòng đọc kỹ thông tin trước khi bắt đầu
+              </div>
+            </div>
+
+            {/* Content */}
+            <div style={{ padding: '24px' }}>
+              {/* Title & Category */}
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px', fontWeight: 600 }}>
+                  TÊN KỲ THI
+                </div>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: '#111827', marginBottom: '8px' }}>
+                  {selectedExam.title}
+                </div>
+                {selectedExam.category && (
+                  <span style={badgeStyle('#f3f4f6', '#374151')}>
+                    {selectedExam.category}
+                  </span>
+                )}
+              </div>
+
+              {/* Description */}
+              {selectedExam.description && (
+                <div style={{ marginBottom: '20px' }}>
+                  <div style={{ fontSize: '12px', color: '#6b7280', marginBottom: '4px', fontWeight: 600 }}>
+                    MÔ TẢ
+                  </div>
+                  <div style={{ fontSize: '14px', color: '#374151', lineHeight: '1.6' }}>
+                    {selectedExam.description}
+                  </div>
+                </div>
+              )}
+
+              {/* Info Grid */}
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: '1fr 1fr', 
+                gap: '12px', 
+                marginBottom: '20px',
+                padding: '16px',
+                backgroundColor: '#f9fafb',
+                borderRadius: '12px',
+              }}>
+                <div>
+                  <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '4px', fontWeight: 600 }}>
+                    THỜI GIAN
+                  </div>
+                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#7c3aed' }}>
+                    {formatDuration(selectedExam.duration)}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '4px', fontWeight: 600 }}>
+                    SỐ CÂU HỎI
+                  </div>
+                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#7c3aed' }}>
+                    {selectedExam.totalQuestions} câu
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '4px', fontWeight: 600 }}>
+                    ĐIỂM ĐẠT
+                  </div>
+                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#f59e0b' }}>
+                    {selectedExam.passingScore}%
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '4px', fontWeight: 600 }}>
+                    ĐIỂM THƯỞNG
+                  </div>
+                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#10b981' }}>
+                    +{selectedExam.pointsReward || selectedExam.pointsAwarded || 0} điểm
+                  </div>
+                </div>
+              </div>
+
+              {/* Attempts Info */}
+              <div style={{
+                padding: '12px 16px',
+                backgroundColor: (selectedExam.attemptCount || 0) > 0 ? '#fef3c7' : '#dbeafe',
+                borderRadius: '8px',
+                marginBottom: '20px',
+                border: (selectedExam.attemptCount || 0) > 0 ? '1px solid #fbbf24' : '1px solid #60a5fa',
+              }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>
+                  {(selectedExam.attemptCount || 0) > 0 
+                    ? `⚠️ Đây là lần thi thứ ${(selectedExam.attemptCount || 0) + 1}/${selectedExam.maxAttempts}`
+                    : `✨ Đây là lần thi đầu tiên của bạn`
+                  }
+                </div>
+              </div>
+
+              {/* Important Notes */}
+              <div style={{
+                padding: '16px',
+                backgroundColor: '#fef2f2',
+                borderRadius: '8px',
+                border: '1px solid #fca5a5',
+                marginBottom: '24px',
+              }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#dc2626', marginBottom: '8px' }}>
+                  ⚠️ LƯU Ý QUAN TRỌNG
+                </div>
+                <ul style={{ 
+                  margin: 0, 
+                  paddingLeft: '20px', 
+                  fontSize: '12px', 
+                  color: '#7f1d1d',
+                  lineHeight: '1.6' 
+                }}>
+                  <li>Hãy đảm bảo kết nối internet ổn định</li>
+                  <li>Không thoát hoặc làm mới trang khi đang làm bài</li>
+                  <li>Bài thi sẽ tự động nộp khi hết thời gian</li>
+                  <li>Bạn chỉ có {selectedExam.maxAttempts} lần làm bài</li>
+                </ul>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={() => {
+                    setShowConfirmDialog(false)
+                    setSelectedExam(null)
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '14px 16px',
+                    backgroundColor: '#ffffff',
+                    color: '#374151',
+                    border: '2px solid #e5e7eb',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  ❌ Hủy
+                </button>
+                <button
+                  onClick={handleConfirmStart}
+                  style={{
+                    flex: 1,
+                    padding: '14px 16px',
+                    background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 6px rgba(124, 58, 237, 0.3)',
+                  }}
+                >
+                  ✅ Bắt đầu thi
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

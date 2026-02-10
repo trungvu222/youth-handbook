@@ -96,6 +96,9 @@ model User {
   // Suggestion System Relations (Module 3.8)
   suggestions              Suggestion[]            @relation("UserSuggestions")
   suggestionResponses      SuggestionResponse[]    @relation("UserSuggestionResponses")
+  
+  // Notification Relations
+  notifications            Notification[]          @relation("UserNotifications")
 
   @@map("users")
 }
@@ -157,6 +160,7 @@ model Activity {
   requiresPostSurvey Boolean   @default(false) @map("requires_post_survey") // Yêu cầu khảo sát sau hoạt động
   
   // Auto-scoring rules
+  lateThresholdMinutes Int     @default(15) @map("late_threshold_minutes") // Số phút sau startTime được tính là trễ (mặc định 15 phút)
   onTimePoints       Int       @default(15) @map("ontime_points")       // Điểm đúng giờ  
   latePoints         Int       @default(5)  @map("late_points")         // Điểm trễ
   missedPoints       Int       @default(-10) @map("missed_points")       // Điểm vắng mặt
@@ -208,6 +212,7 @@ model Survey {
   startDate    DateTime        @map("start_date")
   endDate      DateTime        @map("end_date")
   isAnonymous  Boolean         @default(false) @map("is_anonymous")
+  pointsReward Int             @default(10) @map("points_reward")
   status       SurveyStatus    @default(DRAFT)
   questions    String          // JSON string
   createdAt    DateTime        @default(now()) @map("created_at")
@@ -703,6 +708,7 @@ model Exam {
   id              String      @id @default(cuid())
   title           String
   description     String?
+  category        String?     // Danh mục: Lý luận chính trị, Điều lệ Đoàn, Kỹ năng mềm, v.v
   instructions    String?     // Hướng dẫn làm bài
   duration        Int?        // Thời gian làm bài (phút)
   totalQuestions  Int         @map("total_questions") // Tổng số câu hỏi
@@ -804,6 +810,7 @@ model RatingPeriod {
   startDate       DateTime             @map("start_date")
   endDate         DateTime             @map("end_date")
   criteria        Json                 // Array of criteria objects
+  targetRating    RatingLevel          @default(GOOD) @map("target_rating") // Target rating for this period set by admin
   status          RatingPeriodStatus   @default(DRAFT)
   targetAudience  String               @default("ALL") @map("target_audience") // ALL, UNIT_SPECIFIC, ROLE_SPECIFIC
   unitIds         Json?                @map("unit_ids")    // Array of unit IDs if UNIT_SPECIFIC
@@ -909,4 +916,39 @@ model SuggestionResponse {
   responder  User       @relation("UserSuggestionResponses", fields: [responderId], references: [id])
 
   @@map("suggestion_responses")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  title     String
+  message   String
+  type      String   @default("GENERAL") // GENERAL, SURVEY, ACTIVITY, ANNOUNCEMENT
+  relatedId String?  @map("related_id") // ID of related resource (survey, activity, etc.)
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+// System Configuration Models
+model PointsConfig {
+  id                 String   @id @default(cuid())
+  initialPoints      Int      @default(100) @map("initial_points")      // Điểm khởi điểm
+  maxPoints          Int      @default(1000) @map("max_points")         // Điểm tối đa
+  minPoints          Int      @default(0) @map("min_points")            // Điểm tối thiểu
+  excellentThreshold Int      @default(800) @map("excellent_threshold") // Ngưỡng xuất sắc
+  goodThreshold      Int      @default(600) @map("good_threshold")      // Ngưỡng khá
+  averageThreshold   Int      @default(400) @map("average_threshold")   // Ngưỡng trung bình
+  poorThreshold      Int      @default(400) @map("poor_threshold")      // Ngưỡng yếu
+  isActive           Boolean  @default(true) @map("is_active")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@map("points_config")
 }

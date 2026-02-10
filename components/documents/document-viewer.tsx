@@ -18,7 +18,7 @@ import {
   Clock,
   ExternalLink
 } from 'lucide-react'
-import { toast } from '../ui/use-toast'
+import { toast } from '@/hooks/use-toast'
 import { documentApi } from '../../lib/api'
 
 interface Document {

@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Search, Filter, Eye, Edit, Trash2, Plus, Users, UserCheck, UserX, RefreshCw, AlertTriangle, Key } from "lucide-react"
+import { Search, Filter, Eye, EyeOff, Edit, Trash2, Plus, Users, UserCheck, UserX, RefreshCw, AlertTriangle, Key, ChevronLeft, ChevronRight, Bell, Send, CheckCircle2, Phone, MapPin, Award, Undo2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 interface Unit {
@@ -50,17 +50,25 @@ interface Member {
   politicsLevel?: string
 }
 
-// Production PostgreSQL on Render
-const API_URL = "https://youth-handbook.onrender.com";
+import { BACKEND_URL } from "@/lib/config"
+const API_URL = BACKEND_URL;
 
-export function MemberManagement() {
+interface MemberManagementProps {
+  initialUnitFilter?: string | null;
+}
+
+export function MemberManagement({ initialUnitFilter }: MemberManagementProps = {}) {
   const { toast } = useToast()
   const [members, setMembers] = useState<Member[]>([])
   const [units, setUnits] = useState<Unit[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-  const [filterUnit, setFilterUnit] = useState<string>("all")
+  const [filterUnit, setFilterUnit] = useState<string>(initialUnitFilter || "all")
   const [filterStatus, setFilterStatus] = useState<string>("all")
+  const [viewMode, setViewMode] = useState<"active" | "deleted">("active")
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
   
   // Dialogs
   const [showAddDialog, setShowAddDialog] = useState(false)
@@ -68,11 +76,16 @@ export function MemberManagement() {
   const [showDetailDialog, setShowDetailDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showPasswordDialog, setShowPasswordDialog] = useState(false)
+  const [showRestoreDialog, setShowRestoreDialog] = useState(false)
   const [selectedMember, setSelectedMember] = useState<Member | null>(null)
   
   // Password reset data
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [passwordChangedMember, setPasswordChangedMember] = useState<Member | null>(null)
+  const [sendingNotification, setSendingNotification] = useState(false)
   
   // Form data
   const [formData, setFormData] = useState({
@@ -104,8 +117,12 @@ export function MemberManagement() {
   })
 
   // Fetch members and units
-  const fetchData = async () => {
-    setLoading(true)
+  const fetchData = async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true)
+    } else {
+      setLoading(true)
+    }
     try {
       const token = localStorage.getItem("accessToken")
       console.log("[MemberManagement] Token:", token ? "exists" : "MISSING!")
@@ -125,9 +142,9 @@ export function MemberManagement() {
         "Authorization": `Bearer ${token}`
       }
 
-      // Fetch members
+      // Fetch members - get all users sorted by newest first
       console.log("[MemberManagement] Fetching users from:", `${API_URL}/api/users`)
-      const membersRes = await fetch(`${API_URL}/api/users`, { headers })
+      const membersRes = await fetch(`${API_URL}/api/users?limit=1000&sortBy=createdAt&sortOrder=desc`, { headers })
       console.log("[MemberManagement] Response status:", membersRes.status, membersRes.ok)
       
       if (membersRes.ok) {
@@ -146,6 +163,14 @@ export function MemberManagement() {
         console.log("[MemberManagement] Units data:", unitsData)
         setUnits(unitsData.units || unitsData || [])
       }
+      
+      if (isRefresh) {
+        toast({
+          title: "Thành công",
+          description: "Đã làm mới danh sách đoàn viên.",
+          variant: "success"
+        })
+      }
     } catch (error) {
       console.error("Error fetching data:", error)
       toast({
@@ -155,6 +180,7 @@ export function MemberManagement() {
       })
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }
 
@@ -162,8 +188,19 @@ export function MemberManagement() {
     fetchData()
   }, [])
 
+  // Sync filter when prop changes
+  useEffect(() => {
+    if (initialUnitFilter) {
+      setFilterUnit(initialUnitFilter)
+    }
+  }, [initialUnitFilter])
+
   // Filter members
   const filteredMembers = members.filter(member => {
+    // Filter by view mode first
+    if (viewMode === "active" && !member.isActive) return false
+    if (viewMode === "deleted" && member.isActive) return false
+
     const matchSearch = member.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (member.phone && member.phone.includes(searchTerm))
@@ -177,6 +214,35 @@ export function MemberManagement() {
 
     return matchSearch && matchUnit && matchStatus
   })
+
+  // Sort: ADMIN first, then LEADER/SECRETARY (Bí thư), then MEMBER, within each group sort by createdAt desc
+  const sortedMembers = [...filteredMembers].sort((a, b) => {
+    const roleOrder: Record<string, number> = { 
+      ADMIN: 0,
+      LEADER: 1,
+      SECRETARY: 1, 
+      MEMBER: 2 
+    }
+    const orderA = roleOrder[a.role] ?? 3
+    const orderB = roleOrder[b.role] ?? 3
+    
+    if (orderA !== orderB) {
+      return orderA - orderB
+    }
+    // Same role, sort by createdAt desc
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  })
+
+  // Pagination logic
+  const totalPages = Math.ceil(sortedMembers.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedMembers = sortedMembers.slice(startIndex, endIndex)
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, filterUnit, filterStatus])
 
   // Stats
   const totalMembers = members.length
@@ -233,7 +299,8 @@ export function MemberManagement() {
       if (res.ok) {
         toast({
           title: "Thành công",
-          description: "Đã thêm thành viên mới."
+          description: "Đã thêm thành viên mới.",
+          variant: "success"
         })
         setShowAddDialog(false)
         resetForm()
@@ -298,7 +365,8 @@ export function MemberManagement() {
       if (res.ok) {
         toast({
           title: "Thành công",
-          description: "Đã cập nhật thông tin thành viên."
+          description: "Đã cập nhật thông tin thành viên.",
+          variant: "success"
         })
         setShowEditDialog(false)
         resetForm()
@@ -328,16 +396,21 @@ export function MemberManagement() {
     try {
       const token = localStorage.getItem("accessToken")
       const res = await fetch(`${API_URL}/api/users/${selectedMember.id}`, {
-        method: "DELETE",
+        method: "PUT",
         headers: {
-          "Authorization": `Bearer ${token}`
-        }
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          isActive: false
+        })
       })
 
       if (res.ok) {
         toast({
           title: "Thành công",
-          description: "Đã vô hiệu hóa thành viên."
+          description: "Đã xóa thành viên. Bạn có thể khôi phục trong mục 'Đoàn viên đã xóa'.",
+          variant: "success"
         })
         setShowDeleteDialog(false)
         setSelectedMember(null)
@@ -378,7 +451,8 @@ export function MemberManagement() {
       if (res.ok) {
         toast({
           title: "Thành công",
-          description: `Đã ${member.isActive ? "vô hiệu hóa" : "kích hoạt"} thành viên.`
+          description: `Đã ${member.isActive ? "vô hiệu hóa" : "kích hoạt"} thành viên.`,
+          variant: "success"
         })
         fetchData()
       } else {
@@ -389,6 +463,45 @@ export function MemberManagement() {
       toast({
         title: "Lỗi",
         description: "Không thể thay đổi trạng thái.",
+        variant: "destructive"
+      })
+    }
+  }
+
+  // Restore member (set isActive = true)
+  const handleRestoreMember = async () => {
+    if (!selectedMember) return
+
+    try {
+      const token = localStorage.getItem("accessToken")
+      const res = await fetch(`${API_URL}/api/users/${selectedMember.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          isActive: true
+        })
+      })
+
+      if (res.ok) {
+        toast({
+          title: "Thành công",
+          description: "Đã khôi phục đoàn viên thành công.",
+          variant: "success"
+        })
+        setShowRestoreDialog(false)
+        setSelectedMember(null)
+        fetchData()
+      } else {
+        throw new Error("Failed to restore member")
+      }
+    } catch (error) {
+      console.error("Error restoring member:", error)
+      toast({
+        title: "Lỗi",
+        description: "Không thể khôi phục đoàn viên. Vui lòng thử lại.",
         variant: "destructive"
       })
     }
@@ -433,8 +546,11 @@ export function MemberManagement() {
       if (res.ok) {
         toast({
           title: "Thành công",
-          description: `Đã đổi mật khẩu cho ${selectedMember.fullName}`
+          description: `Đã đổi mật khẩu cho ${selectedMember.fullName}`,
+          variant: "success"
         })
+        // Keep the member data for notification
+        setPasswordChangedMember(selectedMember)
         setShowPasswordDialog(false)
         setNewPassword("")
         setConfirmPassword("")
@@ -458,7 +574,52 @@ export function MemberManagement() {
     setSelectedMember(member)
     setNewPassword("")
     setConfirmPassword("")
+    setShowNewPassword(false)
+    setShowConfirmPassword(false)
     setShowPasswordDialog(true)
+  }
+
+  // Send notification about password change to member
+  const sendPasswordChangeNotification = async () => {
+    if (!passwordChangedMember) return
+
+    setSendingNotification(true)
+    try {
+      const token = localStorage.getItem("accessToken")
+      const res = await fetch(`${API_URL}/api/notifications/send`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          title: "Mật khẩu đã được thay đổi",
+          message: `Mật khẩu tài khoản của bạn đã được Admin thay đổi. Vui lòng liên hệ Admin để nhận mật khẩu mới hoặc đăng nhập bằng mật khẩu mới được cung cấp.`,
+          type: "SYSTEM",
+          recipients: [passwordChangedMember.id]
+        })
+      })
+
+      if (res.ok) {
+        toast({
+          title: "Thành công",
+          description: `Đã gửi thông báo đến ${passwordChangedMember.fullName}`,
+          variant: "success"
+        })
+        setPasswordChangedMember(null)
+      } else {
+        throw new Error("Không thể gửi thông báo")
+      }
+    } catch (error) {
+      console.error("Error sending notification:", error)
+      toast({
+        title: "Lỗi",
+        description: "Không thể gửi thông báo.",
+        variant: "destructive"
+      })
+    } finally {
+      setSendingNotification(false)
+    }
   }
 
   const resetForm = () => {
@@ -531,16 +692,37 @@ export function MemberManagement() {
     setShowDeleteDialog(true)
   }
 
+  const openRestoreDialog = (member: Member) => {
+    setSelectedMember(member)
+    setShowRestoreDialog(true)
+  }
+
   const getRoleBadge = (role: string) => {
     switch (role) {
       case "ADMIN":
-        return <Badge variant="destructive">Admin</Badge>
+        return (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-sm">
+            Admin
+          </span>
+        )
       case "LEADER":
-        return <Badge variant="default">Bí thư</Badge>
+        return (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-sm">
+            Bí thư
+          </span>
+        )
       case "SECRETARY":
-        return <Badge variant="secondary">Bí thư</Badge>
+        return (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-purple-500 to-violet-500 text-white shadow-sm">
+            Bí thư
+          </span>
+        )
       default:
-        return <Badge variant="outline">Đoàn viên</Badge>
+        return (
+          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700">
+            Đoàn viên
+          </span>
+        )
     }
   }
 
@@ -552,216 +734,403 @@ export function MemberManagement() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+          <Users className="absolute inset-0 m-auto h-6 w-6 text-blue-600" />
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold">Quản lý đoàn viên</h2>
-          <p className="text-muted-foreground">Quản lý thông tin và trạng thái đoàn viên</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={fetchData}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Làm mới
-          </Button>
-          <Button onClick={() => { resetForm(); setShowAddDialog(true) }}>
-            <Plus className="h-4 w-4 mr-2" />
-            Thêm thành viên
-          </Button>
+    <div className="space-y-6 animate-in fade-in duration-500">
+      {/* Header with gradient background */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-6 text-white shadow-xl">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yIDItNCAyLTRzMiAyIDIgNC0yIDQtMiA0LTItMi0yLTR6bTAtMjBjMC0yIDItNCAyLTRzMiAyIDIgNC0yIDQtMiA0LTItMi0yLTR6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-30"></div>
+        <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
+                <Users className="h-6 w-6" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold tracking-tight">Quản lý đoàn viên</h2>
+                <p className="text-blue-100 text-sm">Quản lý thông tin và trạng thái đoàn viên</p>
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              variant="secondary" 
+              onClick={() => fetchData(true)} 
+              disabled={refreshing}
+              className="bg-white/20 hover:bg-white/30 text-white border-none backdrop-blur-sm transition-all duration-300 hover:scale-105"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Đang làm mới...' : 'Làm mới'}
+            </Button>
+            <Button 
+              onClick={() => { resetForm(); setShowAddDialog(true) }}
+              className="bg-white text-blue-600 hover:bg-blue-50 shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Thêm thành viên
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Stats Cards with animation */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-6">
+        <Card className="group relative overflow-hidden border-none shadow-lg hover:shadow-xl transition-all duration-500 hover:-translate-y-1">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+          <CardContent className="relative pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-100 rounded-full">
-                <Users className="h-6 w-6 text-blue-600" />
+              <div className="p-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg group-hover:bg-white/20 transition-all duration-500 group-hover:scale-110">
+                <Users className="h-7 w-7 text-white" />
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Tổng số</p>
-                <p className="text-2xl font-bold">{totalMembers}</p>
+              <div className="group-hover:text-white transition-colors duration-500">
+                <p className="text-sm text-muted-foreground group-hover:text-blue-100">Tổng số</p>
+                <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent group-hover:text-white">{totalMembers}</p>
               </div>
             </div>
+            <div className="mt-4 h-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
+        
+        <Card className="group relative overflow-hidden border-none shadow-lg hover:shadow-xl transition-all duration-500 hover:-translate-y-1">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-green-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+          <CardContent className="relative pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-100 rounded-full">
-                <UserCheck className="h-6 w-6 text-green-600" />
+              <div className="p-4 bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl shadow-lg group-hover:bg-white/20 transition-all duration-500 group-hover:scale-110">
+                <UserCheck className="h-7 w-7 text-white" />
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Đang hoạt động</p>
-                <p className="text-2xl font-bold">{activeMembers}</p>
+              <div className="group-hover:text-white transition-colors duration-500">
+                <p className="text-sm text-muted-foreground group-hover:text-green-100">Đang hoạt động</p>
+                <p className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent group-hover:text-white">{activeMembers}</p>
               </div>
             </div>
+            <div className="mt-4 h-1 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-6">
+        
+        <Card className="group relative overflow-hidden border-none shadow-lg hover:shadow-xl transition-all duration-500 hover:-translate-y-1">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-500 to-orange-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+          <CardContent className="relative pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-gray-100 rounded-full">
-                <UserX className="h-6 w-6 text-gray-600" />
+              <div className="p-4 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl shadow-lg group-hover:bg-white/20 transition-all duration-500 group-hover:scale-110">
+                <UserX className="h-7 w-7 text-white" />
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Không hoạt động</p>
-                <p className="text-2xl font-bold">{inactiveMembers}</p>
+              <div className="group-hover:text-white transition-colors duration-500">
+                <p className="text-sm text-muted-foreground group-hover:text-orange-100">Không hoạt động</p>
+                <p className="text-3xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent group-hover:text-white">{inactiveMembers}</p>
               </div>
             </div>
+            <div className="mt-4 h-1 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-left"></div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Search and Filter */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      {/* View Mode Toggle */}
+      <div className="flex gap-3">
+        <button
+          onClick={() => setViewMode("active")}
+          className={`flex-1 px-6 py-3 rounded-xl font-medium transition-all duration-300 ${
+            viewMode === "active"
+              ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          }`}
+        >
+          <div className="flex items-center justify-center gap-2">
+            <Users className="h-5 w-5" />
+            <span>Đoàn viên hoạt động</span>
+          </div>
+        </button>
+        <button
+          onClick={() => setViewMode("deleted")}
+          className={`flex-1 px-6 py-3 rounded-xl font-medium transition-all duration-300 ${
+            viewMode === "deleted"
+              ? "bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-lg"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          }`}
+        >
+          <div className="flex items-center justify-center gap-2">
+            <UserX className="h-5 w-5" />
+            <span>Đoàn viên đã xóa</span>
+          </div>
+        </button>
+      </div>
+
+      {/* Search and Filter - Modern design */}
+      <Card className="border-none shadow-lg">
+        <CardContent className="p-4">
+          <div className="flex flex-col lg:flex-row gap-4 items-center">
+            <div className="relative flex-1 w-full">
+              <div className="absolute left-4 top-1/2 transform -translate-y-1/2 p-2 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg">
+                <Search className="h-4 w-4 text-white" />
+              </div>
               <Input
                 placeholder="Tìm kiếm theo tên, email, số điện thoại..."
-                className="pl-10"
+                className="pl-14 h-12 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 transition-all duration-300"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Select value={filterUnit} onValueChange={setFilterUnit}>
-              <SelectTrigger className="w-full md:w-[200px]">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Lọc theo chi đoàn" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả chi đoàn</SelectItem>
-                {units.map(unit => (
-                  <SelectItem key={unit.id} value={unit.id.toString()}>
-                    {unit.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-full md:w-[180px]">
-                <SelectValue placeholder="Trạng thái" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả</SelectItem>
-                <SelectItem value="active">Đang hoạt động</SelectItem>
-                <SelectItem value="inactive">Không hoạt động</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex gap-3 w-full lg:w-auto">
+              <Select value={filterUnit} onValueChange={setFilterUnit}>
+                <SelectTrigger className="w-full lg:w-[200px] h-12 bg-gray-50 border-none rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-purple-100 rounded-lg">
+                      <Filter className="h-3.5 w-3.5 text-purple-600" />
+                    </div>
+                    <SelectValue placeholder="Chi đoàn" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả chi đoàn</SelectItem>
+                  {units.map(unit => (
+                    <SelectItem key={unit.id} value={unit.id.toString()}>
+                      {unit.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-full lg:w-[180px] h-12 bg-gray-50 border-none rounded-xl">
+                  <SelectValue placeholder="Trạng thái" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả</SelectItem>
+                  <SelectItem value="active">Đang hoạt động</SelectItem>
+                  <SelectItem value="inactive">Không hoạt động</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Members Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Danh sách đoàn viên ({filteredMembers.length})</CardTitle>
+      {/* Members List - Modern Card Grid */}
+      <Card className="border-none shadow-lg overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl">
+                <Users className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">Danh sách đoàn viên</CardTitle>
+                <p className="text-sm text-muted-foreground">{sortedMembers.length} thành viên</p>
+              </div>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
-          {filteredMembers.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Không tìm thấy đoàn viên nào</p>
+        <CardContent className="p-0">
+          {sortedMembers.length === 0 ? (
+            <div className="text-center py-16 text-muted-foreground">
+              <div className="w-20 h-20 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                <Users className="h-10 w-10 text-gray-400" />
+              </div>
+              <p className="font-medium">Không tìm thấy đoàn viên nào</p>
+              <p className="text-sm mt-1">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-2">Đoàn viên</th>
-                    <th className="text-left py-3 px-2">Liên hệ</th>
-                    <th className="text-left py-3 px-2">Chi đoàn</th>
-                    <th className="text-left py-3 px-2">Vai trò</th>
-                    <th className="text-left py-3 px-2">Điểm</th>
-                    <th className="text-left py-3 px-2">Trạng thái</th>
-                    <th className="text-center py-3 px-2">Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredMembers.map(member => (
-                    <tr key={member.id} className="border-b hover:bg-muted/50">
-                      <td className="py-3 px-2">
+            <>
+              {/* Table Header */}
+              <div className="hidden md:grid md:grid-cols-12 gap-4 px-6 py-4 bg-gray-50/50 text-sm font-medium text-muted-foreground border-b">
+                <div className="col-span-3">Thành viên</div>
+                <div className="col-span-2">Liên hệ</div>
+                <div className="col-span-2">Chi đoàn</div>
+                <div className="col-span-1 text-center">Vai trò</div>
+                <div className="col-span-1 text-center">Điểm</div>
+                <div className="col-span-1 text-center">Trạng thái</div>
+                <div className="col-span-2 text-center">Thao tác</div>
+              </div>
+              
+              {/* Members List */}
+              <div className="divide-y">
+                {paginatedMembers.map((member, index) => (
+                  <div 
+                    key={member.id} 
+                    className="group px-6 py-4 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/50 transition-all duration-300"
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                      {/* Member Info */}
+                      <div className="col-span-3">
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={member.avatarUrl} />
-                            <AvatarFallback>{member.fullName.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">{member.fullName}</p>
-                            <p className="text-sm text-muted-foreground">ID: {member.id}</p>
+                          <div className="relative">
+                            <Avatar className="h-12 w-12 ring-2 ring-white shadow-md group-hover:ring-blue-200 transition-all duration-300 group-hover:scale-105">
+                              <AvatarImage src={member.avatarUrl} />
+                              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-500 text-white font-semibold">
+                                {member.fullName.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white ${member.isActive ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-semibold truncate group-hover:text-blue-600 transition-colors">{member.fullName}</p>
+                            <p className="text-xs text-muted-foreground truncate">ID: {member.id.slice(0, 10)}...</p>
                           </div>
                         </div>
-                      </td>
-                      <td className="py-3 px-2">
-                        <p className="text-sm">{member.email}</p>
-                        <p className="text-sm text-muted-foreground">{member.phone || "N/A"}</p>
-                      </td>
-                      <td className="py-3 px-2">
-                        {member.unit?.name || "Chưa phân công"}
-                      </td>
-                      <td className="py-3 px-2">
+                      </div>
+                      
+                      {/* Contact */}
+                      <div className="col-span-2 hidden md:block">
+                        <p className="text-sm truncate">{member.email}</p>
+                        <p className="text-xs text-muted-foreground">{member.phone || "N/A"}</p>
+                      </div>
+                      
+                      {/* Unit */}
+                      <div className="col-span-2 hidden md:block">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 text-sm font-medium">
+                          {member.unit?.name || "Chưa phân công"}
+                        </span>
+                      </div>
+                      
+                      {/* Role */}
+                      <div className="col-span-1 hidden md:flex justify-center">
                         {getRoleBadge(member.role)}
-                      </td>
-                      <td className="py-3 px-2">
-                        <span className="font-medium">{member.points || 0}</span>
-                      </td>
-                      <td className="py-3 px-2">
-                        <Badge variant={member.isActive ? "default" : "secondary"}>
+                      </div>
+                      
+                      {/* Points */}
+                      <div className="col-span-1 hidden md:flex justify-center">
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-full">
+                          <Award className="h-4 w-4 text-amber-500" />
+                          <span className="font-bold text-amber-700">{member.points || 0}</span>
+                        </div>
+                      </div>
+                      
+                      {/* Status */}
+                      <div className="col-span-1 hidden md:flex justify-center">
+                        <Badge 
+                          variant="outline"
+                          className={`${member.isActive 
+                            ? 'bg-green-50 text-green-700 border-green-200' 
+                            : 'bg-gray-50 text-gray-600 border-gray-200'} font-medium`}
+                        >
                           {member.isActive ? "Hoạt động" : "Không hoạt động"}
                         </Badge>
-                      </td>
-                      <td className="py-3 px-2">
-                        <div className="flex justify-center gap-1">
+                      </div>
+                      
+                      {/* Actions */}
+                      <div className="col-span-2 flex justify-end md:justify-center gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => openDetailDialog(member)}
+                          title="Xem chi tiết"
+                          className="h-9 w-9 rounded-xl hover:bg-blue-100 hover:text-blue-600 transition-all duration-200 hover:scale-110"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        {viewMode === "active" ? (
+                          <>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => openEditDialog(member)}
+                              title="Chỉnh sửa"
+                              className="h-9 w-9 rounded-xl hover:bg-green-100 hover:text-green-600 transition-all duration-200 hover:scale-110"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => openPasswordDialog(member)}
+                              title="Đổi mật khẩu"
+                              className="h-9 w-9 rounded-xl hover:bg-orange-100 text-orange-500 hover:text-orange-600 transition-all duration-200 hover:scale-110"
+                            >
+                              <Key className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => openDeleteDialog(member)}
+                              title="Xóa"
+                              className="h-9 w-9 rounded-xl hover:bg-red-100 text-red-500 hover:text-red-600 transition-all duration-200 hover:scale-110"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        ) : (
                           <Button 
                             variant="ghost" 
                             size="icon"
-                            onClick={() => openDetailDialog(member)}
-                            title="Xem chi tiết"
+                            onClick={() => openRestoreDialog(member)}
+                            title="Khôi phục"
+                            className="h-9 w-9 rounded-xl hover:bg-green-100 hover:text-green-600 transition-all duration-200 hover:scale-110"
                           >
-                            <Eye className="h-4 w-4" />
+                            <Undo2 className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => openEditDialog(member)}
-                            title="Chỉnh sửa"
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {/* Pagination - Modern style */}
+              {totalPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 bg-gradient-to-r from-gray-50 to-white border-t">
+                  <div className="text-sm text-muted-foreground">
+                    Hiển thị <span className="font-semibold text-foreground">{startIndex + 1}-{Math.min(endIndex, sortedMembers.length)}</span> / <span className="font-semibold text-foreground">{sortedMembers.length}</span> đoàn viên
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      className="h-9 px-3 rounded-xl hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all duration-200"
+                    >
+                      <ChevronLeft className="h-4 w-4 mr-1" />
+                      Trước
+                    </Button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum: number
+                        if (totalPages <= 5) {
+                          pageNum = i + 1
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i
+                        } else {
+                          pageNum = currentPage - 2 + i
+                        }
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={currentPage === pageNum ? "default" : "outline"}
+                            size="sm"
+                            className={`w-9 h-9 p-0 rounded-xl transition-all duration-200 ${
+                              currentPage === pageNum 
+                                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md hover:shadow-lg' 
+                                : 'hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200'
+                            }`}
+                            onClick={() => setCurrentPage(pageNum)}
                           >
-                            <Edit className="h-4 w-4" />
+                            {pageNum}
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => openPasswordDialog(member)}
-                            title="Đổi mật khẩu"
-                            className="text-orange-600 hover:text-orange-700"
-                          >
-                            <Key className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => openDeleteDialog(member)}
-                            title="Xóa"
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        )
+                      })}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                      className="h-9 px-3 rounded-xl hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all duration-200"
+                    >
+                      Sau
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
@@ -1387,59 +1756,165 @@ export function MemberManagement() {
 
       {/* Detail Dialog */}
       <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Thông tin đoàn viên</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5 text-blue-600" />
+              Thông tin chi tiết đoàn viên
+            </DialogTitle>
           </DialogHeader>
           {selectedMember && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-16 w-16">
+            <div className="space-y-6">
+              {/* Header with avatar and basic info */}
+              <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
+                <Avatar className="h-20 w-20 border-4 border-white shadow-lg">
                   <AvatarImage src={selectedMember.avatarUrl} />
-                  <AvatarFallback className="text-xl">{selectedMember.fullName.charAt(0)}</AvatarFallback>
+                  <AvatarFallback className="text-2xl bg-gradient-to-br from-blue-500 to-purple-500 text-white">
+                    {selectedMember.fullName.charAt(0)}
+                  </AvatarFallback>
                 </Avatar>
-                <div>
-                  <h3 className="text-lg font-semibold">{selectedMember.fullName}</h3>
-                  {getRoleBadge(selectedMember.role)}
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold">{selectedMember.fullName}</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    {getRoleBadge(selectedMember.role)}
+                    <Badge variant={selectedMember.isActive ? "default" : "secondary"}>
+                      {selectedMember.isActive ? "Hoạt động" : "Không hoạt động"}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">{selectedMember.email}</p>
+                </div>
+                <div className="text-center p-3 bg-white rounded-lg shadow">
+                  <p className="text-2xl font-bold text-blue-600">{selectedMember.points || 0}</p>
+                  <p className="text-xs text-muted-foreground">Điểm hoạt động</p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                <div>
-                  <p className="text-sm text-muted-foreground">Email</p>
-                  <p className="font-medium">{selectedMember.email}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Số điện thoại</p>
-                  <p className="font-medium">{selectedMember.phone || "N/A"}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Chi đoàn</p>
-                  <p className="font-medium">{selectedMember.unit?.name || "Chưa phân công"}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Điểm hoạt động</p>
-                  <p className="font-medium text-lg">{selectedMember.points || 0}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Trạng thái</p>
-                  <Badge variant={selectedMember.isActive ? "default" : "secondary"}>
-                    {selectedMember.isActive ? "Hoạt động" : "Không hoạt động"}
-                  </Badge>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Ngày tham gia</p>
-                  <p className="font-medium">{formatDate(selectedMember.dateJoined || selectedMember.createdAt)}</p>
-                </div>
-                {selectedMember.address && (
-                  <div className="col-span-2">
-                    <p className="text-sm text-muted-foreground">Địa chỉ</p>
-                    <p className="font-medium">{selectedMember.address}</p>
+
+              {/* Chức vụ - Position Section */}
+              {(selectedMember.youthPosition || selectedMember.governmentPosition || selectedMember.militaryRank) && (
+                <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg border border-amber-200">
+                  <h4 className="font-semibold text-amber-800 mb-3 flex items-center gap-2">
+                    <Award className="h-4 w-4" />
+                    Chức vụ & Cấp bậc
+                  </h4>
+                  <div className="grid grid-cols-3 gap-4">
+                    {selectedMember.youthPosition && (
+                      <div>
+                        <p className="text-xs text-amber-700">Chức vụ Đoàn</p>
+                        <p className="font-semibold text-amber-900">{selectedMember.youthPosition}</p>
+                      </div>
+                    )}
+                    {selectedMember.governmentPosition && (
+                      <div>
+                        <p className="text-xs text-amber-700">Chức vụ Chính quyền</p>
+                        <p className="font-semibold text-amber-900">{selectedMember.governmentPosition}</p>
+                      </div>
+                    )}
+                    {selectedMember.militaryRank && (
+                      <div>
+                        <p className="text-xs text-amber-700">Quân hàm</p>
+                        <p className="font-semibold text-amber-900">{selectedMember.militaryRank}</p>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
+              )}
+
+              {/* Contact & Personal Info */}
+              <div className="grid grid-cols-2 gap-6">
+                {/* Contact Info */}
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-gray-700 border-b pb-1">Thông tin liên hệ</h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">{selectedMember.phone || "Chưa cập nhật"}</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                      <span className="text-sm">{selectedMember.address || "Chưa cập nhật"}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Personal Info */}
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-gray-700 border-b pb-1">Thông tin cá nhân</h4>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <p className="text-muted-foreground text-xs">Ngày sinh</p>
+                      <p>{selectedMember.dateOfBirth ? formatDate(selectedMember.dateOfBirth) : "N/A"}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Giới tính</p>
+                      <p>{selectedMember.gender || "N/A"}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Nơi sinh</p>
+                      <p>{selectedMember.birthPlace || "N/A"}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Dân tộc</p>
+                      <p>{selectedMember.ethnicity || "N/A"}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Tôn giáo</p>
+                      <p>{selectedMember.religion || "Không"}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Ngày vào Đảng</p>
+                      <p>{selectedMember.partyJoinDate ? formatDate(selectedMember.partyJoinDate) : "Chưa vào Đảng"}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Organization & Education */}
+              <div className="grid grid-cols-2 gap-6">
+                {/* Organization */}
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-gray-700 border-b pb-1">Đơn vị & Tổ chức</h4>
+                  <div className="space-y-2 text-sm">
+                    <div>
+                      <p className="text-muted-foreground text-xs">Chi đoàn</p>
+                      <p className="font-medium">{selectedMember.unit?.name || "Chưa phân công"}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Ngày tham gia</p>
+                      <p>{formatDate(selectedMember.dateJoined || selectedMember.createdAt)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Education */}
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-gray-700 border-b pb-1">Trình độ</h4>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <p className="text-muted-foreground text-xs">Học vấn</p>
+                      <p>{selectedMember.educationLevel || "N/A"}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Chuyên môn</p>
+                      <p>{selectedMember.majorLevel || "N/A"}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Tin học</p>
+                      <p>{selectedMember.itLevel || "N/A"}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Ngoại ngữ</p>
+                      <p>{selectedMember.languageLevel || "N/A"}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <p className="text-muted-foreground text-xs">Lý luận chính trị</p>
+                      <p>{selectedMember.politicsLevel || "N/A"}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setShowDetailDialog(false)}>
               Đóng
             </Button>
@@ -1479,23 +1954,47 @@ export function MemberManagement() {
               <div className="space-y-4 pt-2">
                 <div className="space-y-2">
                   <Label htmlFor="newPassword">Mật khẩu mới *</Label>
-                  <Input
-                    id="newPassword"
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)"
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="newPassword"
+                      type={showNewPassword ? "text" : "password"}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)"
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="shrink-0"
+                    >
+                      {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="confirmPassword">Xác nhận mật khẩu *</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Nhập lại mật khẩu mới"
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Nhập lại mật khẩu mới"
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="shrink-0"
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
                 </div>
                 <div className="text-sm text-muted-foreground bg-blue-50 p-3 rounded-lg">
                   <p className="font-medium text-blue-900 mb-1">Lưu ý:</p>
@@ -1513,6 +2012,8 @@ export function MemberManagement() {
               setShowPasswordDialog(false)
               setNewPassword("")
               setConfirmPassword("")
+              setShowNewPassword(false)
+              setShowConfirmPassword(false)
             }}>
               Hủy
             </Button>
@@ -1535,7 +2036,7 @@ export function MemberManagement() {
           </DialogHeader>
           <p>
             Bạn có chắc chắn muốn xóa thành viên <strong>{selectedMember?.fullName}</strong>?
-            Hành động này không thể hoàn tác.
+            Bạn có thể khôi phục lại sau trong mục "Đoàn viên đã xóa".
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
@@ -1543,6 +2044,88 @@ export function MemberManagement() {
             </Button>
             <Button variant="destructive" onClick={handleDeleteMember}>
               Xóa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Restore Member Dialog */}
+      <Dialog open={showRestoreDialog} onOpenChange={setShowRestoreDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-600">
+              <Undo2 className="h-5 w-5" />
+              Khôi phục đoàn viên
+            </DialogTitle>
+          </DialogHeader>
+          <p>
+            Bạn có chắc chắn muốn khôi phục đoàn viên <strong>{selectedMember?.fullName}</strong>?
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRestoreDialog(false)}>
+              Hủy
+            </Button>
+            <Button 
+              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+              onClick={handleRestoreMember}
+            >
+              Khôi phục
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Password Changed Notification Dialog */}
+      <Dialog open={!!passwordChangedMember} onOpenChange={(open) => !open && setPasswordChangedMember(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-600">
+              <CheckCircle2 className="h-5 w-5" />
+              Đổi mật khẩu thành công!
+            </DialogTitle>
+          </DialogHeader>
+          {passwordChangedMember && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={passwordChangedMember.avatarUrl} />
+                  <AvatarFallback className="bg-green-100 text-green-700">
+                    {passwordChangedMember.fullName.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-semibold">{passwordChangedMember.fullName}</p>
+                  <p className="text-sm text-muted-foreground">{passwordChangedMember.email}</p>
+                </div>
+              </div>
+              
+              <div className="text-center py-4">
+                <p className="text-muted-foreground mb-4">
+                  Bạn có muốn gửi thông báo đến đoàn viên về việc mật khẩu đã được thay đổi?
+                </p>
+                <Button 
+                  onClick={sendPasswordChangeNotification}
+                  disabled={sendingNotification}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                >
+                  {sendingNotification ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Đang gửi...
+                    </>
+                  ) : (
+                    <>
+                      <Bell className="h-4 w-4 mr-2" />
+                      Thông báo đến {passwordChangedMember.fullName}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPasswordChangedMember(null)}>
+              Bỏ qua
             </Button>
           </DialogFooter>
         </DialogContent>

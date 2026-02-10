@@ -8,7 +8,7 @@ import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 import { Search, FileText, Download, Heart, Calendar, Eye, ChevronRight, Filter } from 'lucide-react'
-import { toast } from '../ui/use-toast'
+import { toast } from '@/hooks/use-toast'
 import { DocumentViewer } from '../documents/document-viewer'
 
 interface YouthDocument {

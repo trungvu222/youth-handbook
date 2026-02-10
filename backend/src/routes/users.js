@@ -8,8 +8,7 @@ const {
   changePassword
 } = require('../controllers/userController');
 const { protect } = require('../middleware/auth');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 const router = express.Router();
 

@@ -1,7 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const crypto = require('crypto');
-
-const prisma = new PrismaClient();
 
 // @desc    Get all activities
 // @route   GET /api/activities
@@ -85,7 +83,7 @@ const getActivities = async (req, res, next) => {
         },
         skip,
         take: parseInt(limit),
-        orderBy: { startTime: 'desc' }
+        orderBy: { createdAt: 'desc' }
       }),
       prisma.activity.count({ where: whereClause })
     ]);
@@ -296,7 +294,7 @@ const createActivity = async (req, res, next) => {
           data: usersToNotify.map(user => ({
             userId: user.id,
             title: `Thông báo mời họp: ${title}`,
-            content: `Bạn được mời tham dự hoạt động "${title}" vào lúc ${new Date(startTime).toLocaleString('vi-VN')}${location ? ` tại ${location}` : ''}.`,
+            message: `Bạn được mời tham dự hoạt động "${title}" vào lúc ${new Date(startTime).toLocaleString('vi-VN')}${location ? ` tại ${location}` : ''}.`,
             type: 'ACTIVITY'
           })),
           skipDuplicates: true
@@ -474,7 +472,8 @@ const checkInActivity = async (req, res, next) => {
     // Calculate points based on timing
     let pointsEarned = activity.onTimePoints; // Default on-time points
     const activityStart = new Date(activity.startTime);
-    const lateThreshold = new Date(activityStart.getTime() + 15 * 60000); // 15 minutes
+    const thresholdMinutes = activity.lateThresholdMinutes || 15; // Dùng từ DB, fallback 15 phút
+    const lateThreshold = new Date(activityStart.getTime() + thresholdMinutes * 60000);
 
     if (now > lateThreshold) {
       pointsEarned = activity.latePoints; // Late points
@@ -576,9 +575,10 @@ const getActivityStats = async (req, res, next) => {
     // Calculate statistics
     const totalRegistered = activity.participants.length;
     const checkedIn = activity.participants.filter(p => p.status === 'CHECKED_IN').length;
+    const thresholdMinutes = activity.lateThresholdMinutes || 15; // Dùng từ DB, fallback 15 phút
     const onTime = activity.participants.filter(p => {
       if (!p.checkInTime) return false;
-      const lateThreshold = new Date(activity.startTime.getTime() + 15 * 60000);
+      const lateThreshold = new Date(activity.startTime.getTime() + thresholdMinutes * 60000);
       return p.checkInTime <= lateThreshold;
     }).length;
     const late = checkedIn - onTime;
@@ -1127,7 +1127,7 @@ const updateActivity = async (req, res, next) => {
     const { id } = req.params;
     const { 
       title, description, type, startTime, endTime, location, 
-      pointsReward, status, conclusion, hostUnit, managerId, materials 
+      pointsReward, status, conclusion, hostUnit, managerId, materials, attachments 
     } = req.body;
 
     const activity = await prisma.activity.findUnique({
@@ -1141,6 +1141,8 @@ const updateActivity = async (req, res, next) => {
       });
     }
 
+    const validStatuses = ['DRAFT', 'ACTIVE', 'COMPLETED', 'CANCELLED'];
+    
     const updateData = {};
     if (title !== undefined) updateData.title = title;
     if (description !== undefined) updateData.description = description;
@@ -1149,11 +1151,16 @@ const updateActivity = async (req, res, next) => {
     if (endTime !== undefined) updateData.endTime = new Date(endTime);
     if (location !== undefined) updateData.location = location;
     if (pointsReward !== undefined) updateData.pointsReward = parseInt(pointsReward);
-    if (status !== undefined) updateData.status = status;
+    if (status !== undefined && validStatuses.includes(status)) updateData.status = status;
     if (conclusion !== undefined) updateData.conclusion = conclusion;
     if (hostUnit !== undefined) updateData.hostUnit = hostUnit;
-    if (managerId !== undefined) updateData.managerId = managerId;
+    // managerId: empty string means unset, null means unset, only set if valid ID
+    if (managerId !== undefined) updateData.managerId = managerId || null;
     if (materials !== undefined) updateData.materials = materials;
+    if (attachments !== undefined) updateData.attachments = attachments; // JSON array of files
+    if (req.body.lateThresholdMinutes !== undefined) {
+      updateData.lateThresholdMinutes = parseInt(req.body.lateThresholdMinutes) || 15;
+    }
 
     const updatedActivity = await prisma.activity.update({
       where: { id },

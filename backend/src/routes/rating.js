@@ -1,9 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const { protect: auth } = require('../middleware/auth');
-
-const prisma = new PrismaClient();
 
 // Get rating periods
 router.get('/periods', auth, async (req, res) => {
@@ -92,6 +90,101 @@ router.get('/periods/:id', auth, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Không thể tải kỳ xếp loại'
+    });
+  }
+});
+
+// Get all ratings in a period with full user info (Admin only)
+router.get('/periods/:periodId/all-ratings', auth, async (req, res) => {
+  try {
+    const { periodId } = req.params;
+    
+    // Check if user is admin
+    if (req.user.role !== 'ADMIN' && req.user.role !== 'LEADER') {
+      return res.status(403).json({
+        success: false,
+        error: 'Chỉ admin/lãnh đạo mới có quyền xem toàn bộ danh sách'
+      });
+    }
+
+    // Get period info
+    const period = await prisma.ratingPeriod.findUnique({
+      where: { id: periodId }
+    });
+
+    if (!period) {
+      return res.status(404).json({
+        success: false,
+        error: 'Không tìm thấy kỳ xếp loại'
+      });
+    }
+
+    // Get all ratings for this period with full user info
+    const ratings = await prisma.selfRating.findMany({
+      where: { 
+        periodId: periodId,
+        // Only show submitted and approved ratings
+        status: {
+          in: ['SUBMITTED', 'APPROVED', 'REJECTED']
+        }
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            militaryRank: true,
+            youthPosition: true,
+            unit: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        submittedAt: 'asc'
+      }
+    });
+
+    // Format response for table display
+    const formattedRatings = ratings.map((rating, index) => ({
+      stt: index + 1,
+      id: rating.id,
+      userId: rating.user.id,
+      fullName: rating.user.fullName,
+      militaryRank: rating.user.militaryRank || 'Chưa cập nhật',
+      youthPosition: rating.user.youthPosition || 'Đoàn viên',
+      unitName: rating.user.unit?.name || 'Chưa có chi đoàn',
+      periodTitle: period.title,
+      startDate: period.startDate,
+      rating: rating.finalRating || rating.suggestedRating,
+      status: rating.status,
+      submittedAt: rating.submittedAt,
+      criteriaResponses: rating.criteriaResponses,
+      selfAssessment: rating.selfAssessment
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        period: {
+          id: period.id,
+          title: period.title,
+          startDate: period.startDate,
+          endDate: period.endDate
+        },
+        ratings: formattedRatings,
+        total: formattedRatings.length
+      }
+    });
+  } catch (error) {
+    console.error('Get all ratings error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Không thể tải danh sách xếp loại'
     });
   }
 });
@@ -239,6 +332,55 @@ router.post('/submit', auth, async (req, res) => {
   }
 });
 
+// Delete my rating (only DRAFT status)
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    // Check if rating exists and belongs to user
+    const rating = await prisma.selfRating.findUnique({
+      where: { id }
+    });
+
+    if (!rating) {
+      return res.status(404).json({
+        success: false,
+        error: 'Không tìm thấy đánh giá'
+      });
+    }
+
+    if (rating.userId !== userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Không có quyền xóa đánh giá này'
+      });
+    }
+
+    if (rating.status !== 'DRAFT') {
+      return res.status(400).json({
+        success: false,
+        error: 'Chỉ có thể xóa bản nháp'
+      });
+    }
+
+    await prisma.selfRating.delete({
+      where: { id }
+    });
+
+    res.json({
+      success: true,
+      message: 'Đã xóa đánh giá'
+    });
+  } catch (error) {
+    console.error('Delete rating error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Không thể xóa đánh giá'
+    });
+  }
+});
+
 // Get my rating history
 router.get('/my-history', auth, async (req, res) => {
   try {
@@ -290,7 +432,7 @@ router.post('/periods', auth, async (req, res) => {
       });
     }
 
-    const { title, description, startDate, endDate, criteria, targetAudience, unitIds, roles } = req.body;
+    const { title, description, startDate, endDate, criteria, targetRating, targetAudience, unitIds, roles } = req.body;
 
     const period = await prisma.ratingPeriod.create({
       data: {
@@ -299,11 +441,12 @@ router.post('/periods', auth, async (req, res) => {
         startDate: new Date(startDate),
         endDate: new Date(endDate),
         criteria,
+        targetRating: targetRating || 'GOOD',
         targetAudience: targetAudience || 'ALL',
         unitIds,
         roles,
         createdBy: req.user.id,
-        status: 'DRAFT'
+        status: 'ACTIVE' // Auto-activate period to enable notifications
       },
       include: {
         creator: {
@@ -328,6 +471,128 @@ router.post('/periods', auth, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Không thể tạo kỳ xếp loại'
+    });
+  }
+});
+
+// Update rating period (Admin/Leader only)
+router.put('/periods/:id', auth, async (req, res) => {
+  try {
+    const { role } = req.user;
+    const { id } = req.params;
+    
+    if (role !== 'ADMIN' && role !== 'LEADER') {
+      return res.status(403).json({
+        success: false,
+        error: 'Không có quyền truy cập'
+      });
+    }
+
+    const { title, description, startDate, endDate, criteria, targetRating, targetAudience, unitIds, roles } = req.body;
+
+    // Check if period exists
+    const existingPeriod = await prisma.ratingPeriod.findUnique({
+      where: { id }
+    });
+
+    if (!existingPeriod) {
+      return res.status(404).json({
+        success: false,
+        error: 'Không tìm thấy kỳ xếp loại'
+      });
+    }
+
+    const period = await prisma.ratingPeriod.update({
+      where: { id },
+      data: {
+        title,
+        description,
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+        criteria,
+        targetRating: targetRating || 'GOOD',
+        targetAudience: targetAudience || 'ALL',
+        unitIds,
+        roles
+      },
+      include: {
+        creator: {
+          select: {
+            id: true,
+            fullName: true,
+            role: true
+          }
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        ...period,
+        author: period.creator
+      },
+      message: 'Đã cập nhật kỳ xếp loại'
+    });
+  } catch (error) {
+    console.error('Update rating period error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Không thể cập nhật kỳ xếp loại'
+    });
+  }
+});
+
+// Delete rating period (Admin only)
+router.delete('/periods/:id', auth, async (req, res) => {
+  try {
+    const { role } = req.user;
+    
+    if (role !== 'ADMIN' && role !== 'LEADER') {
+      return res.status(403).json({
+        success: false,
+        error: 'Không có quyền xóa kỳ xếp loại'
+      });
+    }
+
+    const { id } = req.params;
+
+    // Check if period exists
+    const period = await prisma.ratingPeriod.findUnique({
+      where: { id },
+      include: {
+        selfRatings: true
+      }
+    });
+
+    if (!period) {
+      return res.status(404).json({
+        success: false,
+        error: 'Không tìm thấy kỳ xếp loại'
+      });
+    }
+
+    // Delete all related self ratings first
+    if (period.selfRatings && period.selfRatings.length > 0) {
+      await prisma.selfRating.deleteMany({
+        where: { periodId: id }
+      });
+    }
+
+    // Delete the period
+    await prisma.ratingPeriod.delete({
+      where: { id }
+    });
+
+    res.json({
+      success: true,
+      message: 'Đã xóa kỳ xếp loại thành công'
+    });
+  } catch (error) {
+    console.error('Delete rating period error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Không thể xóa kỳ xếp loại'
     });
   }
 });
@@ -518,7 +783,123 @@ router.post('/:id/reject', auth, async (req, res) => {
   }
 });
 
-// Get rating stats
+// Get my personal rating stats
+router.get('/my-stats', auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Total periods participated
+    const totalParticipated = await prisma.selfRating.count({
+      where: { 
+        userId,
+        status: { not: 'DRAFT' }
+      }
+    });
+
+    // Total submitted
+    const totalSubmitted = await prisma.selfRating.count({
+      where: { 
+        userId,
+        status: { in: ['SUBMITTED', 'APPROVED', 'REJECTED'] }
+      }
+    });
+
+    // Total approved
+    const totalApproved = await prisma.selfRating.count({
+      where: { 
+        userId,
+        status: 'APPROVED'
+      }
+    });
+
+    // Average points
+    const avgPointsResult = await prisma.selfRating.aggregate({
+      _avg: {
+        pointsAwarded: true
+      },
+      where: {
+        userId,
+        status: 'APPROVED',
+        pointsAwarded: { not: null }
+      }
+    });
+
+    // Total points earned
+    const totalPointsResult = await prisma.selfRating.aggregate({
+      _sum: {
+        pointsAwarded: true
+      },
+      where: {
+        userId,
+        status: 'APPROVED',
+        pointsAwarded: { not: null }
+      }
+    });
+
+    // Rating distribution
+    const ratingsByLevel = await prisma.selfRating.groupBy({
+      by: ['finalRating'],
+      where: {
+        userId,
+        status: 'APPROVED',
+        finalRating: { not: null }
+      },
+      _count: true
+    });
+
+    const distribution = {
+      EXCELLENT: 0,
+      GOOD: 0,
+      AVERAGE: 0,
+      POOR: 0
+    };
+    ratingsByLevel.forEach(item => {
+      if (item.finalRating) {
+        distribution[item.finalRating] = item._count;
+      }
+    });
+
+    // Recent approved ratings for trend
+    const recentRatings = await prisma.selfRating.findMany({
+      where: {
+        userId,
+        status: 'APPROVED'
+      },
+      include: {
+        period: {
+          select: {
+            id: true,
+            title: true,
+            endDate: true
+          }
+        }
+      },
+      orderBy: { reviewedAt: 'desc' },
+      take: 5
+    });
+
+    res.json({
+      success: true,
+      data: {
+        totalParticipated,
+        totalSubmitted,
+        totalApproved,
+        avgPoints: avgPointsResult._avg.pointsAwarded || 0,
+        totalPoints: totalPointsResult._sum.pointsAwarded || 0,
+        distribution,
+        recentRatings
+      }
+    });
+  } catch (error) {
+    console.error('Get my stats error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Không thể tải thống kê'
+    });
+  }
+});
+
+// Get rating stats (Admin only)
 router.get('/admin/stats', auth, async (req, res) => {
   try {
     const { role } = req.user;
@@ -562,6 +943,209 @@ router.get('/admin/stats', auth, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Không thể tải thống kê'
+    });
+  }
+});
+
+// Get stats for a specific period (Admin only)
+router.get('/periods/:periodId/stats', auth, async (req, res) => {
+  try {
+    const { periodId } = req.params;
+    
+    // Check if user is admin
+    if (req.user.role !== 'ADMIN' && req.user.role !== 'LEADER') {
+      return res.status(403).json({
+        success: false,
+        error: 'Chỉ admin/lãnh đạo mới có quyền xem thống kê'
+      });
+    }
+
+    // Check if period exists
+    const period = await prisma.ratingPeriod.findUnique({
+      where: { id: periodId }
+    });
+
+    if (!period) {
+      return res.status(404).json({
+        success: false,
+        error: 'Không tìm thấy kỳ xếp loại'
+      });
+    }
+
+    // Count all ratings in this period by status
+    const ratingsByStatus = await prisma.selfRating.groupBy({
+      by: ['status'],
+      where: { periodId },
+      _count: true
+    });
+
+    const statusCounts = {
+      DRAFT: 0,
+      SUBMITTED: 0,
+      APPROVED: 0,
+      REJECTED: 0,
+      NEEDS_REVISION: 0
+    };
+    ratingsByStatus.forEach(item => {
+      statusCounts[item.status] = item._count;
+    });
+
+    // Count ratings by final rating level (only approved)
+    const ratingsByLevel = await prisma.selfRating.groupBy({
+      by: ['finalRating'],
+      where: {
+        periodId,
+        status: 'APPROVED',
+        finalRating: { not: null }
+      },
+      _count: true
+    });
+
+    const distribution = {
+      EXCELLENT: 0,
+      GOOD: 0,
+      AVERAGE: 0,
+      POOR: 0
+    };
+    ratingsByLevel.forEach(item => {
+      if (item.finalRating) {
+        distribution[item.finalRating] = item._count;
+      }
+    });
+
+    // Calculate average points awarded
+    const pointsStats = await prisma.selfRating.aggregate({
+      where: {
+        periodId,
+        status: 'APPROVED',
+        pointsAwarded: { not: null }
+      },
+      _avg: { pointsAwarded: true },
+      _sum: { pointsAwarded: true },
+      _count: true
+    });
+
+    // Total submissions (submitted + approved + rejected + needs_revision)
+    const totalSubmissions = statusCounts.SUBMITTED + statusCounts.APPROVED + statusCounts.REJECTED + statusCounts.NEEDS_REVISION;
+    
+    // Pending approvals (submitted + needs_revision)
+    const pendingApprovals = statusCounts.SUBMITTED + statusCounts.NEEDS_REVISION;
+
+    res.json({
+      success: true,
+      data: {
+        period: {
+          id: period.id,
+          title: period.title,
+          startDate: period.startDate,
+          endDate: period.endDate,
+          status: period.status
+        },
+        totalSubmissions,
+        pendingApprovals,
+        statusCounts,
+        distribution,
+        avgPoints: pointsStats._avg.pointsAwarded || 0,
+        totalPoints: pointsStats._sum.pointsAwarded || 0,
+        totalApproved: statusCounts.APPROVED
+      }
+    });
+  } catch (error) {
+    console.error('Get period stats error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Không thể tải thống kê'
+    });
+  }
+});
+
+// Get detailed ratings list for a specific period (Admin only)
+router.get('/periods/:periodId/ratings', auth, async (req, res) => {
+  try {
+    const { periodId } = req.params;
+    
+    // Check if user is admin
+    if (req.user.role !== 'ADMIN' && req.user.role !== 'LEADER') {
+      return res.status(403).json({
+        success: false,
+        error: 'Chỉ admin/lãnh đạo mới có quyền xem danh sách'
+      });
+    }
+
+    // Check if period exists
+    const period = await prisma.ratingPeriod.findUnique({
+      where: { id: periodId },
+      select: {
+        id: true,
+        title: true,
+        startDate: true,
+        endDate: true,
+        status: true,
+        targetRating: true
+      }
+    });
+
+    if (!period) {
+      return res.status(404).json({
+        success: false,
+        error: 'Không tìm thấy kỳ xếp loại'
+      });
+    }
+
+    // Get all approved ratings for this period with user details
+    const ratings = await prisma.selfRating.findMany({
+      where: {
+        periodId,
+        status: 'APPROVED'
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            militaryRank: true,
+            youthPosition: true,
+            unit: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        reviewedAt: 'desc'
+      }
+    });
+
+    // Format response data
+    const formattedRatings = ratings.map(rating => ({
+      id: rating.id,
+      userId: rating.user.id,
+      fullName: rating.user.fullName,
+      militaryRank: rating.user.militaryRank || '',
+      youthPosition: rating.user.youthPosition || '',
+      unitName: rating.user.unit?.name || '',
+      finalRating: rating.finalRating,
+      pointsAwarded: rating.pointsAwarded,
+      submittedAt: rating.submittedAt,
+      reviewedAt: rating.reviewedAt
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        period,
+        ratings: formattedRatings,
+        total: formattedRatings.length
+      }
+    });
+  } catch (error) {
+    console.error('Get period ratings error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Không thể tải danh sách xếp loại'
     });
   }
 });

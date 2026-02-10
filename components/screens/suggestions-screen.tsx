@@ -23,7 +23,7 @@ import {
   Eye,
   Filter
 } from 'lucide-react'
-import { toast } from '../ui/use-toast'
+import { toast } from '@/hooks/use-toast'
 
 interface Suggestion {
   id: string;

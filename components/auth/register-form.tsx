@@ -27,13 +27,24 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
       const formData = new FormData(e.target as HTMLFormElement)
       const firstName = formData.get('firstName') as string
       const lastName = formData.get('lastName') as string
+      const emailValue = (formData.get('email') as string)?.trim()
+      const phoneValue = (formData.get('phone') as string)?.trim()
+      
+      // Allow registration with email OR phone (at least one required)
+      if (!emailValue && !phoneValue) {
+        alert('Vui lòng nhập email hoặc số điện thoại')
+        setIsLoading(false)
+        return
+      }
+
+      const identifier = emailValue || phoneValue
       
       const userData = {
-        username: formData.get('email') as string, // Use email as username for now
-        email: formData.get('email') as string,
+        username: identifier, // Use email or phone as username
+        email: emailValue || undefined,
         password: formData.get('password') as string,
         fullName: `${firstName} ${lastName}`,
-        phone: formData.get('phone') as string,
+        phone: phoneValue || undefined,
       }
 
       const { authApi } = await import('@/lib/api')
@@ -74,12 +85,12 @@ export function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) 
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" name="email" type="email" placeholder="Nhập email" required />
+            <Label htmlFor="email">Email <span className="text-muted-foreground text-xs">(hoặc SĐT)</span></Label>
+            <Input id="email" name="email" type="email" placeholder="Nhập email (không bắt buộc)" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="phone">Số điện thoại</Label>
-            <Input id="phone" name="phone" type="tel" placeholder="Nhập số điện thoại" required />
+            <Label htmlFor="phone">Số điện thoại <span className="text-muted-foreground text-xs">(hoặc Email)</span></Label>
+            <Input id="phone" name="phone" type="tel" placeholder="Nhập số điện thoại (không bắt buộc)" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="unit">Đơn vị</Label>

@@ -1,6 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 // @desc    Get all users with points for leaderboard
 // @route   GET /api/points/leaderboard
@@ -300,10 +298,123 @@ const getUnits = async (req, res, next) => {
   }
 };
 
+// @desc    Get points configuration
+// @route   GET /api/points/config
+// @access  Private (Admin only)
+const getPointsConfig = async (req, res, next) => {
+  try {
+    // Get the active config or create default one
+    let config = await prisma.pointsConfig.findFirst({
+      where: { isActive: true }
+    });
+
+    if (!config) {
+      // Create default config if not exists
+      config = await prisma.pointsConfig.create({
+        data: {
+          initialPoints: 100,
+          maxPoints: 1000,
+          minPoints: 0,
+          excellentThreshold: 800,
+          goodThreshold: 600,
+          averageThreshold: 400,
+          poorThreshold: 400,
+          isActive: true
+        }
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: config
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update points configuration
+// @route   PUT /api/points/config
+// @access  Private (Admin only)
+const updatePointsConfig = async (req, res, next) => {
+  try {
+    const {
+      initialPoints,
+      maxPoints,
+      minPoints,
+      excellentThreshold,
+      goodThreshold,
+      averageThreshold,
+      poorThreshold
+    } = req.body;
+
+    // Validate thresholds
+    if (excellentThreshold <= goodThreshold || 
+        goodThreshold <= averageThreshold) {
+      return res.status(400).json({
+        success: false,
+        error: 'Ngưỡng điểm không hợp lệ. Xuất sắc > Khá > Trung bình'
+      });
+    }
+
+    if (minPoints >= maxPoints) {
+      return res.status(400).json({
+        success: false,
+        error: 'Điểm tối thiểu phải nhỏ hơn điểm tối đa'
+      });
+    }
+
+    // Get current active config
+    let config = await prisma.pointsConfig.findFirst({
+      where: { isActive: true }
+    });
+
+    if (config) {
+      // Update existing config
+      config = await prisma.pointsConfig.update({
+        where: { id: config.id },
+        data: {
+          initialPoints: initialPoints ?? config.initialPoints,
+          maxPoints: maxPoints ?? config.maxPoints,
+          minPoints: minPoints ?? config.minPoints,
+          excellentThreshold: excellentThreshold ?? config.excellentThreshold,
+          goodThreshold: goodThreshold ?? config.goodThreshold,
+          averageThreshold: averageThreshold ?? config.averageThreshold,
+          poorThreshold: poorThreshold ?? config.poorThreshold
+        }
+      });
+    } else {
+      // Create new config
+      config = await prisma.pointsConfig.create({
+        data: {
+          initialPoints: initialPoints || 100,
+          maxPoints: maxPoints || 1000,
+          minPoints: minPoints || 0,
+          excellentThreshold: excellentThreshold || 800,
+          goodThreshold: goodThreshold || 600,
+          averageThreshold: averageThreshold || 400,
+          poorThreshold: poorThreshold || 400,
+          isActive: true
+        }
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Cập nhật cấu hình điểm thành công',
+      data: config
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getLeaderboard,
   addPoints,
   subtractPoints,
   getPointsHistory,
-  getUnits
+  getUnits,
+  getPointsConfig,
+  updatePointsConfig
 };

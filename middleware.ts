@@ -12,6 +12,24 @@ export function middleware(request: NextRequest) {
   if (isCapacitorApp && pathname.startsWith('/admin')) {
     return NextResponse.redirect(new URL('/', request.url));
   }
+
+  // Admin routes protection
+  if (pathname.startsWith('/admin')) {
+    // Allow access to login page
+    if (pathname === '/admin/login') {
+      return NextResponse.next();
+    }
+
+    // Check for access token
+    const accessToken = request.cookies.get('accessToken')?.value;
+    
+    // If no token, redirect to admin login
+    if (!accessToken) {
+      const loginUrl = new URL('/admin/login', request.url);
+      loginUrl.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
   
   return NextResponse.next();
 }

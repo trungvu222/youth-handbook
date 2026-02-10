@@ -194,7 +194,7 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
 
         {/* Login Form */}
         <form onSubmit={handleSubmit} style={{ width: '100%', maxWidth: '320px', boxSizing: 'border-box' }} className="w-full max-w-sm space-y-4">
-          {/* Username Input */}
+          {/* Username Input - accepts username, email, or phone */}
           <div style={inputContainerStyle} className="relative">
             <div style={iconStyle} className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10">
               <User style={{ width: '20px', height: '20px' }} className="h-5 w-5 text-gray-500" />
@@ -202,7 +202,7 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
             <input
               type="text"
               name="username"
-              placeholder="Tên đăng nhập"
+              placeholder="Email, SĐT hoặc tên đăng nhập"
               style={inputStyle}
               className="h-12 pl-12 pr-4 rounded-full border-2 border-gray-300 bg-white/90 backdrop-blur-sm w-full"
               required

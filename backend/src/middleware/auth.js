@@ -1,7 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key';
 
 // Protect routes - require authentication
@@ -45,6 +43,71 @@ const protect = async (req, res, next) => {
         return res.status(401).json({
           success: false,
           error: 'User account is deactivated'
+        });
+      }
+
+      req.user = user;
+      next();
+    } catch (err) {
+      return res.status(401).json({
+        success: false,
+        error: 'Not authorized to access this route'
+      });
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Protect admin routes - require authentication AND admin role
+const protectAdmin = async (req, res, next) => {
+  try {
+    let token;
+
+    // Get token from header
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    // Make sure token exists
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        error: 'Not authorized to access this route'
+      });
+    }
+
+    try {
+      // Verify token
+      const decoded = jwt.verify(token, JWT_SECRET);
+
+      // Get user from database
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.id },
+        include: {
+          unit: true
+        }
+      });
+
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          error: 'No user found with this token'
+        });
+      }
+
+      if (!user.isActive) {
+        return res.status(401).json({
+          success: false,
+          error: 'User account is deactivated'
+        });
+      }
+
+      // Check if user is admin
+      if (user.role !== 'ADMIN') {
+        return res.status(403).json({
+          success: false,
+          error: 'Access denied. Admin role required.'
         });
       }
 
@@ -115,6 +178,7 @@ const checkUnitAccess = async (req, res, next) => {
 
 module.exports = {
   protect,
+  protectAdmin,
   authorize,
   checkUnitAccess
 };

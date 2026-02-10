@@ -1,6 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 // Document System Controllers for Module 3.5
 
@@ -618,6 +616,135 @@ const getDocumentStats = async (req, res, next) => {
   }
 };
 
+// @desc    Upload document file
+// @route   POST /api/documents/upload/document
+// @access  Admin/Leader
+const uploadDocumentFile = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'No file uploaded'
+      });
+    }
+
+    const fileUrl = `/uploads/documents/${req.file.filename}`;
+    const fileName = req.file.originalname;
+    const fileSize = req.file.size;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        fileUrl,
+        fileName,
+        fileSize
+      }
+    });
+
+  } catch (error) {
+    console.error('Upload document file error:', error);
+    next(error);
+  }
+};
+
+// @desc    Send document notification
+// @route   POST /api/documents/:id/notify
+// @access  Admin/Leader  
+const sendDocumentNotification = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { type = 'all', userIds = [] } = req.body;
+
+    // Get document
+    const document = await prisma.document.findUnique({
+      where: { id },
+      include: {
+        author: {
+          select: {
+            id: true,
+            fullName: true
+          }
+        }
+      }
+    });
+
+    if (!document) {
+      return res.status(404).json({
+        success: false,
+        error: 'Document not found'
+      });
+    }
+
+    let recipients = [];
+
+    if (type === 'all') {
+      // Get all members
+      recipients = await prisma.user.findMany({
+        where: {
+          role: 'MEMBER',
+          isActive: true
+        },
+        select: {
+          id: true,
+          fullName: true,
+          email: true
+        }
+      });
+    } else if (type === 'specific' && userIds.length > 0) {
+      // Get specific users
+      recipients = await prisma.user.findMany({
+        where: {
+          id: { in: userIds },
+          isActive: true
+        },
+        select: {
+          id: true,
+          fullName: true,
+          email: true
+        }
+      });
+    }
+
+    // Create notifications using generic Notification model
+    const notificationPromises = recipients.map(user => 
+      prisma.notification.create({
+        data: {
+          userId: user.id,
+          title: `Văn bản mới: ${document.title}`,
+          message: `${document.author.fullName} đã chia sẻ văn bản "${document.title}". Số hiệu: ${document.documentNumber || 'N/A'}`,
+          type: 'DOCUMENT',
+          relatedId: document.id,
+          isRead: false
+        }
+      })
+    );
+
+    await Promise.all(notificationPromises);
+
+    // Update document notification status
+    await prisma.document.update({
+      where: { id },
+      data: {
+        isNotificationSent: true
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        message: `Đã gửi thông báo đến ${recipients.length} đoàn viên`,
+        recipientCount: recipients.length,
+        sentCount: recipients.length,
+        recipients: recipients.map(r => ({ id: r.id, fullName: r.fullName }))
+      }
+    });
+
+  } catch (error) {
+    console.error('Send document notification error:', error);
+    next(error);
+  }
+};
+
 module.exports = {
   getDocuments,
   getDocument,
@@ -627,7 +754,9 @@ module.exports = {
   createDocument,
   updateDocument,
   deleteDocument,
-  getDocumentStats
+  getDocumentStats,
+  uploadDocumentFile,
+  sendDocumentNotification
 };
 
 

@@ -1,0 +1,132 @@
+[
+  {
+    "question": "Đoàn TNCS Hồ Chí Minh được thành lập vào ngày nào?",
+    "options": [
+      "26/3/1929",
+      "26/3/1930", 
+      "26/3/1931",
+      "26/3/1932"
+    ],
+    "correctAnswer": 2,
+    "explanation": "Đoàn TNCS Hồ Chí Minh được thành lập ngày 26/3/1931 tại Hà Nội.",
+    "difficulty": "EASY",
+    "points": 1
+  },
+  {
+    "question": "Tên gọi đầu tiên của Đoàn TNCS Hồ Chí Minh là gì?",
+    "options": [
+      "Đoàn Thanh niên Cộng sản Việt Nam",
+      "Đoàn Thanh niên Lao động Việt Nam",
+      "Đoàn Thanh niên Cứu quốc Việt Nam",
+      "Đoàn Thanh niên Đông Dương Cộng sản"
+    ],
+    "correctAnswer": 3,
+    "explanation": "Tên gọi đầu tiên là Đoàn Thanh niên Đông Dương Cộng sản.",
+    "difficulty": "MEDIUM",
+    "points": 2
+  },
+  {
+    "question": "Điều lệ Đoàn hiện hành được thông qua tại Đại hội Đoàn toàn quốc lần thứ mấy?",
+    "options": [
+      "Đại hội X",
+      "Đại hội XI",
+      "Đại hội XII",
+      "Đại hội XIII"
+    ],
+    "correctAnswer": 2,
+    "explanation": "Điều lệ Đoàn hiện hành được thông qua tại Đại hội Đoàn toàn quốc lần thứ XII năm 2022.",
+    "difficulty": "MEDIUM",
+    "points": 2
+  },
+  {
+    "question": "Độ tuổi đoàn viên là bao nhiêu?",
+    "options": [
+      "Từ 15 đến 30 tuổi",
+      "Từ 16 đến 30 tuổi",
+      "Từ 16 đến 35 tuổi",
+      "Từ 18 đến 35 tuổi"
+    ],
+    "correctAnswer": 1,
+    "explanation": "Đoàn viên là thanh niên Việt Nam từ đủ 16 tuổi đến 30 tuổi.",
+    "difficulty": "EASY",
+    "points": 1
+  },
+  {
+    "question": "Nhiệm kỳ của Ban Chấp hành Đoàn các cấp là bao nhiêu năm?",
+    "options": [
+      "2 năm",
+      "3 năm",
+      "4 năm",
+      "5 năm"
+    ],
+    "correctAnswer": 3,
+    "explanation": "Nhiệm kỳ của Ban Chấp hành Đoàn các cấp là 5 năm.",
+    "difficulty": "EASY",
+    "points": 1
+  },
+  {
+    "question": "Nguyên tắc tổ chức và hoạt động của Đoàn là gì?",
+    "options": [
+      "Tập trung dân chủ",
+      "Dân chủ tập trung",
+      "Tự quản, tự chủ",
+      "Tập thể lãnh đạo"
+    ],
+    "correctAnswer": 0,
+    "explanation": "Nguyên tắc tổ chức và hoạt động của Đoàn là tập trung dân chủ.",
+    "difficulty": "MEDIUM",
+    "points": 2
+  },
+  {
+    "question": "Huy hiệu Đoàn TNCS Hồ Chí Minh có hình ảnh gì?",
+    "options": [
+      "Ngôi sao vàng 5 cánh",
+      "Búa liềm",
+      "Ngọn đuốc",
+      "Ngôi sao 8 cánh và búa liềm"
+    ],
+    "correctAnswer": 3,
+    "explanation": "Huy hiệu Đoàn có hình ngôi sao 8 cánh màu vàng và búa liềm ở giữa.",
+    "difficulty": "EASY",
+    "points": 1
+  },
+  {
+    "question": "Đoàn viên có quyền gì trong tổ chức Đoàn?",
+    "options": [
+      "Chỉ được tham gia sinh hoạt",
+      "Được bầu cử và ứng cử",
+      "Chỉ được đóng đoàn phí",
+      "Không có quyền gì"
+    ],
+    "correctAnswer": 1,
+    "explanation": "Đoàn viên có quyền bầu cử, ứng cử vào các cơ quan lãnh đạo của Đoàn.",
+    "difficulty": "EASY",
+    "points": 1
+  },
+  {
+    "question": "Mức đóng đoàn phí tối thiểu mỗi tháng là bao nhiêu?",
+    "options": [
+      "1.000 đồng",
+      "2.000 đồng",
+      "3.000 đồng",
+      "5.000 đồng"
+    ],
+    "correctAnswer": 1,
+    "explanation": "Mức đóng đoàn phí tối thiểu là 2.000 đồng/tháng.",
+    "difficulty": "MEDIUM",
+    "points": 2
+  },
+  {
+    "question": "Đoàn viên có nghĩa vụ nào sau đây?",
+    "options": [
+      "Học tập nâng cao trình độ",
+      "Chấp hành Điều lệ Đoàn",
+      "Tham gia sinh hoạt Đoàn",
+      "Tất cả các đáp án trên"
+    ],
+    "correctAnswer": 3,
+    "explanation": "Đoàn viên có nghĩa vụ học tập, chấp hành Điều lệ và tham gia sinh hoạt Đoàn.",
+    "difficulty": "EASY",
+    "points": 1
+  }
+]

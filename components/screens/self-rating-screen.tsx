@@ -19,7 +19,7 @@ import {
   Calendar,
   TrendingUp
 } from 'lucide-react'
-import { toast } from '../ui/use-toast'
+import { toast } from '@/hooks/use-toast'
 
 interface RatingPeriod {
   id: string;
@@ -61,6 +61,7 @@ interface SelfRating {
 export default function SelfRatingScreen() {
   const [periods, setPeriods] = useState<RatingPeriod[]>([])
   const [myRatings, setMyRatings] = useState<SelfRating[]>([])
+  const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [selectedPeriod, setSelectedPeriod] = useState<RatingPeriod | null>(null)
   const [activeTab, setActiveTab] = useState('available')
@@ -86,6 +87,12 @@ export default function SelfRatingScreen() {
         setMyRatings(historyResponse.data)
       }
 
+      // Load my statistics
+      const statsResponse = await ratingApi.getMyRatingStats()
+      if (statsResponse.success && statsResponse.data) {
+        setStats(statsResponse.data)
+      }
+
     } catch (error) {
       console.error('Error loading rating data:', error)
       toast({
@@ -109,6 +116,36 @@ export default function SelfRatingScreen() {
       title: 'Thành công',
       description: 'Đã gửi đánh giá chờ duyệt'
     })
+  }
+
+  const handleDeleteRating = async (ratingId: string) => {
+    if (!confirm('Bạn có chắc muốn xóa bản nháp này?')) {
+      return
+    }
+
+    try {
+      const response = await ratingApi.deleteRating(ratingId)
+      if (response.success) {
+        toast({
+          title: 'Thành công',
+          description: 'Đã xóa bản nháp'
+        })
+        loadData()
+      } else {
+        toast({
+          title: 'Lỗi',
+          description: response.error || 'Không thể xóa',
+          variant: 'destructive'
+        })
+      }
+    } catch (error) {
+      console.error('Delete error:', error)
+      toast({
+        title: 'Lỗi',
+        description: 'Không thể xóa bản nháp',
+        variant: 'destructive'
+      })
+    }
   }
 
   const getStatusColor = (status: string) => {
@@ -144,10 +181,10 @@ export default function SelfRatingScreen() {
 
   const getRatingLabel = (rating: string) => {
     switch (rating) {
-      case 'EXCELLENT': return 'Xuất sắc'
-      case 'GOOD': return 'Khá'
-      case 'AVERAGE': return 'Trung bình'
-      case 'POOR': return 'Yếu'
+      case 'EXCELLENT': return 'Hoàn thành xuất sắc nhiệm vụ'
+      case 'GOOD': return 'Hoàn thành tốt nhiệm vụ'
+      case 'AVERAGE': return 'Hoàn thành nhiệm vụ'
+      case 'POOR': return 'Không hoàn thành nhiệm vụ'
       default: return rating
     }
   }
@@ -186,7 +223,7 @@ export default function SelfRatingScreen() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Tự xếp loại chất lượng</h1>
+          <h1 className="text-2xl font-bold">Xếp loại chất lượng đoàn</h1>
           <p className="text-muted-foreground">
             Đánh giá chất lượng bản thân theo các tiêu chí đã định
           </p>
@@ -194,7 +231,7 @@ export default function SelfRatingScreen() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="available" className="flex items-center gap-2">
             <Star className="h-4 w-4" />
             Kỳ xếp loại
@@ -202,6 +239,10 @@ export default function SelfRatingScreen() {
           <TabsTrigger value="history" className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
             Lịch sử ({myRatings.length})
+          </TabsTrigger>
+          <TabsTrigger value="stats" className="flex items-center gap-2">
+            <Trophy className="h-4 w-4" />
+            Thống kê
           </TabsTrigger>
         </TabsList>
 
@@ -335,7 +376,154 @@ export default function SelfRatingScreen() {
             </Select>
           </div>
 
-          <RatingHistory ratings={filteredRatings} loading={loading} />
+          <RatingHistory ratings={filteredRatings} loading={loading} onDelete={handleDeleteRating} />
+        </TabsContent>
+
+        <TabsContent value="stats" className="space-y-6">
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : stats ? (
+            <>
+              {/* Statistics Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card>
+                  <CardContent className="p-6 text-center">
+                    <div className="text-3xl font-bold text-blue-600">
+                      {stats.totalParticipated || 0}
+                    </div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      Kỳ tham gia
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6 text-center">
+                    <div className="text-3xl font-bold text-green-600">
+                      {stats.totalApproved || 0}
+                    </div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      Đã duyệt
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6 text-center">
+                    <div className="text-3xl font-bold text-purple-600">
+                      {Math.round((stats.avgPoints || 0) * 10) / 10}
+                    </div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      Điểm TB
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6 text-center">
+                    <div className="text-3xl font-bold text-yellow-600">
+                      {stats.totalPoints || 0}
+                    </div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      Tổng điểm
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Rating Distribution */}
+              {stats.distribution && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Trophy className="h-5 w-5 text-yellow-600" />
+                      Phân bổ xếp loại
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center p-4 bg-purple-50 rounded-lg">
+                        <div className="text-2xl font-bold text-purple-600">
+                          {stats.distribution.EXCELLENT || 0}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Xuất sắc</div>
+                      </div>
+                      <div className="text-center p-4 bg-blue-50 rounded-lg">
+                        <div className="text-2xl font-bold text-blue-600">
+                          {stats.distribution.GOOD || 0}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Khá</div>
+                      </div>
+                      <div className="text-center p-4 bg-green-50 rounded-lg">
+                        <div className="text-2xl font-bold text-green-600">
+                          {stats.distribution.AVERAGE || 0}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Trung bình</div>
+                      </div>
+                      <div className="text-center p-4 bg-red-50 rounded-lg">
+                        <div className="text-2xl font-bold text-red-600">
+                          {stats.distribution.POOR || 0}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Yếu</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Recent Ratings */}
+              {stats.recentRatings && stats.recentRatings.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Calendar className="h-5 w-5 text-blue-600" />
+                      Kết quả gần đây
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {stats.recentRatings.map((rating: any) => (
+                        <div key={rating.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div className="flex-1">
+                            <div className="font-medium">{rating.period.title}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {new Date(rating.period.endDate).toLocaleDateString('vi-VN')}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Badge className={`${
+                              rating.finalRating === 'EXCELLENT' ? 'bg-purple-100 text-purple-800' :
+                              rating.finalRating === 'GOOD' ? 'bg-blue-100 text-blue-800' :
+                              rating.finalRating === 'AVERAGE' ? 'bg-green-100 text-green-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {rating.finalRating === 'EXCELLENT' ? 'Xuất sắc' :
+                               rating.finalRating === 'GOOD' ? 'Khá' :
+                               rating.finalRating === 'AVERAGE' ? 'Trung bình' : 'Yếu'}
+                            </Badge>
+                            {rating.pointsAwarded > 0 && (
+                              <Badge className="bg-blue-100 text-blue-800">
+                                +{rating.pointsAwarded} điểm
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          ) : (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <Trophy className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500">Chưa có dữ liệu thống kê</p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>

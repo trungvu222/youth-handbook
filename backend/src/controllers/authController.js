@@ -1,8 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
-const { hashPassword, comparePassword, sendTokenResponse } = require('../utils/auth');
+const prisma = require('../lib/prisma');
+const { hashPassword, comparePassword, sendTokenResponse, verifyRefreshToken, generateToken } = require('../utils/auth');
 const { isValidEmail } = require('../utils/helpers');
-
-const prisma = new PrismaClient();
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -18,42 +16,47 @@ const register = async (req, res, next) => {
       educationLevel, majorLevel, itLevel, languageLevel, politicsLevel
     } = req.body;
 
-    // Validation
-    if (!username || !email || !password || !fullName) {
+    // Flexible validation - allow registration with phone OR email
+    // At minimum: need identifier (username/email/phone), password, and fullName
+    const effectiveUsername = username || email || phone;
+    const effectiveEmail = email || (phone ? `${phone}@phone.local` : null);
+
+    if (!effectiveUsername || !password || !fullName) {
       return res.status(400).json({
         success: false,
-        error: 'Please provide username, email, password, and full name'
+        error: 'Vui lòng cung cấp tên đăng nhập (hoặc email/số điện thoại), mật khẩu và họ tên'
       });
     }
 
-    if (!isValidEmail(email)) {
+    // Email validation - only if a real email is provided (not phone-generated)
+    if (email && !email.endsWith('@phone.local') && !isValidEmail(email)) {
       return res.status(400).json({
         success: false,
-        error: 'Please provide a valid email'
+        error: 'Email không hợp lệ'
       });
     }
 
     if (password.length < 6) {
       return res.status(400).json({
         success: false,
-        error: 'Password must be at least 6 characters'
+        error: 'Mật khẩu phải có ít nhất 6 ký tự'
       });
     }
 
-    // Check if user exists
+    // Check if user exists (by username, email, or phone)
+    const orConditions = [{ username: effectiveUsername }];
+    if (effectiveEmail) orConditions.push({ email: effectiveEmail });
+    if (phone) orConditions.push({ phone });
+    if (email && email !== effectiveEmail) orConditions.push({ email });
+
     const existingUser = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { username },
-          { email }
-        ]
-      }
+      where: { OR: orConditions }
     });
 
     if (existingUser) {
       return res.status(400).json({
         success: false,
-        error: 'User with this username or email already exists'
+        error: 'Tài khoản với thông tin này đã tồn tại'
       });
     }
 
@@ -63,8 +66,8 @@ const register = async (req, res, next) => {
     // Create user
     const user = await prisma.user.create({
       data: {
-        username,
-        email,
+        username: effectiveUsername,
+        email: effectiveEmail || `${effectiveUsername}@user.local`,
         passwordHash,
         fullName,
         phone,
@@ -114,12 +117,13 @@ const login = async (req, res, next) => {
       });
     }
 
-    // Check for user (can login with username or email)
+    // Check for user (can login with username, email, or phone)
     const user = await prisma.user.findFirst({
       where: {
         OR: [
           { username },
-          { email: username }
+          { email: username },
+          { phone: username }
         ],
         isActive: true
       },
@@ -284,9 +288,138 @@ const changePassword = async (req, res, next) => {
   }
 };
 
+// @desc    Admin login
+// @route   POST /api/auth/admin/login
+// @access  Public
+const adminLogin = async (req, res, next) => {
+  try {
+    const { username, password } = req.body;
+
+    // Validation
+    if (!username || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please provide username and password'
+      });
+    }
+
+    // Check for user (can login with username or email)
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { username },
+          { email: username }
+        ],
+        isActive: true,
+        role: 'ADMIN' // Only ADMIN role can login to admin panel
+      },
+      include: {
+        unit: true
+      }
+    });
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid credentials or insufficient permissions'
+      });
+    }
+
+    // Check if password matches
+    const isMatch = await comparePassword(password, user.passwordHash);
+
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid credentials'
+      });
+    }
+
+    sendTokenResponse(user, 200, res);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Refresh access token
+// @route   POST /api/auth/refresh
+// @access  Public (but requires valid refresh token)
+const refreshToken = async (req, res, next) => {
+  try {
+    // Get refresh token from cookie or body
+    const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
+
+    if (!refreshToken) {
+      return res.status(401).json({
+        success: false,
+        error: 'No refresh token provided'
+      });
+    }
+
+    // Verify refresh token
+    const decoded = verifyRefreshToken(refreshToken);
+
+    if (!decoded) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid or expired refresh token'
+      });
+    }
+
+    // Get user from token
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      include: {
+        unit: true
+      }
+    });
+
+    if (!user || !user.isActive) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not found or inactive'
+      });
+    }
+
+    // Generate new access token
+    const accessToken = generateToken(user.id, user.role);
+
+    // Remove password from output
+    const { passwordHash, ...userWithoutPassword } = user;
+
+    res.status(200).json({
+      success: true,
+      accessToken,
+      user: userWithoutPassword
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Logout (clear refresh token cookie)
+// @route   POST /api/auth/logout
+// @access  Public
+const logout = async (req, res, next) => {
+  try {
+    // Clear refresh token cookie
+    res.clearCookie('refreshToken');
+
+    res.status(200).json({
+      success: true,
+      message: 'Logged out successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   register,
   login,
+  adminLogin,
+  refreshToken,
+  logout,
   getMe,
   updateProfile,
   changePassword

@@ -1,4 +1,5 @@
 import '../globals.css';
+import { AdminLayoutClient } from './admin-layout-client';
 
 export const metadata = {
   title: 'Admin Dashboard - HỆ THỐNG QUẢN LÝ ĐOÀN VIÊN TRUNG ĐOÀN 196',
@@ -12,7 +13,9 @@ export default function AdminLayout({
 }) {
   return (
     <div className="admin-layout">
-      {children}
+      <AdminLayoutClient>
+        {children}
+      </AdminLayoutClient>
     </div>
   );
 }

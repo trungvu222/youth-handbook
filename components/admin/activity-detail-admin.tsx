@@ -34,8 +34,9 @@ import {
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { activityApi } from "@/lib/api"
+import { BACKEND_URL } from "@/lib/config"
 
-const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL || "https://youth-handbook.onrender.com";
+const RAW_API_URL = BACKEND_URL;
 const API_URL = RAW_API_URL.replace(/\/api\/?$/, '')
 
 interface ActivityDetailAdminProps {
@@ -134,6 +135,8 @@ export default function ActivityDetailAdmin({ activityId, onBack, onEdit, onDele
       }
       
       const result = await activityApi.getAttendanceList(activityId, params)
+      console.log('[DEBUG] Attendance API result:', result)
+      console.log('[DEBUG] Stats:', result.data?.stats)
       if (result.success && result.data) {
         setParticipants(result.data.participants || [])
         setAttendanceStats(result.data.stats || null)
@@ -146,13 +149,17 @@ export default function ActivityDetailAdmin({ activityId, onBack, onEdit, onDele
   }
 
   useEffect(() => {
+    console.log('[DEBUG] Component mounted/activityId changed:', activityId)
     if (activityId) {
       loadActivity()
     }
   }, [activityId])
 
   useEffect(() => {
+    console.log('[DEBUG] useEffect triggered - activeTab:', activeTab, 'activityId:', activityId, 'filterStatus:', filterStatus)
+    console.log('[DEBUG] Condition check:', activeTab === "attendance", '&&', !!activityId, '=', activeTab === "attendance" && activityId)
     if (activeTab === "attendance" && activityId) {
+      console.log('[DEBUG] Calling loadAttendance...')
       loadAttendance()
     }
   }, [activeTab, activityId, filterStatus])
@@ -357,7 +364,10 @@ export default function ActivityDetailAdmin({ activityId, onBack, onEdit, onDele
       </Card>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={(value) => {
+        console.log('[DEBUG] Tab changed from', activeTab, 'to', value)
+        setActiveTab(value)
+      }}>
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="info">Thông tin</TabsTrigger>
           <TabsTrigger value="attendance">Danh sách điểm danh</TabsTrigger>

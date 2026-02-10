@@ -2,7 +2,9 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const cookieParser = require('cookie-parser');
 const path = require('path');
+const prisma = require('./lib/prisma');
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -17,6 +19,7 @@ const studyRoutes = require('./routes/study');
 const examRoutes = require('./routes/exams');
 const ratingRoutes = require('./routes/rating');
 const suggestionRoutes = require('./routes/suggestions');
+const notificationRoutes = require('./routes/notifications');
 // const adminRoutes = require('./routes/admin');
 
 // Import middleware
@@ -37,6 +40,7 @@ app.use(cors({
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
 
 // Logging middleware
 if (process.env.NODE_ENV !== 'production') {
@@ -59,6 +63,7 @@ app.use('/api/study', studyRoutes);
 app.use('/api/exams', examRoutes);
 app.use('/api/rating', ratingRoutes);
 app.use('/api/suggestions', suggestionRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Inline admin routes
 app.get('/api/admin/test', (req, res) => {
@@ -69,12 +74,133 @@ app.get('/api/admin/test', (req, res) => {
   });
 });
 
+// Dashboard stats endpoint - fetches real data from database
+app.get('/api/dashboard/stats', async (req, res) => {
+  // Disable caching to always get fresh data
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  
+  try {
+    // Fetch all active users
+    const users = await prisma.user.findMany({
+      where: { isActive: true },
+      include: {
+        unit: true,
+        selfRatings: {
+          where: { status: 'APPROVED' },
+          orderBy: { createdAt: 'desc' },
+          take: 1
+        }
+      }
+    });
+
+    // Fetch all units
+    const units = await prisma.unit.findMany({
+      include: {
+        _count: {
+          select: { members: { where: { isActive: true } } }
+        }
+      }
+    });
+
+    // Fetch recent activities
+    const activities = await prisma.activity.findMany({
+      orderBy: { startTime: 'desc' },
+      take: 10,
+      include: {
+        _count: {
+          select: { participants: true }
+        }
+      }
+    });
+
+    // Calculate stats
+    const totalMembers = users.length;
+    const activeMembers = users.filter(u => u.isActive).length;
+    const totalPoints = users.reduce((sum, u) => sum + (u.points || 0), 0);
+
+    // Calculate members by rating from actual selfRating data
+    let xuatSac = 0, kha = 0, trungBinh = 0, yeu = 0;
+    
+    users.forEach(user => {
+      const latestRating = user.selfRatings[0];
+      if (latestRating && latestRating.finalRating) {
+        switch (latestRating.finalRating) {
+          case 'EXCELLENT': xuatSac++; break;
+          case 'GOOD': kha++; break;
+          case 'AVERAGE': trungBinh++; break;
+          case 'POOR': yeu++; break;
+        }
+      } else {
+        // If no rating, classify by points as fallback
+        const points = user.points || 0;
+        if (points >= 100) xuatSac++;
+        else if (points >= 70) kha++;
+        else if (points >= 50) trungBinh++;
+        else yeu++;
+      }
+    });
+
+    // Calculate new members this month
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    const newMembersThisMonth = users.filter(u => new Date(u.createdAt) >= startOfMonth).length;
+
+    // Members by unit with unit ID
+    const membersByUnit = units.map(unit => {
+      const unitMembers = users.filter(u => u.unitId === unit.id);
+      return {
+        unitId: unit.id,
+        unitName: unit.name,
+        memberCount: unitMembers.length,
+        activeCount: unitMembers.filter(u => u.isActive).length
+      };
+    }).filter(u => u.memberCount > 0);
+
+    // Recent activities
+    const recentActivities = activities.slice(0, 5).map(a => ({
+      id: a.id,
+      title: a.title,
+      type: a.type || 'MEETING',
+      date: a.startTime || a.createdAt,
+      participants: a._count?.participants || 0
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        overview: {
+          totalMembers,
+          activeMembers,
+          newMembersThisMonth,
+          excellentMembers: xuatSac,
+          totalActivities: activities.length,
+          upcomingActivities: activities.filter(a => a.status === 'ACTIVE').length,
+          completedActivities: activities.filter(a => a.status === 'COMPLETED').length,
+          totalPoints
+        },
+        membersByRank: {
+          xuatSac,
+          kha,
+          trungBinh,
+          yeu
+        },
+        membersByUnit,
+        recentActivities
+      }
+    });
+  } catch (error) {
+    console.error('Dashboard stats error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Seed admin endpoint (one-time use)
 app.post('/api/admin/seed-admin', async (req, res) => {
   try {
-    const { PrismaClient } = require('@prisma/client');
     const bcrypt = require('bcryptjs');
-    const prisma = new PrismaClient();
     
     const hashedPassword = await bcrypt.hash('123456', 10);
     
@@ -116,9 +242,7 @@ app.post('/api/admin/seed-admin', async (req, res) => {
 // Seed sample data endpoint
 app.post('/api/admin/seed-data', async (req, res) => {
   try {
-    const { PrismaClient } = require('@prisma/client');
     const bcrypt = require('bcryptjs');
-    const prisma = new PrismaClient();
     
     const hashedPassword = await bcrypt.hash('123456', 10);
     
@@ -201,9 +325,7 @@ app.post('/api/admin/seed-data', async (req, res) => {
 // FULL RESET AND SEED ENDPOINT - Xóa tất cả và tạo dữ liệu mới
 app.post('/api/admin/reset-and-seed', async (req, res) => {
   try {
-    const { PrismaClient } = require('@prisma/client');
     const bcrypt = require('bcryptjs');
-    const prisma = new PrismaClient();
     
     console.log('🔄 Starting reset and seed...');
     
@@ -655,42 +777,23 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 // Start server
-if (require.main === module) {
-  app.listen(PORT, () => {
+//if (require.main === module) {  // REMOVED - always start server
+  const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Youth Handbook Backend running on port ${PORT}`);
     console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+    console.log(`📍 Server address: ${JSON.stringify(server.address())}`);
+    console.log(`⏰ Server time: ${new Date().toISOString()}`);
     
-    // Auto-seed admin user in background (non-blocking)
-    setImmediate(async () => {
-      try {
-        const bcrypt = require('bcryptjs');
-        const { PrismaClient } = require('@prisma/client');
-        const prisma = new PrismaClient();
-        
-        const existingAdmin = await prisma.user.findFirst({ where: { role: 'ADMIN' } });
-        if (!existingAdmin) {
-          const passwordHash = await bcrypt.hash('123456', 10);
-          await prisma.user.create({
-            data: {
-              email: 'admin@youth.com',
-              username: 'admin',
-              passwordHash,
-              fullName: 'Administrator',
-              role: 'ADMIN',
-              phone: '0123456789',
-              youthPosition: 'Ban chấp hành Đoàn Cơ sở'
-            }
-          });
-          console.log('✅ Auto-seeded admin user: admin@youth.com / 123456');
-        } else {
-          console.log('✅ Admin user exists');
-        }
-        await prisma.$disconnect();
-      } catch (error) {
-        console.log('⚠️ Auto-seed skipped:', error.message);
-      }
-    });
+    // REMOVED AUTO-SEED - Causing process to exit
+    // Auto-seed is unnecessary - admin can be created via API endpoint
+    console.log('✅ Backend started successfully - ready to accept connections');
   });
-}
+  
+  server.on('error', (err) => {
+    console.error(`❌ Server error: ${err.message}`);
+    console.error(`❌ Error code: ${err.code}`);
+    process.exit(1);
+  });
+//}  // REMOVED - always start server
 
 module.exports = app;

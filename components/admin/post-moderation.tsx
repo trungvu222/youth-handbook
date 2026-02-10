@@ -8,8 +8,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Check, X, Eye, Calendar, User, RefreshCw, FileText } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { BACKEND_URL } from "@/lib/config"
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://youth-handbook.onrender.com"
+const API_URL = BACKEND_URL
 
 interface Post {
   id: string

@@ -1,246 +1,212 @@
 const { PrismaClient } = require('@prisma/client');
-
 const prisma = new PrismaClient();
-
-const sampleExams = [
-  {
-    title: 'Kiểm tra kiến thức lý luận chính trị cơ bản',
-    description: 'Bài kiểm tra về các kiến thức lý luận chính trị cơ bản dành cho đoàn viên, thanh niên.',
-    instructions: 'Thời gian làm bài: 30 phút. Trả lời 15 câu hỏi trắc nghiệm. Điểm đạt: 70%.',
-    duration: 30,
-    totalQuestions: 15,
-    passingScore: 70,
-    maxAttempts: 3,
-    pointsAwarded: 15,
-    showResults: true,
-    showAnswers: true,
-    shuffleQuestions: true,
-    shuffleAnswers: false,
-    status: 'PUBLISHED',
-    creatorId: 'cmfi9sjf70002ttx8b8icy3t2',
-    questions: [
-      {
-        questionText: 'Đảng Cộng sản Việt Nam được thành lập vào năm nào?',
-        questionType: 'SINGLE_CHOICE',
-        options: ['1925', '1930', '1945', '1954'],
-        correctAnswers: [1],
-        explanation: 'Đảng Cộng sản Việt Nam được thành lập ngày 3/2/1930 tại Hồng Kông do Chủ tịch Hồ Chí Minh sáng lập.',
-        points: 1,
-        difficulty: 'EASY'
-      },
-      {
-        questionText: 'Chủ tịch Hồ Chí Minh sinh năm nào?',
-        questionType: 'SINGLE_CHOICE',
-        options: ['1889', '1890', '1891', '1892'],
-        correctAnswers: [1],
-        explanation: 'Chủ tịch Hồ Chí Minh sinh ngày 19/5/1890 (theo dương lịch) tại làng Sen, xã Kim Liên, huyện Nam Đàn, tỉnh Nghệ An.',
-        points: 1,
-        difficulty: 'EASY'
-      },
-      {
-        questionText: 'Cách mạng tháng Tám năm 1945 thành công, nước Việt Nam Dân chủ Cộng hòa ra đời vào ngày nào?',
-        questionType: 'SINGLE_CHOICE',
-        options: ['30/8/1945', '2/9/1945', '19/8/1945', '25/8/1945'],
-        correctAnswers: [1],
-        explanation: 'Ngày 2/9/1945, Chủ tịch Hồ Chí Minh đọc Tuyên ngôn Độc lập khai sinh ra nước Việt Nam Dân chủ Cộng hòa.',
-        points: 1,
-        difficulty: 'MEDIUM'
-      },
-      {
-        questionText: 'Đoàn Thanh niên Cộng sản Hồ Chí Minh được thành lập vào năm nao?',
-        questionType: 'SINGLE_CHOICE',
-        options: ['1925', '1931', '1956', '1961'],
-        correctAnswers: [1],
-        explanation: 'Đoàn Thanh niên Cộng sản Hồ Chí Minh được thành lập ngày 26/3/1931.',
-        points: 1,
-        difficulty: 'MEDIUM'
-      },
-      {
-        questionText: 'Nguyên tắc tổ chức và hoạt động của Đảng là gì?',
-        questionType: 'SINGLE_CHOICE',
-        options: ['Dân chủ tập trung', 'Tập thể lãnh đạo', 'Cá nhân phụ trách', 'Tất cả các phương án trên'],
-        correctAnswers: [3],
-        explanation: 'Nguyên tắc tổ chức và hoạt động của Đảng bao gồm: dân chủ tập trung, tập thể lãnh đạo, cá nhân phụ trách.',
-        points: 1,
-        difficulty: 'MEDIUM'
-      }
-    ]
-  },
-
-  {
-    title: 'Kiến thức về kỹ năng lãnh đạo cho thanh niên',
-    description: 'Bài test đánh giá kiến thức và kỹ năng lãnh đạo dành cho cán bộ Đoàn các cấp.',
-    instructions: 'Thời gian: 45 phút. 20 câu hỏi. Cần đạt tối thiểu 75% để pass.',
-    duration: 45,
-    totalQuestions: 20,
-    passingScore: 75,
-    maxAttempts: 2,
-    pointsAwarded: 20,
-    showResults: true,
-    showAnswers: true,
-    shuffleQuestions: true,
-    shuffleAnswers: true,
-    status: 'PUBLISHED',
-    creatorId: 'cmfi9sjf70002ttx8b8icy3t2',
-    questions: [
-      {
-        questionText: 'Đặc điểm quan trọng nhất của một nhà lãnh đạo hiệu quả là gì?',
-        questionType: 'SINGLE_CHOICE',
-        options: ['Khả năng ra quyết định nhanh', 'Khả năng truyền cảm hứng cho người khác', 'Kiến thức chuyên môn sâu rộng', 'Khả năng kiểm soát mọi việc'],
-        correctAnswers: [1],
-        explanation: 'Khả năng truyền cảm hứng và tạo động lực cho người khác là đặc điểm quan trọng nhất của nhà lãnh đạo hiệu quả.',
-        points: 1,
-        difficulty: 'MEDIUM'
-      },
-      {
-        questionText: 'Khi gặp xung đột trong nhóm, cách xử lý tốt nhất là?',
-        questionType: 'SINGLE_CHOICE',
-        options: ['Tránh né, để thời gian giải quyết', 'Đặt ra luật cứng rắn để ngăn chặn', 'Lắng nghe và tìm cách hòa giải', 'Loại bỏ người gây xung đột'],
-        correctAnswers: [2],
-        explanation: 'Lắng nghe tất cả các bên và tìm cách hòa giải là phương pháp hiệu quả nhất để giải quyết xung đột.',
-        points: 1,
-        difficulty: 'HARD'
-      },
-      {
-        questionText: 'Theo bạn, điều gì quan trọng nhất khi giao việc cho đồng đội?',
-        questionType: 'SINGLE_CHOICE',
-        options: ['Giao việc chi tiết, cụ thể', 'Đặt mục tiêu rõ ràng và trao quyền', 'Giám sát chặt chẽ quá trình thực hiện', 'Đưa ra nhiều hướng dẫn'],
-        correctAnswers: [1],
-        explanation: 'Đặt mục tiêu rõ ràng và trao quyền cho đồng đội sẽ tạo động lực và phát huy tối đa năng lực của họ.',
-        points: 1,
-        difficulty: 'MEDIUM'
-      }
-    ]
-  },
-
-  {
-    title: 'Kiểm tra kiến thức pháp luật cơ bản',
-    description: 'Đánh giá hiểu biết về các quy định pháp luật có liên quan đến hoạt động thanh niên.',
-    instructions: 'Thời gian: 25 phút. 12 câu hỏi. Điểm đạt: 60%.',
-    duration: 25,
-    totalQuestions: 12,
-    passingScore: 60,
-    maxAttempts: 5,
-    pointsAwarded: 10,
-    showResults: true,
-    showAnswers: false, // Không hiển thị đáp án để tăng tính bảo mật
-    shuffleQuestions: false,
-    shuffleAnswers: true,
-    status: 'PUBLISHED',
-    creatorId: 'cmfi9sjf70002ttx8b8icy3t2',
-    questions: [
-      {
-        questionText: 'Hiến pháp nước Cộng hòa xã hội chủ nghĩa Việt Nam hiện hành được thông qua năm nào?',
-        questionType: 'SINGLE_CHOICE',
-        options: ['1992', '2013', '2019', '2021'],
-        correctAnswers: [1],
-        explanation: 'Hiến pháp hiện hành được Quốc hội thông qua ngày 28/11/2013 và có hiệu lực từ 1/1/2014.',
-        points: 1,
-        difficulty: 'EASY'
-      },
-      {
-        questionText: 'Tuổi thành niên theo quy định của pháp luật Việt Nam là?',
-        questionType: 'SINGLE_CHOICE',
-        options: ['16 tuổi', '18 tuổi', '20 tuổi', '21 tuổi'],
-        correctAnswers: [1],
-        explanation: 'Theo Bộ luật Dân sự 2015, tuổi thành niên là đủ 18 tuổi trở lên.',
-        points: 1,
-        difficulty: 'EASY'
-      },
-      {
-        questionText: 'Luật Thanh niên số 53/2020/QH14 có hiệu lực từ ngày nào?',
-        questionType: 'SINGLE_CHOICE',
-        options: ['1/1/2021', '1/7/2021', '1/1/2022', '1/7/2022'],
-        correctAnswers: [0],
-        explanation: 'Luật Thanh niên số 53/2020/QH14 có hiệu lực thi hành từ ngày 1/1/2021.',
-        points: 1,
-        difficulty: 'MEDIUM'
-      }
-    ]
-  }
-];
 
 async function seedExams() {
   try {
-    console.log('🧠 Bắt đầu seed exams...');
+    console.log('🌱 Seeding exam data with realistic attempts...');
 
-    // Check if exams already exist
-    const existingCount = await prisma.exam.count();
-    if (existingCount > 0) {
-      console.log(`📝 Đã có ${existingCount} exams trong database`);
-      console.log('⚠️ Xóa dữ liệu cũ và tạo mới...');
-      await prisma.exam.deleteMany({});
+    // Find admin user
+    let admin = await prisma.user.findFirst({
+      where: { role: 'ADMIN' }
+    });
+
+    if (!admin) {
+      console.log('❌ Admin user not found. Please run seed-rating-q1-2026.js first.');
+      return;
     }
 
-    // Create exams
-    let createdCount = 0;
-    for (const examData of sampleExams) {
-      try {
-        const { questions, ...examInfo } = examData;
-        
-        // Create exam first
-        const exam = await prisma.exam.create({
+    // Get all MEMBER users
+    const members = await prisma.user.findMany({
+      where: { 
+        role: 'MEMBER',
+        isActive: true 
+      },
+      include: {
+        unit: true
+      }
+    });
+
+    if (members.length === 0) {
+      console.log('❌ No members found. Please run seed-rating-q1-2026.js first.');
+      return;
+    }
+
+    console.log(`✅ Found ${members.length} members to create exam attempts`);
+
+    // Delete existing exam data to start fresh
+    console.log('🗑️  Cleaning existing exam data...');
+    await prisma.examAttempt.deleteMany({});
+    await prisma.examQuestion.deleteMany({});
+    await prisma.exam.deleteMany({});
+
+    // Create 3 realistic exams with different categories
+    const examsData = [
+      {
+        title: 'Cuộc thi Tìm hiểu Ngày 26/3',
+        description: 'Tìm hiểu lịch sử ngày thành lập Đoàn Thanh niên Cộng sản Hồ Chí Minh',
+        category: 'Lịch sử - Truyền thống',
+        instructions: 'Thời gian làm bài: 45 phút. Vui lòng đọc kỹ câu hỏi trước khi trả lời.',
+        duration: 45,
+        totalQuestions: 20,
+        passingScore: 50,
+        maxAttempts: 3,
+        pointsAwarded: 10,
+        status: 'PUBLISHED',
+        shuffleQuestions: true,
+        showAnswers: true,
+        showResults: true,
+        startTime: new Date('2025-03-20'),
+        endTime: new Date('2026-03-30')
+      },
+      {
+        title: 'Kiến thức về Điều lệ Đoàn',
+        description: 'Kiểm tra kiến thức về Điều lệ Đoàn TNCS Hồ Chí Minh',
+        category: 'Điều lệ & Tổ chức',
+        instructions: 'Thời gian làm bài: 20 phút. Cần đạt 70% để hoàn thành.',
+        duration: 20,
+        totalQuestions: 15,
+        passingScore: 70,
+        maxAttempts: 2,
+        pointsAwarded: 15,
+        status: 'PUBLISHED',
+        shuffleQuestions: false,
+        showAnswers: true,
+        showResults: true,
+        startTime: new Date('2025-12-01'),
+        endTime: new Date('2026-12-31')
+      },
+      {
+        title: 'Tìm hiểu về Đoàn TNCS Hồ Chí Minh',
+        description: 'Tìm hiểu về lịch sử, tổ chức và hoạt động của Đoàn TNCS Hồ Chí Minh',
+        category: 'Lý luận chính trị',
+        instructions: 'Thời gian làm bài: 30 phút. Đọc kỹ đề trước khi làm bài.',
+        duration: 30,
+        totalQuestions: 25,
+        passingScore: 60,
+        maxAttempts: 2,
+        pointsAwarded: 12,
+        status: 'PUBLISHED',
+        shuffleQuestions: true,
+        showAnswers: false,
+        showResults: true,
+        startTime: new Date('2025-11-01'),
+        endTime: new Date('2026-12-31')
+      }
+    ];
+
+    const createdExams = [];
+
+    for (const examData of examsData) {
+      console.log(`\n📝 Creating exam: ${examData.title}`);
+      
+      const exam = await prisma.exam.create({
+        data: {
+          ...examData,
+          creatorId: admin.id,
+          questions: {
+            create: Array.from({ length: examData.totalQuestions }, (_, i) => ({
+              questionText: `Câu hỏi ${i + 1} của ${examData.title}`,
+              questionType: 'SINGLE_CHOICE',
+              answers: [
+                { text: 'Đáp án A', isCorrect: i % 4 === 0 },
+                { text: 'Đáp án B', isCorrect: i % 4 === 1 },
+                { text: 'Đáp án C', isCorrect: i % 4 === 2 },
+                { text: 'Đáp án D', isCorrect: i % 4 === 3 }
+              ],
+              explanation: `Giải thích cho câu hỏi ${i + 1}`,
+              points: i % 3 === 0 ? 3 : i % 3 === 1 ? 5 : 7,
+              orderIndex: i
+            }))
+          }
+        },
+        include: {
+          questions: true
+        }
+      });
+
+      console.log(`✅ Created exam with ${exam.questions.length} questions`);
+      createdExams.push(exam);
+
+      // Create exam attempts for random members
+      const participantsCount = Math.floor(members.length * (0.5 + Math.random() * 0.35)); // 50-85% members participate
+      const shuffledMembers = [...members].sort(() => Math.random() - 0.5);
+      const participants = shuffledMembers.slice(0, participantsCount);
+
+      console.log(`👥 Creating ${participants.length} exam attempts...`);
+
+      for (const member of participants) {
+        // Random score between 35-95
+        const baseScore = 35 + Math.random() * 60;
+        const score = Math.round(baseScore);
+        const isPassed = score >= examData.passingScore;
+
+        // Random time spent (60-95% of duration)
+        const timeSpent = Math.floor(examData.duration * 60 * (0.6 + Math.random() * 0.35)); // in seconds
+
+        // Random submission date within exam period
+        const startDate = new Date(examData.startTime);
+        const endDate = new Date();
+        const randomDate = new Date(startDate.getTime() + Math.random() * (endDate.getTime() - startDate.getTime()));
+
+        // Generate random answers
+        const userAnswers = exam.questions.map((q, idx) => ({
+          questionId: q.id,
+          selectedAnswer: Math.floor(Math.random() * 4),
+          isCorrect: Math.random() > 0.35 // 65% correct rate
+        }));
+
+        await prisma.examAttempt.create({
           data: {
-            ...examInfo,
-            createdAt: new Date(),
-            updatedAt: new Date()
+            examId: exam.id,
+            userId: member.id,
+            attemptNumber: 1,
+            status: 'SUBMITTED',
+            score: score,
+            isPassed: isPassed,
+            timeSpent: timeSpent,
+            startedAt: new Date(randomDate.getTime() - timeSpent * 1000),
+            submittedAt: randomDate,
+            answers: userAnswers
           }
         });
-
-        // Create questions for this exam
-        for (let i = 0; i < questions.length; i++) {
-          const questionData = questions[i];
-          
-          // Transform question data to match schema
-          const answerOptions = questionData.options.map((option, index) => ({
-            text: option,
-            isCorrect: questionData.correctAnswers.includes(index)
-          }));
-
-          await prisma.examQuestion.create({
-            data: {
-              examId: exam.id,
-              questionText: questionData.questionText,
-              questionType: questionData.questionType,
-              answers: answerOptions,
-              explanation: questionData.explanation,
-              points: questionData.points,
-              orderIndex: i + 1,
-              createdAt: new Date()
-            }
-          });
-        }
-
-        createdCount++;
-        console.log(`✅ Tạo thành công: "${examData.title}" với ${questions.length} câu hỏi`);
-      } catch (error) {
-        console.log(`❌ Lỗi tạo exam "${examData.title}":`, error.message);
       }
+
+      console.log(`✅ Created ${participants.length} attempts for "${exam.title}"`);
     }
 
-    console.log(`\n🎉 Hoàn thành! Đã tạo ${createdCount}/${sampleExams.length} exams`);
-    console.log('\n📋 Danh sách exams đã tạo:');
+    // Print summary
+    console.log('\n📊 EXAM SEEDING SUMMARY:');
+    console.log('========================');
     
-    const exams = await prisma.exam.findMany({
-      include: {
-        _count: {
-          select: { questions: true, attempts: true }
+    for (const exam of createdExams) {
+      const attempts = await prisma.examAttempt.count({
+        where: { examId: exam.id }
+      });
+      
+      const passedCount = await prisma.examAttempt.count({
+        where: { 
+          examId: exam.id,
+          isPassed: true 
         }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
+      });
 
-    exams.forEach((exam, index) => {
-      console.log(`${index + 1}. ${exam.title}`);
-      console.log(`   📊 ${exam._count.questions} câu hỏi, ${exam.duration} phút, ${exam.passingScore}% để đạt`);
-      console.log(`   🎯 ${exam.pointsAwarded} điểm thưởng, tối đa ${exam.maxAttempts} lần thi`);
-      console.log(`   📈 ${exam._count.attempts} lượt thi đã thực hiện\n`);
-    });
+      const avgScore = await prisma.examAttempt.aggregate({
+        where: { examId: exam.id },
+        _avg: { score: true }
+      });
 
-    console.log('💡 Bạn có thể test Exam Management ngay bây giờ!');
-    
+      console.log(`\n📝 ${exam.title}`);
+      console.log(`   Danh mục: ${exam.category}`);
+      console.log(`   Tổng lượt thi: ${attempts}`);
+      console.log(`   Số người đạt: ${passedCount}/${attempts} (${Math.round(passedCount/attempts*100)}%)`);
+      console.log(`   Điểm trung bình: ${Math.round(avgScore._avg.score || 0)}`);
+    }
+
+    console.log('\n✅ Exam seeding completed successfully!');
+
   } catch (error) {
-    console.error('❌ Lỗi khi seed exams:', error);
+    console.error('❌ Error seeding exams:', error);
+    throw error;
   } finally {
     await prisma.$disconnect();
   }
@@ -252,3 +218,4 @@ if (require.main === module) {
 }
 
 module.exports = { seedExams };
+

@@ -13,10 +13,11 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Calendar, Plus, Users, Edit, Trash2, Eye, RefreshCw, MapPin, Clock, AlertTriangle, MoreVertical, ClipboardList, FileText, CheckCircle2, XCircle, Clock3, FileCheck, Upload, X, Send, Bell } from "lucide-react"
+import { Calendar, Plus, Users, Edit, Trash2, Eye, RefreshCw, MapPin, Clock, AlertTriangle, MoreVertical, ClipboardList, FileText, CheckCircle2, XCircle, Clock3, FileCheck, Upload, X, Send, Bell, Copy, Ban, PlayCircle, ChevronLeft, ChevronRight, Award, Megaphone } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { BACKEND_URL } from "@/lib/config"
 
-const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL || "https://youth-handbook.onrender.com";
+const RAW_API_URL = BACKEND_URL;
 const API_URL = RAW_API_URL.replace(/\/api\/?$/, '')
 
 // Allowed file types and max size
@@ -40,6 +41,7 @@ interface Activity {
   endTime?: string
   location?: string
   pointsReward: number
+  lateThresholdMinutes?: number
   organizer?: { fullName: string }
   unit?: { name: string }
   _count?: { participants: number }
@@ -88,11 +90,14 @@ export default function ActivityManagement() {
   const [showAttendanceDialog, setShowAttendanceDialog] = useState(false)
   const [showConclusionDialog, setShowConclusionDialog] = useState(false)
   const [showViewConclusionDialog, setShowViewConclusionDialog] = useState(false)
+  const [attendancePage, setAttendancePage] = useState(1)
+  const ITEMS_PER_PAGE = 10
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null)
   const [activityStats, setActivityStats] = useState<ActivityStats | null>(null)
   const [loadingStats, setLoadingStats] = useState(false)
   const [filterStatus, setFilterStatus] = useState("all")
   const [conclusionText, setConclusionText] = useState("")
+  const [conclusionFiles, setConclusionFiles] = useState<File[]>([])
   const [savingConclusion, setSavingConclusion] = useState(false)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [selectedAttendees, setSelectedAttendees] = useState<string[]>([])
@@ -101,6 +106,8 @@ export default function ActivityManagement() {
   const [notifyUserIds, setNotifyUserIds] = useState<string[]>([])
   const [isEditMode, setIsEditMode] = useState(false)
   const [editFormData, setEditFormData] = useState<any>({})
+  const [currentPage, setCurrentPage] = useState(1)
+  const ACTIVITIES_PER_PAGE = 10
 
   const [formData, setFormData] = useState({
     title: "",
@@ -110,6 +117,7 @@ export default function ActivityManagement() {
     endTime: "",
     location: "",
     pointsReward: 10,
+    lateThresholdMinutes: 15,  // Ngưỡng tính trễ (phút)
     hostUnit: "",          // Đơn vị chủ trì
     managerId: "",         // Phụ trách
     materials: "",         // Vật chất
@@ -201,6 +209,7 @@ export default function ActivityManagement() {
   // Open attendance dialog
   const openAttendanceDialog = async (activity: Activity) => {
     setSelectedActivity(activity)
+    setAttendancePage(1) // Reset to first page
     setShowAttendanceDialog(true)
     await fetchActivityStats(activity.id)
   }
@@ -209,6 +218,7 @@ export default function ActivityManagement() {
   const openConclusionDialog = (activity: Activity) => {
     setSelectedActivity(activity)
     setConclusionText(activity.conclusion || "")
+    setConclusionFiles([])
     setShowConclusionDialog(true)
   }
 
@@ -224,17 +234,51 @@ export default function ActivityManagement() {
     setSavingConclusion(true)
     try {
       const token = localStorage.getItem("accessToken")
+      
+      // Upload files first if any
+      let attachmentUrls: any[] = []
+      if (conclusionFiles.length > 0) {
+        const formData = new FormData()
+        conclusionFiles.forEach(file => formData.append('files', file))
+        
+        const uploadRes = await fetch(`${API_URL}/api/activities/upload-attachment`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData
+        })
+        
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json()
+          attachmentUrls = uploadData.data.files
+        } else {
+          toast({ title: "Lỗi", description: "Không thể upload file đính kèm", variant: "destructive" })
+          return
+        }
+      }
+      
+      // Merge with existing attachments
+      const existingAttachments = selectedActivity.attachments ? 
+        (Array.isArray(selectedActivity.attachments) ? selectedActivity.attachments : []) : []
+      const allAttachments = [...existingAttachments, ...attachmentUrls]
+      
+      // Update activity with conclusion, attachments, and mark as COMPLETED
       const res = await fetch(`${API_URL}/api/activities/${selectedActivity.id}`, {
         method: "PUT",
         headers: { 
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}` 
         },
-        body: JSON.stringify({ conclusion: conclusionText })
+        body: JSON.stringify({ 
+          conclusion: conclusionText,
+          attachments: allAttachments,
+          status: 'COMPLETED'
+        })
       })
+      
       if (res.ok) {
-        toast({ title: "Thành công", description: "Đã lưu kết luận cuộc họp" })
+        toast({ title: "Thành công", description: "Đã lưu kết luận và tài liệu đính kèm" })
         setShowConclusionDialog(false)
+        setConclusionFiles([])
         fetchActivities()
       } else {
         toast({ title: "Lỗi", description: "Không thể lưu kết luận", variant: "destructive" })
@@ -330,11 +374,24 @@ export default function ActivityManagement() {
           const formDataFiles = new FormData()
           selectedFiles.forEach(file => formDataFiles.append('files', file))
           
-          await fetch(`${API_URL}/api/activities/${result.data.id}/attachments`, {
+          const uploadRes = await fetch(`${API_URL}/api/activities/upload-attachment`, {
             method: "POST",
             headers: { Authorization: `Bearer ${token}` },
             body: formDataFiles
           })
+          
+          if (uploadRes.ok) {
+            const uploadData = await uploadRes.json()
+            // Update activity with uploaded file URLs
+            await fetch(`${API_URL}/api/activities/${result.data.id}`, {
+              method: "PUT",
+              headers: { 
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}` 
+              },
+              body: JSON.stringify({ attachments: uploadData.data.files })
+            })
+          }
         }
         
         toast({ title: "Thành công", description: "Đã tạo hoạt động mới" })
@@ -356,6 +413,7 @@ export default function ActivityManagement() {
       endTime: "", 
       location: "", 
       pointsReward: 10,
+      lateThresholdMinutes: 15,
       hostUnit: "",
       managerId: "",
       materials: ""
@@ -476,6 +534,59 @@ export default function ActivityManagement() {
     }
   }
 
+  // Change activity status
+  const handleStatusChange = async (activity: Activity, newStatus: string) => {
+    try {
+      const token = localStorage.getItem("accessToken")
+      const res = await fetch(`${API_URL}/api/activities/${activity.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: newStatus })
+      })
+      if (res.ok) {
+        const statusLabels: Record<string, string> = { ACTIVE: "Đang diễn ra", COMPLETED: "Đã kết thúc", CANCELLED: "Đã hủy" }
+        toast({ title: "Thành công", description: `Đã chuyển trạng thái sang "${statusLabels[newStatus] || newStatus}"` })
+        fetchActivities()
+      } else {
+        toast({ title: "Lỗi", description: "Không thể cập nhật trạng thái", variant: "destructive" })
+      }
+    } catch (error) {
+      toast({ title: "Lỗi", description: "Có lỗi xảy ra", variant: "destructive" })
+    }
+  }
+
+  // Duplicate activity
+  const handleDuplicate = async (activity: Activity) => {
+    try {
+      const token = localStorage.getItem("accessToken")
+      const duplicateData = {
+        title: `${activity.title} (bản sao)`,
+        description: activity.description || "",
+        type: activity.type,
+        startTime: activity.startTime,
+        endTime: activity.endTime || undefined,
+        location: activity.location || "",
+        pointsReward: activity.pointsReward,
+        hostUnit: activity.hostUnit || "",
+        materials: activity.materials || ""
+      }
+      const res = await fetch(`${API_URL}/api/activities`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(duplicateData)
+      })
+      if (res.ok) {
+        toast({ title: "Thành công", description: "Đã nhân bản hoạt động" })
+        setCurrentPage(1)
+        fetchActivities()
+      } else {
+        toast({ title: "Lỗi", description: "Không thể nhân bản", variant: "destructive" })
+      }
+    } catch (error) {
+      toast({ title: "Lỗi", description: "Có lỗi xảy ra", variant: "destructive" })
+    }
+  }
+
   const getStatusBadge = (status: string) => {
     const colors: Record<string, string> = {
       DRAFT: "secondary", 
@@ -510,6 +621,18 @@ export default function ActivityManagement() {
 
   const filtered = activities.filter(a => filterStatus === "all" || a.status === filterStatus)
 
+  // Pagination calculations
+  const totalPages = Math.ceil(filtered.length / ACTIVITIES_PER_PAGE)
+  const paginatedActivities = filtered.slice(
+    (currentPage - 1) * ACTIVITIES_PER_PAGE,
+    currentPage * ACTIVITIES_PER_PAGE
+  )
+
+  // Reset to page 1 when filter changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filterStatus])
+
   // Helper function to get status display based on time
   const getActivityStatusDisplay = (activity: Activity) => {
     const now = new Date()
@@ -529,124 +652,328 @@ export default function ActivityManagement() {
     }
   }
 
-  if (loading) return <div className="flex justify-center p-8"><RefreshCw className="h-8 w-8 animate-spin" /></div>
+  if (loading) return (
+    <div className="flex justify-center items-center p-16">
+      <div className="text-center space-y-4">
+        <div className="relative">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center mx-auto">
+            <RefreshCw className="h-6 w-6 animate-spin text-indigo-600" />
+          </div>
+        </div>
+        <p className="text-sm text-muted-foreground font-medium">Đang tải dữ liệu...</p>
+      </div>
+    </div>
+  )
+
+  // Status color config
+  const statusConfig: Record<string, { bg: string; text: string; border: string; dot: string; label: string; gradient: string }> = {
+    DRAFT: { bg: 'bg-sky-50', text: 'text-sky-700', border: 'border-l-sky-400', dot: 'bg-sky-400', label: 'Sắp diễn ra', gradient: 'from-sky-500 to-blue-500' },
+    ACTIVE: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-l-emerald-400', dot: 'bg-emerald-400', label: 'Đang diễn ra', gradient: 'from-emerald-500 to-teal-500' },
+    COMPLETED: { bg: 'bg-slate-100', text: 'text-slate-500', border: 'border-l-slate-300', dot: 'bg-slate-400', label: 'Đã kết thúc', gradient: 'from-slate-400 to-gray-400' },
+    CANCELLED: { bg: 'bg-red-50', text: 'text-red-600', border: 'border-l-red-300', dot: 'bg-red-400', label: 'Đã hủy', gradient: 'from-red-400 to-rose-400' },
+  }
+
+  const typeConfig: Record<string, { icon: string; bg: string; text: string; label: string }> = {
+    MEETING: { icon: '📋', bg: 'bg-violet-50 ring-1 ring-violet-200/60', text: 'text-violet-700', label: 'Sinh hoạt' },
+    VOLUNTEER: { icon: '🤝', bg: 'bg-pink-50 ring-1 ring-pink-200/60', text: 'text-pink-700', label: 'Tình nguyện' },
+    STUDY: { icon: '📚', bg: 'bg-amber-50 ring-1 ring-amber-200/60', text: 'text-amber-700', label: 'Học tập' },
+    TASK: { icon: '✅', bg: 'bg-cyan-50 ring-1 ring-cyan-200/60', text: 'text-cyan-700', label: 'Nhiệm vụ' },
+    SOCIAL: { icon: '🎉', bg: 'bg-orange-50 ring-1 ring-orange-200/60', text: 'text-orange-700', label: 'Giao lưu' },
+    CONFERENCE: { icon: '🎤', bg: 'bg-indigo-50 ring-1 ring-indigo-200/60', text: 'text-indigo-700', label: 'Hội nghị' },
+  }
+
+  // Stats summary
+  const statsActive = activities.filter(a => a.status === 'ACTIVE').length
+  const statsCompleted = activities.filter(a => a.status === 'COMPLETED').length
+  const statsDraft = activities.filter(a => a.status === 'DRAFT').length
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold">Quản lý hoạt động</h2>
-          <p className="text-muted-foreground">Tổng: {activities.length} hoạt động</p>
-        </div>
-        <div className="flex gap-2">
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tất cả</SelectItem>
-              <SelectItem value="DRAFT">Sắp diễn ra</SelectItem>
-              <SelectItem value="ACTIVE">Đang diễn ra</SelectItem>
-              <SelectItem value="COMPLETED">Đã kết thúc</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" onClick={fetchActivities}><RefreshCw className="h-4 w-4" /></Button>
-          <Button onClick={() => setShowCreateDialog(true)}><Plus className="h-4 w-4 mr-2" />Tạo mới</Button>
+      {/* Premium Header */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-fuchsia-500 p-6 shadow-lg">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djZoLTZWMjBoNnYxNGgtNnYtNmg2eiIvPjwvZz48L2c+PC9zdmc+')] opacity-30"></div>
+        <div className="relative flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="text-white">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center">
+                <Megaphone className="h-5 w-5" />
+              </div>
+              <h2 className="text-2xl font-bold tracking-tight">Quản lý hoạt động</h2>
+            </div>
+            <div className="flex items-center gap-4 text-white/80 text-sm">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse"></span>
+                {statsActive} đang diễn ra
+              </span>
+              <span>·</span>
+              <span>{statsDraft} sắp tới</span>
+              <span>·</span>
+              <span>{statsCompleted} hoàn thành</span>
+              <span>·</span>
+              <span className="font-medium text-white">{activities.length} tổng cộng</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-44 h-9 bg-white/15 backdrop-blur-sm border-white/20 text-white hover:bg-white/25 [&>svg]:text-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                <SelectItem value="DRAFT">Sắp diễn ra</SelectItem>
+                <SelectItem value="ACTIVE">Đang diễn ra</SelectItem>
+                <SelectItem value="COMPLETED">Đã kết thúc</SelectItem>
+                <SelectItem value="CANCELLED">Đã hủy</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="ghost" size="icon" className="h-9 w-9 text-white hover:bg-white/15" onClick={fetchActivities}>
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+            <Button className="h-9 bg-white text-indigo-700 hover:bg-white/90 shadow-md font-semibold" onClick={() => setShowCreateDialog(true)}>
+              <Plus className="h-4 w-4 mr-1.5" />Tạo mới
+            </Button>
+          </div>
         </div>
       </div>
 
-      <div className="grid gap-4">
-        {filtered.length === 0 ? (
-          <Card><CardContent className="py-8 text-center text-muted-foreground">Không có hoạt động nào</CardContent></Card>
-        ) : filtered.map(activity => (
-          <Card key={activity.id}>
-            <CardContent className="p-4">
-              <div className="flex justify-between items-start">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-lg">{activity.title}</h3>
-                    {getTypeBadge(activity.type)}
-                    {getStatusBadge(activity.status)}
-                  </div>
-                  {activity.description && <p className="text-sm text-muted-foreground">{activity.description}</p>}
-                  <div className="flex gap-4 text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1"><Clock className="h-4 w-4" />{new Date(activity.startTime).toLocaleString("vi-VN")}</span>
-                    {activity.location && <span className="flex items-center gap-1"><MapPin className="h-4 w-4" />{activity.location}</span>}
-                    <span className="flex items-center gap-1"><Users className="h-4 w-4" />{activity._count?.participants || 0} người</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {/* Nút Kết luận - hiển thị khi hoạt động hoàn thành hoặc đang diễn ra */}
-                  {(activity.status === "COMPLETED" || activity.status === "ACTIVE") && (
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => openConclusionDialog(activity)}
-                      className="text-amber-600 border-amber-300 hover:bg-amber-50"
-                    >
-                      <FileCheck className="h-4 w-4 mr-1" />
-                      Kết luận
-                    </Button>
-                  )}
-                  
-                  {/* Nút Danh sách điểm danh - chỉ hiển thị khi trạng thái Đang diễn ra */}
-                  {activity.status === "ACTIVE" && (
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => openAttendanceDialog(activity)}
-                      className="text-green-600 border-green-300 hover:bg-green-50"
-                    >
-                      <ClipboardList className="h-4 w-4 mr-1" />
-                      Danh sách điểm danh
-                    </Button>
-                  )}
-                  
-                  <Button variant="ghost" size="icon" onClick={() => openDetailDialog(activity)}>
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  
-                  {/* Menu dropdown */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {activity.status === "ACTIVE" && (
-                        <>
-                          <DropdownMenuItem onClick={() => openAttendanceDialog(activity)}>
-                            <ClipboardList className="h-4 w-4 mr-2" />
-                            Danh sách điểm danh
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                        </>
-                      )}
-                      <DropdownMenuItem onClick={() => openDetailDialog(activity)}>
-                        <Eye className="h-4 w-4 mr-2" />
-                        Xem báo cáo
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => openDeleteDialog(activity)}>
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Xóa
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => { openDetailDialog(activity); setTimeout(() => enableEditMode(), 100); }}>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Chỉnh sửa
-                      </DropdownMenuItem>
+      {/* Activity Cards */}
+      <div className="space-y-3">
+        {paginatedActivities.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center mb-5 shadow-sm">
+              <Calendar className="h-9 w-9 text-indigo-300" />
+            </div>
+            <h3 className="font-semibold text-lg text-slate-700">Không có hoạt động nào</h3>
+            <p className="text-muted-foreground mt-1.5 text-sm">Thử thay đổi bộ lọc hoặc tạo hoạt động mới</p>
+            <Button className="mt-5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white" onClick={() => setShowCreateDialog(true)}>
+              <Plus className="h-4 w-4 mr-1.5" />Tạo hoạt động
+            </Button>
+          </div>
+        ) : paginatedActivities.map((activity) => {
+          const sc = statusConfig[activity.status] || statusConfig.DRAFT
+          const tc = typeConfig[activity.type] || typeConfig.MEETING
+          return (
+            <div
+              key={activity.id}
+              className="group relative rounded-2xl border border-slate-100 bg-white hover:bg-slate-50/40 shadow-sm hover:shadow-lg transition-all duration-300 ease-out overflow-hidden"
+            >
+              {/* Status indicator stripe */}
+              <div className={`absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b ${sc.gradient}`}></div>
+              
+              <div className="pl-5 pr-4 py-4">
+                <div className="flex items-start justify-between gap-3">
+                  {/* Left content */}
+                  <div className="flex-1 min-w-0 space-y-2.5">
+                    {/* Title + badges */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-semibold text-[15px] text-slate-800 leading-snug">{activity.title}</h3>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold ${tc.bg} ${tc.text}`}>
+                        <span className="text-xs">{tc.icon}</span> {tc.label}
+                      </span>
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold ${sc.bg} ${sc.text}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${sc.dot} ${activity.status === 'ACTIVE' ? 'animate-pulse' : ''}`}></span>
+                        {sc.label}
+                      </span>
                       {activity.conclusion && (
-                        <DropdownMenuItem onClick={() => openViewConclusionDialog(activity)}>
-                          <FileText className="h-4 w-4 mr-2" />
-                          Xem kết luận cuộc họp
-                        </DropdownMenuItem>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-600 ring-1 ring-amber-200/60">
+                          <FileCheck className="h-2.5 w-2.5" /> Có kết luận
+                        </span>
                       )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                    </div>
+
+                    {/* Description */}
+                    {activity.description && (
+                      <p className="text-[13px] text-slate-500 line-clamp-1 leading-relaxed">{activity.description}</p>
+                    )}
+
+                    {/* Meta row */}
+                    <div className="flex items-center gap-3.5 text-[12px]">
+                      <span className="inline-flex items-center gap-1.5 text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md">
+                        <Clock className="h-3 w-3 text-indigo-400" />
+                        {new Date(activity.startTime).toLocaleString("vi-VN", { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })}
+                      </span>
+                      {activity.location && (
+                        <span className="inline-flex items-center gap-1.5 text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md">
+                          <MapPin className="h-3 w-3 text-rose-400" />
+                          <span className="truncate max-w-[140px]">{activity.location}</span>
+                        </span>
+                      )}
+                      <span className="inline-flex items-center gap-1.5 text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md">
+                        <Users className="h-3 w-3 text-emerald-400" />
+                        {activity._count?.participants || 0} người
+                      </span>
+                      {activity.pointsReward > 0 && (
+                        <span className="inline-flex items-center gap-1.5 text-amber-600 bg-amber-50/70 px-2 py-0.5 rounded-md font-medium">
+                          <Award className="h-3 w-3" />
+                          +{activity.pointsReward} điểm
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right: Action buttons */}
+                  <div className="flex items-center gap-1 flex-shrink-0 opacity-90 group-hover:opacity-100 transition-opacity">
+                    {(activity.status === "COMPLETED" || activity.status === "ACTIVE") && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => openConclusionDialog(activity)}
+                        className="h-8 rounded-lg text-amber-600 border-amber-200 hover:bg-amber-50 hover:text-amber-700 hover:border-amber-300 text-xs font-medium shadow-sm"
+                      >
+                        <FileCheck className="h-3.5 w-3.5 mr-1" />
+                        Kết luận
+                      </Button>
+                    )}
+                    
+                    {activity.status === "ACTIVE" && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => openAttendanceDialog(activity)}
+                        className="h-8 rounded-lg text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 text-xs font-medium shadow-sm"
+                      >
+                        <ClipboardList className="h-3.5 w-3.5 mr-1" />
+                        Điểm danh
+                      </Button>
+                    )}
+                    
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-slate-100" onClick={() => openDetailDialog(activity)}>
+                      <Eye className="h-4 w-4 text-slate-400" />
+                    </Button>
+                    
+                    {/* Enhanced dropdown menu */}
+                    <DropdownMenu modal={false}>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-slate-100">
+                          <MoreVertical className="h-4 w-4 text-slate-400" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" sideOffset={5} className="z-[9999] w-52 bg-white shadow-xl border rounded-xl p-1.5">
+                        {/* View & Edit */}
+                        <DropdownMenuItem onClick={() => openDetailDialog(activity)} className="cursor-pointer rounded-lg h-9">
+                          <Eye className="h-4 w-4 mr-2 text-slate-400" />
+                          Xem chi tiết
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => { openDetailDialog(activity); setTimeout(() => enableEditMode(), 100); }} className="cursor-pointer rounded-lg h-9">
+                          <Edit className="h-4 w-4 mr-2 text-blue-500" />
+                          Chỉnh sửa
+                        </DropdownMenuItem>
+                        
+                        <DropdownMenuSeparator className="my-1" />
+                        
+                        {/* Status changes */}
+                        {activity.status !== "ACTIVE" && activity.status !== "COMPLETED" && activity.status !== "CANCELLED" && (
+                          <DropdownMenuItem onClick={() => handleStatusChange(activity, 'ACTIVE')} className="cursor-pointer rounded-lg h-9">
+                            <PlayCircle className="h-4 w-4 mr-2 text-emerald-500" />
+                            Bắt đầu hoạt động
+                          </DropdownMenuItem>
+                        )}
+                        {activity.status === "ACTIVE" && (
+                          <DropdownMenuItem onClick={() => handleStatusChange(activity, 'COMPLETED')} className="cursor-pointer rounded-lg h-9">
+                            <CheckCircle2 className="h-4 w-4 mr-2 text-indigo-500" />
+                            Hoàn thành
+                          </DropdownMenuItem>
+                        )}
+                        {activity.status !== "CANCELLED" && activity.status !== "COMPLETED" && (
+                          <DropdownMenuItem onClick={() => handleStatusChange(activity, 'CANCELLED')} className="cursor-pointer rounded-lg h-9 text-orange-600">
+                            <Ban className="h-4 w-4 mr-2" />
+                            Hủy hoạt động
+                          </DropdownMenuItem>
+                        )}
+                        
+                        <DropdownMenuSeparator className="my-1" />
+                        
+                        {/* Attendance & Conclusion */}
+                        {activity.status === "ACTIVE" && (
+                          <DropdownMenuItem onClick={() => openAttendanceDialog(activity)} className="cursor-pointer rounded-lg h-9">
+                            <ClipboardList className="h-4 w-4 mr-2 text-emerald-500" />
+                            Điểm danh
+                          </DropdownMenuItem>
+                        )}
+                        {(activity.status === "COMPLETED" || activity.status === "ACTIVE") && (
+                          <DropdownMenuItem onClick={() => openConclusionDialog(activity)} className="cursor-pointer rounded-lg h-9">
+                            <FileCheck className="h-4 w-4 mr-2 text-amber-500" />
+                            Viết kết luận
+                          </DropdownMenuItem>
+                        )}
+                        {activity.conclusion && (
+                          <DropdownMenuItem onClick={() => openViewConclusionDialog(activity)} className="cursor-pointer rounded-lg h-9">
+                            <FileText className="h-4 w-4 mr-2 text-blue-500" />
+                            Xem kết luận
+                          </DropdownMenuItem>
+                        )}
+                        
+                        <DropdownMenuSeparator className="my-1" />
+                        
+                        {/* Duplicate & Delete */}
+                        <DropdownMenuItem onClick={() => handleDuplicate(activity)} className="cursor-pointer rounded-lg h-9">
+                          <Copy className="h-4 w-4 mr-2 text-violet-500" />
+                          Nhân bản
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openDeleteDialog(activity)} className="cursor-pointer rounded-lg h-9 text-red-600 focus:text-red-600 focus:bg-red-50">
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Xóa hoạt động
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        ))}
+            </div>
+          )
+        })}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between rounded-xl bg-slate-50/70 border border-slate-100 px-4 py-3">
+          <p className="text-sm text-slate-500">
+            Hiện <span className="font-semibold text-slate-700">{(currentPage - 1) * ACTIVITIES_PER_PAGE + 1}–{Math.min(currentPage * ACTIVITIES_PER_PAGE, filtered.length)}</span> / {filtered.length} hoạt động
+          </p>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0 rounded-lg"
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(page => {
+                if (totalPages <= 7) return true
+                if (page === 1 || page === totalPages) return true
+                if (Math.abs(page - currentPage) <= 1) return true
+                return false
+              })
+              .map((page, idx, arr) => (
+                <span key={page} className="flex items-center">
+                  {idx > 0 && arr[idx - 1] !== page - 1 && (
+                    <span className="px-1 text-muted-foreground text-xs">...</span>
+                  )}
+                  <Button
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    className={`h-8 w-8 p-0 text-xs rounded-lg ${currentPage === page ? 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-md border-0' : ''}`}
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </Button>
+                </span>
+              ))}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0 rounded-lg"
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Dialog open={showCreateDialog} onOpenChange={(open) => { setShowCreateDialog(open); if (!open) resetForm(); }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -716,6 +1043,27 @@ export default function ActivityManagement() {
                   onChange={e => setFormData({...formData, endTime: e.target.value})} 
                 />
               </div>
+            </div>
+            
+            {/* Ngưỡng tính trễ */}
+            <div>
+              <Label>
+                Ngưỡng tính trễ (phút) 
+                <span className="text-xs ml-2 text-gray-500">
+                  (Sau bao nhiêu phút kể từ giờ bắt đầu được tính là trễ? Mặc định: 15)
+                </span>
+              </Label>
+              <Input 
+                type="number"
+                min="1"
+                max="120"
+                value={formData.lateThresholdMinutes || 15} 
+                onChange={e => setFormData({...formData, lateThresholdMinutes: parseInt(e.target.value) || 15})} 
+                placeholder="15"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                VD: Nhập 10 → Check-in sau 10 phút tính trễ. Nhập 30 → Check-in sau 30 phút tính trễ.
+              </p>
             </div>
             
             {/* Đơn vị chủ trì */}
@@ -1002,6 +1350,31 @@ export default function ActivityManagement() {
                 </div>
               </div>
 
+              {/* Ngưỡng tính trễ */}
+              <div>
+                <Label className="text-muted-foreground">
+                  Ngưỡng tính trễ (phút) 
+                  <span className="text-xs ml-2 text-gray-500">
+                    (Số phút sau giờ bắt đầu được tính là trễ, mặc định 15 phút)
+                  </span>
+                </Label>
+                {isEditMode ? (
+                  <Input 
+                    type="number"
+                    min="1"
+                    max="120"
+                    value={editFormData.lateThresholdMinutes || 15} 
+                    onChange={e => setEditFormData({...editFormData, lateThresholdMinutes: parseInt(e.target.value) || 15})}
+                    placeholder="15"
+                  />
+                ) : (
+                  <p>{selectedActivity.lateThresholdMinutes || 15} phút (Check-in sau {
+                    new Date(new Date(selectedActivity.startTime).getTime() + (selectedActivity.lateThresholdMinutes || 15) * 60000)
+                      .toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+                  } tính là trễ)</p>
+                )}
+              </div>
+
               {/* Đơn vị chủ trì */}
               <div>
                 <Label className="text-muted-foreground">Đơn vị chủ trì</Label>
@@ -1034,11 +1407,12 @@ export default function ActivityManagement() {
                 )}
               </div>
 
-              {/* Đại biểu tham dự - Link to view */}
+              {/* Người tham gia */}
               <div>
-                <Label className="text-muted-foreground">Đại biểu tham dự</Label>
-                <p className="text-blue-600 cursor-pointer hover:underline" onClick={() => openAttendanceDialog(selectedActivity)}>
-                  Xem danh sách người tham gia
+                <Label className="text-muted-foreground">Người tham gia</Label>
+                <p className="font-semibold text-lg text-blue-600 cursor-pointer hover:underline" onClick={() => openAttendanceDialog(selectedActivity)}>
+                  {selectedActivity._count?.participants || 0} người 
+                  <span className="text-sm text-muted-foreground ml-2">(Nhấn để xem chi tiết)</span>
                 </p>
               </div>
 
@@ -1080,15 +1454,6 @@ export default function ActivityManagement() {
                 ) : (
                   <p className="font-bold text-lg">{selectedActivity.pointsReward} điểm</p>
                 )}
-              </div>
-
-              {/* Số người tham gia */}
-              <div>
-                <Label className="text-muted-foreground">Số người tham gia</Label>
-                <p className="font-semibold text-lg text-blue-600 cursor-pointer hover:underline" onClick={() => openAttendanceDialog(selectedActivity)}>
-                  {selectedActivity._count?.participants || 0} người 
-                  <span className="text-sm text-muted-foreground ml-2">(Nhấn để xem chi tiết)</span>
-                </p>
               </div>
             </div>
           )}
@@ -1163,22 +1528,29 @@ export default function ActivityManagement() {
 
       {/* Attendance List Dialog - Danh sách điểm danh */}
       <Dialog open={showAttendanceDialog} onOpenChange={setShowAttendanceDialog}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="w-[98vw] max-w-none h-[95vh] flex flex-col p-0">
+          <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <ClipboardList className="h-5 w-5 text-green-600" />
               Danh sách điểm danh
             </DialogTitle>
           </DialogHeader>
           {selectedActivity && (
-            <div className="space-y-4">
+            <div className="flex-1 overflow-y-auto px-6 space-y-4">
               {/* Activity Info */}
               <div className="p-3 bg-muted rounded-lg">
-                <h4 className="font-semibold">{selectedActivity.title}</h4>
+                <h4 className="font-semibold text-lg">{selectedActivity.title}</h4>
                 <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                  <Clock className="h-3 w-3" />
-                  {new Date(selectedActivity.startTime).toLocaleString("vi-VN")}
-                  {selectedActivity.endTime && ` - ${new Date(selectedActivity.endTime).toLocaleString("vi-VN")}`}
+                  <Clock className="h-4 w-4" />
+                  <span className="font-medium">Thời gian:</span> {new Date(selectedActivity.startTime).toLocaleString("vi-VN", { 
+                    year: 'numeric', 
+                    month: '2-digit', 
+                    day: '2-digit', 
+                    hour: '2-digit', 
+                    minute: '2-digit',
+                    hour12: false 
+                  })}
+                  {selectedActivity.endTime && ` - ${new Date(selectedActivity.endTime).toLocaleString("vi-VN", { hour: '2-digit', minute: '2-digit', hour12: false })}`}
                 </p>
                 {selectedActivity.location && (
                   <p className="text-sm text-muted-foreground flex items-center gap-1">
@@ -1195,21 +1567,25 @@ export default function ActivityManagement() {
                 </div>
               ) : activityStats ? (
                 <>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                     <div className="p-3 bg-blue-50 rounded-lg text-center">
                       <p className="text-2xl font-bold text-blue-600">{activityStats.totalRegistered}</p>
                       <p className="text-xs text-muted-foreground">Đăng ký</p>
                     </div>
-                    <div className="p-3 bg-green-50 rounded-lg text-center">
-                      <p className="text-2xl font-bold text-green-600">{activityStats.checkedIn}</p>
+                    <div className="p-3 bg-purple-50 rounded-lg text-center">
+                      <p className="text-2xl font-bold text-purple-600">{activityStats.checkedIn}</p>
                       <p className="text-xs text-muted-foreground">Đã điểm danh</p>
                     </div>
+                    <div className="p-3 bg-green-50 rounded-lg text-center">
+                      <p className="text-2xl font-bold text-green-600">{activityStats.onTime || 0}</p>
+                      <p className="text-xs text-muted-foreground">Đúng giờ</p>
+                    </div>
                     <div className="p-3 bg-amber-50 rounded-lg text-center">
-                      <p className="text-2xl font-bold text-amber-600">{activityStats.late}</p>
+                      <p className="text-2xl font-bold text-amber-600">{activityStats.late || 0}</p>
                       <p className="text-xs text-muted-foreground">Đến trễ</p>
                     </div>
                     <div className="p-3 bg-red-50 rounded-lg text-center">
-                      <p className="text-2xl font-bold text-red-600">{activityStats.absent}</p>
+                      <p className="text-2xl font-bold text-red-600">{activityStats.absent || 0}</p>
                       <p className="text-xs text-muted-foreground">Vắng mặt</p>
                     </div>
                   </div>
@@ -1224,11 +1600,11 @@ export default function ActivityManagement() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-12">STT</TableHead>
-                          <TableHead>Họ và tên</TableHead>
-                          <TableHead>Email</TableHead>
-                          <TableHead>Trạng thái</TableHead>
-                          <TableHead>Thời gian điểm danh</TableHead>
+                          <TableHead className="w-20 text-center">STT</TableHead>
+                          <TableHead className="w-[200px]">Họ và tên</TableHead>
+                          <TableHead className="w-[280px]">Email</TableHead>
+                          <TableHead className="w-[180px]">Trạng thái</TableHead>
+                          <TableHead className="w-[220px]">Thời gian điểm danh</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1239,12 +1615,17 @@ export default function ActivityManagement() {
                             </TableCell>
                           </TableRow>
                         ) : (
-                          activityStats.participants.map((p, index) => (
-                            <TableRow key={p.id}>
-                              <TableCell>{index + 1}</TableCell>
-                              <TableCell className="font-medium">{p.user.fullName}</TableCell>
-                              <TableCell className="text-muted-foreground">{p.user.email}</TableCell>
-                              <TableCell>
+                          (() => {
+                            const startIndex = (attendancePage - 1) * ITEMS_PER_PAGE;
+                            const endIndex = startIndex + ITEMS_PER_PAGE;
+                            const paginatedParticipants = activityStats.participants.slice(startIndex, endIndex);
+                            
+                            return paginatedParticipants.map((p, index) => (
+                              <TableRow key={p.id}>
+                                <TableCell className="text-center">{startIndex + index + 1}</TableCell>
+                                <TableCell className="font-medium">{p.user.fullName}</TableCell>
+                                <TableCell className="text-muted-foreground text-sm">{p.user.email}</TableCell>
+                                <TableCell>
                                 {p.status === "CHECKED_IN" ? (
                                   <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
                                     <CheckCircle2 className="h-3 w-3 mr-1" />
@@ -1262,15 +1643,53 @@ export default function ActivityManagement() {
                                   </Badge>
                                 )}
                               </TableCell>
-                              <TableCell className="text-muted-foreground">
-                                {p.checkInTime ? new Date(p.checkInTime).toLocaleString("vi-VN") : "-"}
+                              <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                                {p.checkInTime ? new Date(p.checkInTime).toLocaleString("vi-VN", {
+                                  year: 'numeric',
+                                  month: '2-digit', 
+                                  day: '2-digit',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  hour12: false
+                                }) : <span className="text-gray-400">-</span>}
                               </TableCell>
                             </TableRow>
-                          ))
+                          ));
+                          })()
                         )}
                       </TableBody>
                     </Table>
                   </div>
+
+                  {/* Pagination */}
+                  {activityStats.participants.length > ITEMS_PER_PAGE && (
+                    <div className="flex items-center justify-between px-2">
+                      <div className="text-sm text-muted-foreground">
+                        Hiển thị {Math.min((attendancePage - 1) * ITEMS_PER_PAGE + 1, activityStats.participants.length)} - {Math.min(attendancePage * ITEMS_PER_PAGE, activityStats.participants.length)} / {activityStats.participants.length}
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setAttendancePage(p => Math.max(1, p - 1))}
+                          disabled={attendancePage === 1}
+                        >
+                          ← Trước
+                        </Button>
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm">Trang {attendancePage} / {Math.ceil(activityStats.participants.length / ITEMS_PER_PAGE)}</span>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setAttendancePage(p => Math.min(Math.ceil(activityStats.participants.length / ITEMS_PER_PAGE), p + 1))}
+                          disabled={attendancePage >= Math.ceil(activityStats.participants.length / ITEMS_PER_PAGE)}
+                        >
+                          Sau →
+                        </Button>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Non-participants */}
                   {activityStats.nonParticipants.length > 0 && (
@@ -1293,7 +1712,7 @@ export default function ActivityManagement() {
               )}
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="px-6 pb-6 pt-4 shrink-0">
             <Button variant="outline" onClick={() => setShowAttendanceDialog(false)}>
               Đóng
             </Button>
@@ -1331,6 +1750,80 @@ export default function ActivityManagement() {
                 <p className="text-xs text-muted-foreground">
                   Ghi lại các quyết định, nhiệm vụ được giao và các nội dung quan trọng của cuộc họp.
                 </p>
+              </div>
+              
+              {/* File attachments */}
+              <div className="space-y-2">
+                <Label>Tài liệu đính kèm</Label>
+                <div className="border-2 border-dashed rounded-lg p-4 text-center">
+                  <input
+                    type="file"
+                    multiple
+                    accept=".jpg,.jpeg,.png,.gif,.pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx"
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files || [])
+                      setConclusionFiles(prev => [...prev, ...files])
+                    }}
+                    className="hidden"
+                    id="conclusion-file-input"
+                  />
+                  <label htmlFor="conclusion-file-input" className="cursor-pointer">
+                    <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">
+                      Click để chọn file hoặc kéo thả vào đây
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Hỗ trợ: JPG, PNG, PDF, PPT, DOC, XLS (tối đa 20MB/file)
+                    </p>
+                  </label>
+                </div>
+                
+                {/* Selected files list */}
+                {conclusionFiles.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-sm font-medium">Đã chọn {conclusionFiles.length} file:</p>
+                    {conclusionFiles.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          <span className="text-sm">{file.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                          </span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setConclusionFiles(prev => prev.filter((_, i) => i !== index))}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Existing attachments */}
+                {selectedActivity.attachments && Array.isArray(selectedActivity.attachments) && selectedActivity.attachments.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-sm font-medium mb-2">Tài liệu đã lưu:</p>
+                    <div className="space-y-2">
+                      {selectedActivity.attachments.map((file: any, index: number) => (
+                        <div key={index} className="flex items-center gap-2 p-2 bg-blue-50 rounded">
+                          <FileText className="h-4 w-4 text-blue-600" />
+                          <a 
+                            href={`${API_URL}${file.url}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:underline"
+                          >
+                            {file.originalName || file.url.split('/').pop()}
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

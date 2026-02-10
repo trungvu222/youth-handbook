@@ -12,7 +12,8 @@ import {
   Trophy,
   Calendar,
   Eye,
-  MessageSquare
+  MessageSquare,
+  Trash2
 } from 'lucide-react'
 
 interface SelfRating {
@@ -37,9 +38,10 @@ interface SelfRating {
 interface RatingHistoryProps {
   ratings: SelfRating[];
   loading: boolean;
+  onDelete?: (id: string) => void;
 }
 
-export function RatingHistory({ ratings, loading }: RatingHistoryProps) {
+export function RatingHistory({ ratings, loading, onDelete }: RatingHistoryProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'APPROVED': return 'bg-green-100 text-green-800'
@@ -209,6 +211,17 @@ export function RatingHistory({ ratings, loading }: RatingHistoryProps) {
               </div>
 
               <div className="flex flex-col items-end gap-2">
+                {rating.status === 'DRAFT' && onDelete && (
+                  <Button 
+                    size="sm" 
+                    variant="destructive"
+                    onClick={() => onDelete(rating.id)}
+                  >
+                    <Trash2 className="h-3 w-3 mr-1" />
+                    Xóa
+                  </Button>
+                )}
+                
                 {rating.status === 'NEEDS_REVISION' && (
                   <Button size="sm" variant="outline">
                     Chỉnh sửa
@@ -219,7 +232,8 @@ export function RatingHistory({ ratings, loading }: RatingHistoryProps) {
                   <div className="text-xs text-muted-foreground">
                     {rating.status === 'SUBMITTED' ? 'Chờ duyệt' : 
                      rating.status === 'APPROVED' ? 'Đã hoàn thành' :
-                     rating.status === 'REJECTED' ? 'Bị từ chối' : 
+                     rating.status === 'REJECTED' ? 'Bị từ chối' :
+                     rating.status === 'DRAFT' ? 'Bản nháp' :
                      'Cần cập nhật'}
                   </div>
                 </div>

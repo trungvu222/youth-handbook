@@ -1,7 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
 const bcrypt = require('bcryptjs');
-
-const prisma = new PrismaClient();
 
 // @desc    Get user profile by ID (Admin/Leader access)
 // @route   GET /api/users/:id

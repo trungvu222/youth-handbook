@@ -17,7 +17,7 @@ import {
   AlertTriangle,
   Info
 } from 'lucide-react'
-import { toast } from '../ui/use-toast'
+import { toast } from '@/hooks/use-toast'
 
 interface RatingCriteria {
   id: string;
@@ -33,6 +33,7 @@ interface RatingPeriod {
   startDate: string;
   endDate: string;
   criteria: RatingCriteria[];
+  targetRating?: 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'POOR';
   status: 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
 }
 
@@ -53,10 +54,6 @@ export function SelfRatingForm({ period, onComplete, onCancel }: SelfRatingFormP
   useEffect(() => {
     loadExistingRating()
   }, [period.id])
-
-  useEffect(() => {
-    calculateSuggestedRating()
-  }, [responses])
 
   const loadExistingRating = async () => {
     try {
@@ -82,24 +79,6 @@ export function SelfRatingForm({ period, onComplete, onCancel }: SelfRatingFormP
       console.error('Error loading existing rating:', error)
     } finally {
       setLoading(false)
-    }
-  }
-
-  const calculateSuggestedRating = () => {
-    const totalCriteria = period.criteria.length
-    if (totalCriteria === 0) return
-
-    const metCriteria = Object.values(responses).filter(r => r.value).length
-    const percentage = (metCriteria / totalCriteria) * 100
-
-    if (percentage >= 90) {
-      setSuggestedRating('EXCELLENT')
-    } else if (percentage >= 75) {
-      setSuggestedRating('GOOD')
-    } else if (percentage >= 60) {
-      setSuggestedRating('AVERAGE')
-    } else {
-      setSuggestedRating('POOR')
     }
   }
 
@@ -179,48 +158,6 @@ export function SelfRatingForm({ period, onComplete, onCancel }: SelfRatingFormP
     }
   }
 
-  const getSuggestedRatingInfo = () => {
-    const totalCriteria = period.criteria.length
-    const metCriteria = Object.values(responses).filter(r => r.value).length
-
-    switch (suggestedRating) {
-      case 'EXCELLENT':
-        return {
-          label: 'Xuất sắc',
-          color: 'text-purple-600 bg-purple-50 border-purple-200',
-          icon: <Star className="h-5 w-5 text-purple-600" />,
-          points: '+10 điểm',
-          description: `Bạn đã đạt ${metCriteria}/${totalCriteria} tiêu chí (${Math.round((metCriteria/totalCriteria)*100)}%)`
-        }
-      case 'GOOD':
-        return {
-          label: 'Khá',
-          color: 'text-blue-600 bg-blue-50 border-blue-200',
-          icon: <Trophy className="h-5 w-5 text-blue-600" />,
-          points: '+5 điểm',
-          description: `Bạn đã đạt ${metCriteria}/${totalCriteria} tiêu chí (${Math.round((metCriteria/totalCriteria)*100)}%)`
-        }
-      case 'AVERAGE':
-        return {
-          label: 'Trung bình',
-          color: 'text-green-600 bg-green-50 border-green-200',
-          icon: <CheckCircle className="h-5 w-5 text-green-600" />,
-          points: '+2 điểm',
-          description: `Bạn đã đạt ${metCriteria}/${totalCriteria} tiêu chí (${Math.round((metCriteria/totalCriteria)*100)}%)`
-        }
-      case 'POOR':
-        return {
-          label: 'Yếu',
-          color: 'text-red-600 bg-red-50 border-red-200',
-          icon: <XCircle className="h-5 w-5 text-red-600" />,
-          points: '+1 điểm',
-          description: `Bạn đã đạt ${metCriteria}/${totalCriteria} tiêu chí (${Math.round((metCriteria/totalCriteria)*100)}%)`
-        }
-    }
-  }
-
-  const ratingInfo = getSuggestedRatingInfo()
-
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-6">
@@ -257,13 +194,30 @@ export function SelfRatingForm({ period, onComplete, onCancel }: SelfRatingFormP
           )}
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span>
-              Thời gian: {new Date(period.startDate).toLocaleDateString('vi-VN')} - {new Date(period.endDate).toLocaleDateString('vi-VN')}
-            </span>
-            <span>
-              {period.criteria.length} tiêu chí đánh giá
-            </span>
+          <div className="space-y-3">
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <span>
+                Thời gian: {new Date(period.startDate).toLocaleDateString('vi-VN')} - {new Date(period.endDate).toLocaleDateString('vi-VN')}
+              </span>
+              <span>
+                {period.criteria.length} tiêu chí đánh giá
+              </span>
+            </div>
+            
+            {period.targetRating && (
+              <Alert className="bg-blue-50 border-blue-200">
+                <Star className="h-4 w-4 text-blue-600" />
+                <AlertDescription>
+                  <span className="font-medium text-blue-900">Xếp loại mục tiêu: </span>
+                  <span className="font-bold text-blue-700">
+                    {period.targetRating === 'EXCELLENT' && 'Hoàn thành xuất sắc nhiệm vụ'}
+                    {period.targetRating === 'GOOD' && 'Hoàn thành tốt nhiệm vụ'}
+                    {period.targetRating === 'AVERAGE' && 'Hoàn thành nhiệm vụ'}
+                    {period.targetRating === 'POOR' && 'Không hoàn thành nhiệm vụ'}
+                  </span>
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -338,29 +292,42 @@ export function SelfRatingForm({ period, onComplete, onCancel }: SelfRatingFormP
         </CardContent>
       </Card>
 
-      {/* Suggested Rating */}
-      <Card className={`border-2 ${ratingInfo.color}`}>
+      {/* Suggested Rating (Auto-calculated) */}
+      <Card className={`border-2 ${ratingInfo.color.replace('text-', 'border-')}`}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            {ratingInfo.icon}
-            Mức xếp loại gợi ý: {ratingInfo.label}
+            <ratingInfo.icon className={`h-5 w-5 ${ratingInfo.color}`} />
+            Mức xếp loại gợi ý
           </CardTitle>
           <CardDescription>
-            {ratingInfo.description}
+            Dựa trên số tiêu chí đã đáp ứng
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-2 text-sm">
-            <Trophy className="h-4 w-4" />
-            <span>Điểm thưởng dự kiến: <strong>{ratingInfo.points}</strong></span>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-muted-foreground">Xếp loại:</span>
+              <span className={`text-lg font-bold ${ratingInfo.color}`}>
+                {ratingInfo.label}
+              </span>
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-muted-foreground">Tỷ lệ hoàn thành:</span>
+              <span className="text-sm font-medium">{ratingInfo.points}</span>
+            </div>
+
+            <p className="text-sm text-muted-foreground">
+              {ratingInfo.description}
+            </p>
+
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                Đây chỉ là gợi ý dựa trên tiêu chí. Kết quả cuối cùng sẽ do Admin/Leader duyệt và có thể điều chỉnh.
+              </AlertDescription>
+            </Alert>
           </div>
-          
-          <Alert className="mt-4">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              Đây chỉ là gợi ý dựa trên số tiêu chí bạn đã đáp ứng. Kết quả cuối cùng sẽ do Admin/Leader duyệt.
-            </AlertDescription>
-          </Alert>
         </CardContent>
       </Card>
 

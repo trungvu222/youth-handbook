@@ -1,6 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 
 // Exam System Controllers for Module 3.6
 
@@ -83,6 +81,24 @@ const getExams = async (req, res, next) => {
       take: parseInt(limit)
     });
 
+    // Get average scores for all exams
+    const examIds = exams.map(e => e.id);
+    const avgScores = await prisma.examAttempt.groupBy({
+      by: ['examId'],
+      where: {
+        examId: { in: examIds },
+        status: 'SUBMITTED'
+      },
+      _avg: {
+        score: true
+      }
+    });
+
+    const avgScoreMap = avgScores.reduce((acc, item) => {
+      acc[item.examId] = item._avg.score || 0;
+      return acc;
+    }, {});
+
     const examsWithAttempts = exams.map(exam => {
       const userAttempts = exam.attempts || [];
       const lastAttempt = userAttempts[0] || null;
@@ -90,10 +106,14 @@ const getExams = async (req, res, next) => {
       
       return {
         ...exam,
+        totalAttempts: exam._count?.attempts || 0,
+        totalQuestions: exam._count?.questions || 0,
+        avgScore: avgScoreMap[exam.id] || 0,
         userAttempts: userAttempts.length,
         lastAttempt,
         canTakeExam,
-        attempts: undefined
+        attempts: undefined,
+        _count: undefined
       };
     });
 
@@ -554,6 +574,7 @@ const createExam = async (req, res, next) => {
     const {
       title,
       description,
+      category,
       instructions,
       duration,
       passingScore,
@@ -569,10 +590,13 @@ const createExam = async (req, res, next) => {
       questions
     } = req.body;
 
+    console.log('📝 Creating exam:', { title, category, questionsCount: questions?.length })
+
     const exam = await prisma.exam.create({
       data: {
         title,
         description,
+        category,
         instructions,
         duration,
         totalQuestions: questions?.length || 0,
@@ -591,6 +615,8 @@ const createExam = async (req, res, next) => {
       }
     });
 
+    console.log('✅ Exam created:', exam.id)
+
     // Create questions if provided
     if (questions && Array.isArray(questions)) {
       const questionData = questions.map((q, index) => ({
@@ -606,6 +632,8 @@ const createExam = async (req, res, next) => {
       await prisma.examQuestion.createMany({
         data: questionData
       });
+
+      console.log(`✅ Created ${questionData.length} questions`)
     }
 
     res.status(201).json({
@@ -614,7 +642,7 @@ const createExam = async (req, res, next) => {
     });
 
   } catch (error) {
-    console.error('Create exam error:', error);
+    console.error('❌ Create exam error:', error);
     next(error);
   }
 };
@@ -643,7 +671,8 @@ const getExamStats = async (req, res, next) => {
 
     const [
       totalExams,
-      activeExams,
+      publishedExams,
+      draftExams,
       totalAttempts,
       passedAttempts,
       averageScore,
@@ -651,7 +680,10 @@ const getExamStats = async (req, res, next) => {
     ] = await Promise.all([
       prisma.exam.count({ where: dateFilter }),
       prisma.exam.count({ 
-        where: { ...dateFilter, status: 'ACTIVE' } 
+        where: { ...dateFilter, status: 'PUBLISHED' } 
+      }),
+      prisma.exam.count({ 
+        where: { ...dateFilter, status: 'DRAFT' } 
       }),
       prisma.examAttempt.count({ 
         where: { ...examFilter, status: 'SUBMITTED' } 
@@ -671,23 +703,289 @@ const getExamStats = async (req, res, next) => {
       })
     ]);
 
-    const passRate = totalAttempts > 0 ? (passedAttempts / totalAttempts) * 100 : 0;
+    const avgPassRate = totalAttempts > 0 ? (passedAttempts / totalAttempts) * 100 : 0;
 
     res.status(200).json({
       success: true,
       data: {
         totalExams,
-        activeExams,
+        publishedExams,
+        draftExams,
         totalAttempts,
         passedAttempts,
-        passRate,
-        averageScore: averageScore._avg.score || 0,
+        avgPassRate: Math.round(avgPassRate * 10) / 10, // Round to 1 decimal
+        averageScore: Math.round(averageScore._avg.score || 0),
         examResults
       }
     });
 
   } catch (error) {
     console.error('Get exam stats error:', error);
+    next(error);
+  }
+};
+
+// @desc    Update exam
+// @route   PUT /api/exams/:id
+// @access  Private/Admin/Leader
+const updateExam = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const {
+      title,
+      description,
+      category,
+      instructions,
+      duration,
+      passingScore,
+      maxAttempts,
+      pointsAwarded,
+      startTime,
+      endTime,
+      showResults,
+      showAnswers,
+      shuffleQuestions,
+      shuffleAnswers,
+      unitId,
+      status,
+      questions
+    } = req.body;
+
+    // Check if exam exists
+    const exam = await prisma.exam.findUnique({
+      where: { id }
+    });
+
+    if (!exam) {
+      return res.status(404).json({
+        success: false,
+        error: 'Không tìm thấy kỳ thi'
+      });
+    }
+
+    // Only creator, admin, or leader can update
+    if (req.user.role !== 'ADMIN' && req.user.role !== 'LEADER' && exam.creatorId !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Không có quyền cập nhật kỳ thi này'
+      });
+    }
+
+    // Prepare update data
+    const updateData = {
+      updatedAt: new Date()
+    };
+
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (category !== undefined) updateData.category = category;
+    if (instructions !== undefined) updateData.instructions = instructions;
+    if (duration !== undefined) updateData.duration = duration;
+    if (passingScore !== undefined) updateData.passingScore = passingScore;
+    if (maxAttempts !== undefined) updateData.maxAttempts = maxAttempts;
+    if (pointsAwarded !== undefined) updateData.pointsAwarded = pointsAwarded;
+    if (startTime !== undefined) updateData.startTime = startTime ? new Date(startTime) : null;
+    if (endTime !== undefined) updateData.endTime = endTime ? new Date(endTime) : null;
+    if (showResults !== undefined) updateData.showResults = showResults;
+    if (showAnswers !== undefined) updateData.showAnswers = showAnswers;
+    if (shuffleQuestions !== undefined) updateData.shuffleQuestions = shuffleQuestions;
+    if (shuffleAnswers !== undefined) updateData.shuffleAnswers = shuffleAnswers;
+    if (unitId !== undefined) updateData.unitId = unitId;
+    if (status !== undefined) updateData.status = status;
+
+    // Update questions if provided
+    if (questions !== undefined) {
+      updateData.totalQuestions = questions.length;
+    }
+
+    // Update exam and questions in transaction
+    const updatedExam = await prisma.$transaction(async (tx) => {
+      // Update exam
+      const exam = await tx.exam.update({
+        where: { id },
+        data: updateData
+      });
+
+      // Update questions if provided
+      if (questions && Array.isArray(questions)) {
+        // Delete existing questions
+        await tx.examQuestion.deleteMany({
+          where: { examId: id }
+        });
+
+        // Create new questions
+        if (questions.length > 0) {
+          const questionData = questions.map((q, index) => ({
+            examId: id,
+            questionText: q.questionText,
+            questionType: q.questionType || 'SINGLE_CHOICE',
+            answers: q.answers,
+            explanation: q.explanation,
+            points: q.points || 1,
+            orderIndex: index + 1
+          }));
+
+          await tx.examQuestion.createMany({
+            data: questionData
+          });
+        }
+      }
+
+      // Return exam with questions
+      return await tx.exam.findUnique({
+        where: { id },
+        include: {
+          creator: {
+            select: {
+              id: true,
+              fullName: true
+            }
+          },
+          questions: true
+        }
+      });
+    });
+
+    res.status(200).json({
+      success: true,
+      data: updatedExam
+    });
+
+  } catch (error) {
+    console.error('Update exam error:', error);
+    next(error);
+  }
+};
+
+// @desc    Delete exam
+// @route   DELETE /api/exams/:id
+// @access  Private/Admin
+const deleteExam = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    // Check if exam exists
+    const exam = await prisma.exam.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: {
+            attempts: true
+          }
+        }
+      }
+    });
+
+    if (!exam) {
+      return res.status(404).json({
+        success: false,
+        error: 'Không tìm thấy kỳ thi'
+      });
+    }
+
+    // Delete related records first (cascade)
+    // Note: ExamAnswer model doesn't exist - answers are stored as JSON in ExamAttempt
+    await prisma.$transaction([
+      // Delete exam attempts (contains answers as JSON)
+      prisma.examAttempt.deleteMany({
+        where: { examId: id }
+      }),
+      // Delete exam questions
+      prisma.examQuestion.deleteMany({
+        where: { examId: id }
+      }),
+      // Delete the exam
+      prisma.exam.delete({
+        where: { id }
+      })
+    ]);
+
+    res.status(200).json({
+      success: true,
+      message: 'Đã xóa kỳ thi thành công'
+    });
+
+  } catch (error) {
+    console.error('Delete exam error:', error);
+    next(error);
+  }
+};
+
+// @desc    Get exam attempts (for statistics)
+// @route   GET /api/exams/:id/attempts
+// @access  Private/Admin/Leader
+const getExamAttempts = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    // Check if exam exists
+    const exam = await prisma.exam.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        title: true,
+        passingScore: true
+      }
+    });
+
+    if (!exam) {
+      return res.status(404).json({
+        success: false,
+        error: 'Không tìm thấy kỳ thi'
+      });
+    }
+
+    // Get all attempts for this exam
+    const attempts = await prisma.examAttempt.findMany({
+      where: {
+        examId: id,
+        status: 'SUBMITTED'
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            militaryRank: true,
+            youthPosition: true,
+            unit: {
+              select: {
+                id: true,
+                name: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: [
+        { score: 'desc' },
+        { submittedAt: 'asc' }
+      ]
+    });
+
+    // Format response
+    const formattedAttempts = attempts.map(attempt => ({
+      id: attempt.id,
+      userId: attempt.user.id,
+      fullName: attempt.user.fullName,
+      militaryRank: attempt.user.militaryRank,
+      youthPosition: attempt.user.youthPosition,
+      unitName: attempt.user.unit?.name || 'N/A',
+      examTitle: exam.title,
+      score: attempt.score,
+      isPassed: attempt.isPassed,
+      timeSpent: attempt.timeSpent,
+      submittedAt: attempt.submittedAt,
+      attemptNumber: attempt.attemptNumber
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: formattedAttempts
+    });
+
+  } catch (error) {
+    console.error('Get exam attempts error:', error);
     next(error);
   }
 };
@@ -699,7 +997,10 @@ module.exports = {
   submitExamAttempt,
   getExamLeaderboard,
   createExam,
-  getExamStats
+  updateExam,
+  deleteExam,
+  getExamStats,
+  getExamAttempts
 };
 
 
