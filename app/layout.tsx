@@ -18,8 +18,8 @@ export const metadata: Metadata = {
   },
   themeColor: '#1976d2',
   icons: {
-    icon: '/placeholder-logo.png',
-    apple: '/placeholder-logo.png',
+    icon: '/Huy_Hieu_Doan.png',
+    apple: '/Huy_Hieu_Doan.png',
   },
 }
 
@@ -71,7 +71,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src * 'self' https://youth-handbook.onrender.com; img-src * 'self' data: blob: https:; style-src * 'self' 'unsafe-inline';" />
         <link rel="manifest" href="/manifest.json" />
-        <link rel="apple-touch-icon" href="/placeholder-logo.png" />
+        <link rel="apple-touch-icon" href="/Huy_Hieu_Doan.png" />
         {/* Critical CSS for mobile app */}
         <style dangerouslySetInnerHTML={{ __html: criticalCSS }} />
       </head>
