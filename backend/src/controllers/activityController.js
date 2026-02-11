@@ -418,11 +418,15 @@ const checkInActivity = async (req, res, next) => {
       });
     }
 
-    // Verify QR code
-    if (activity.qrCode !== qrCode) {
+    // Verify QR code (accept full UUID or short code - first 8 chars, case-insensitive)
+    const fullCode = activity.qrCode || '';
+    const shortCode = fullCode.substring(0, 8).toUpperCase();
+    const inputCode = (qrCode || '').trim();
+    
+    if (fullCode !== inputCode && shortCode !== inputCode.toUpperCase()) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid QR code'
+        error: 'Mã điểm danh không hợp lệ'
       });
     }
 

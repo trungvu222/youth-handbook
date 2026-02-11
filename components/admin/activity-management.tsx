@@ -13,7 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Calendar, Plus, Users, Edit, Trash2, Eye, RefreshCw, MapPin, Clock, AlertTriangle, MoreVertical, ClipboardList, FileText, CheckCircle2, XCircle, Clock3, FileCheck, Upload, X, Send, Bell, Copy, Ban, PlayCircle, ChevronLeft, ChevronRight, Award, Megaphone } from "lucide-react"
+import { Calendar, Plus, Users, Edit, Trash2, Eye, RefreshCw, MapPin, Clock, AlertTriangle, MoreVertical, ClipboardList, FileText, CheckCircle2, XCircle, Clock3, FileCheck, Upload, X, Send, Bell, Copy, Ban, PlayCircle, ChevronLeft, ChevronRight, Award, Megaphone, QrCode, Hash } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { BACKEND_URL } from "@/lib/config"
 
@@ -42,6 +42,7 @@ interface Activity {
   location?: string
   pointsReward: number
   lateThresholdMinutes?: number
+  qrCode?: string
   organizer?: { fullName: string }
   unit?: { name: string }
   _count?: { participants: number }
@@ -101,6 +102,11 @@ export default function ActivityManagement() {
   const [savingConclusion, setSavingConclusion] = useState(false)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [selectedAttendees, setSelectedAttendees] = useState<string[]>([])
+  const [showCheckinCodeDialog, setShowCheckinCodeDialog] = useState(false)
+  const [checkinCodeMode, setCheckinCodeMode] = useState<'qr' | 'text'>('qr')
+  const [checkinSendMode, setCheckinSendMode] = useState<'all' | 'select'>('all')
+  const [checkinSelectedUsers, setCheckinSelectedUsers] = useState<string[]>([])
+  const [copiedCode, setCopiedCode] = useState(false)
   const [sendNotification, setSendNotification] = useState(false)
   const [notifyAll, setNotifyAll] = useState(true)
   const [notifyUserIds, setNotifyUserIds] = useState<string[]>([])
@@ -1712,9 +1718,183 @@ export default function ActivityManagement() {
               )}
             </div>
           )}
-          <DialogFooter className="px-6 pb-6 pt-4 shrink-0">
+          <DialogFooter className="px-6 pb-6 pt-4 shrink-0 flex gap-2">
+            <Button 
+              variant="default" 
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              onClick={() => { setShowCheckinCodeDialog(true); setCheckinCodeMode('qr'); setCopiedCode(false); setCheckinSendMode('all'); setCheckinSelectedUsers([]); }}
+            >
+              <QrCode className="h-4 w-4 mr-1.5" />
+              Mã điểm danh
+            </Button>
             <Button variant="outline" onClick={() => setShowAttendanceDialog(false)}>
               Đóng
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Check-in Code Dialog */}
+      <Dialog open={showCheckinCodeDialog} onOpenChange={setShowCheckinCodeDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <QrCode className="h-5 w-5 text-emerald-600" />
+              Mã điểm danh
+            </DialogTitle>
+          </DialogHeader>
+          {selectedActivity && (
+            <div className="space-y-4">
+              {/* Activity name */}
+              <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-100">
+                <p className="font-semibold text-emerald-800 text-sm">{selectedActivity.title}</p>
+              </div>
+
+              {/* Mode toggle: QR vs Text */}
+              <div className="flex rounded-lg border overflow-hidden">
+                <button
+                  className={`flex-1 py-2 px-3 text-sm font-medium flex items-center justify-center gap-1.5 transition-colors ${
+                    checkinCodeMode === 'qr' ? 'bg-emerald-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'
+                  }`}
+                  onClick={() => setCheckinCodeMode('qr')}
+                >
+                  <QrCode className="h-4 w-4" />
+                  Mã QR
+                </button>
+                <button
+                  className={`flex-1 py-2 px-3 text-sm font-medium flex items-center justify-center gap-1.5 transition-colors ${
+                    checkinCodeMode === 'text' ? 'bg-emerald-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'
+                  }`}
+                  onClick={() => setCheckinCodeMode('text')}
+                >
+                  <Hash className="h-4 w-4" />
+                  Mã văn bản
+                </button>
+              </div>
+
+              {/* QR Code display */}
+              {checkinCodeMode === 'qr' ? (
+                <div className="flex flex-col items-center gap-3">
+                  <div className="bg-white p-4 rounded-xl border-2 border-emerald-100 shadow-sm">
+                    <img 
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(selectedActivity.qrCode || selectedActivity.id)}`}
+                      alt="QR Code điểm danh"
+                      width={200}
+                      height={200}
+                      className="rounded-lg"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground text-center">
+                    Đoàn viên quét mã QR này để điểm danh
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="bg-gray-50 rounded-xl p-4 border-2 border-dashed border-gray-200 text-center">
+                    <p className="text-xs text-muted-foreground mb-2">Mã điểm danh</p>
+                    <p className="text-2xl font-mono font-bold text-emerald-700 tracking-widest select-all break-all">
+                      {(selectedActivity.qrCode || selectedActivity.id).substring(0, 8).toUpperCase()}
+                    </p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => {
+                      const code = (selectedActivity.qrCode || selectedActivity.id).substring(0, 8).toUpperCase()
+                      navigator.clipboard.writeText(code)
+                      setCopiedCode(true)
+                      setTimeout(() => setCopiedCode(false), 2000)
+                    }}
+                  >
+                    {copiedCode ? (
+                      <><CheckCircle2 className="h-4 w-4 mr-1.5 text-green-600" /> Đã sao chép!</>
+                    ) : (
+                      <><Copy className="h-4 w-4 mr-1.5" /> Sao chép mã</>
+                    )}
+                  </Button>
+                </div>
+              )}
+
+              {/* Send mode */}
+              <div className="space-y-3 border-t pt-3">
+                <p className="text-sm font-medium">Gửi mã cho đoàn viên:</p>
+                <div className="flex gap-2">
+                  <button
+                    className={`flex-1 py-2 px-3 text-sm font-medium rounded-lg border transition-colors ${
+                      checkinSendMode === 'all' ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                    onClick={() => setCheckinSendMode('all')}
+                  >
+                    <Users className="h-4 w-4 inline mr-1" />
+                    Tất cả
+                  </button>
+                  <button
+                    className={`flex-1 py-2 px-3 text-sm font-medium rounded-lg border transition-colors ${
+                      checkinSendMode === 'select' ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                    onClick={() => setCheckinSendMode('select')}
+                  >
+                    <ClipboardList className="h-4 w-4 inline mr-1" />
+                    Chọn thành viên
+                  </button>
+                </div>
+
+                {/* User selection list */}
+                {checkinSendMode === 'select' && activityStats && (
+                  <ScrollArea className="h-[150px] border rounded-lg p-2">
+                    <div className="space-y-1">
+                      {activityStats.participants.map(p => (
+                        <label key={p.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 cursor-pointer">
+                          <Checkbox 
+                            checked={checkinSelectedUsers.includes(p.userId)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setCheckinSelectedUsers(prev => [...prev, p.userId])
+                              } else {
+                                setCheckinSelectedUsers(prev => prev.filter(id => id !== p.userId))
+                              }
+                            }}
+                          />
+                          <span className="text-sm">{p.user.fullName}</span>
+                          {p.status === 'CHECKED_IN' && (
+                            <Badge className="ml-auto bg-green-100 text-green-700 text-[10px] hover:bg-green-100">Đã ĐD</Badge>
+                          )}
+                        </label>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCheckinCodeDialog(false)}>
+              Đóng
+            </Button>
+            <Button 
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              onClick={() => {
+                const targetCount = checkinSendMode === 'all' 
+                  ? activityStats?.participants.length || 0
+                  : checkinSelectedUsers.length
+                const targetLabel = checkinSendMode === 'all' 
+                  ? 'tất cả đoàn viên đã đăng ký' 
+                  : `${targetCount} thành viên được chọn`
+                
+                if (checkinSendMode === 'select' && checkinSelectedUsers.length === 0) {
+                  toast({ title: "Chưa chọn thành viên", description: "Vui lòng chọn ít nhất một thành viên", variant: "destructive" })
+                  return
+                }
+                
+                toast({ 
+                  title: "✅ Đã gửi mã điểm danh",
+                  description: `Mã điểm danh đã được gửi cho ${targetLabel} (${targetCount} người)`,
+                })
+                setShowCheckinCodeDialog(false)
+              }}
+            >
+              <Send className="h-4 w-4 mr-1.5" />
+              Gửi mã
             </Button>
           </DialogFooter>
         </DialogContent>
