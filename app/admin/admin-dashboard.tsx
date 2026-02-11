@@ -337,9 +337,9 @@ export default function AdminDashboard() {
                 </svg>
               </div>
               <div>
-                <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">HỆ THỐNG QUẢN LÝ TRUNG ĐOÀN 196</h1>
+                <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">HỆ THỐNG QUẢN LÝ ĐOÀN VIÊN TRUNG ĐOÀN 196</h1>
                 <p className="text-red-100 text-sm lg:text-base">
-                  Chào mừng, <span className="font-semibold text-white">{currentUser?.fullName}</span> - {currentUser?.youthPosition || 'Ban chấp hành Đoàn Cơ sở'}
+                  Chào mừng, <span className="font-semibold text-white">{currentUser?.fullName}</span> - Ban chấp hành Đoàn Cơ sở
                 </p>
               </div>
             </div>
@@ -811,8 +811,8 @@ export default function AdminDashboard() {
               </div>
               {sidebarOpen && (
                 <div className="overflow-hidden">
-                  <h2 className="font-bold text-gray-900 truncate">Quản trị viên</h2>
-                  <p className="text-xs text-gray-500 truncate">Admin Panel</p>
+                  <h2 className="font-bold text-gray-900 truncate">Đoàn Thanh Niên</h2>
+                  <p className="text-xs text-gray-500 truncate">Quản trị viên</p>
                 </div>
               )}
             </div>
@@ -871,7 +871,7 @@ export default function AdminDashboard() {
                   onClick={() => changeTab('profile')}
                 >
                   <p className="font-medium text-gray-900">{currentUser?.fullName}</p>
-                  <p className="text-sm text-gray-500">{currentUser?.youthPosition || 'Ban chấp hành Đoàn Cơ sở'}</p>
+                  <p className="text-sm text-gray-500">Ban chấp hành Đoàn Cơ sở</p>
                 </div>
                 <div 
                   className="w-10 h-10 rounded-full overflow-hidden cursor-pointer hover:ring-2 hover:ring-red-300 transition-all"
