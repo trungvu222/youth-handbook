@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Trophy } from "lucide-react"
+import { useAutoRefresh } from "@/hooks/use-auto-refresh"
 
 interface NewsScreenMobileProps {
   onShowPoints?: () => void
@@ -17,8 +18,11 @@ export default function NewsScreenMobile({ onShowPoints }: NewsScreenMobileProps
     loadPosts()
   }, [])
 
-  const loadPosts = async () => {
-    setLoading(true)
+  // Auto-refresh: poll every 30s + refresh on visibility/focus
+  useAutoRefresh(() => loadPosts(true))
+
+  const loadPosts = async (silent = false) => {
+    if (!silent) setLoading(true)
     try {
       const { postApi } = await import('@/lib/api')
       const result = await postApi.getPosts({ limit: 50 })

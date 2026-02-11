@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useAutoRefresh } from "@/hooks/use-auto-refresh"
 import {
   User,
   Star,
@@ -39,9 +40,12 @@ export default function MeScreenMobile({ onLogout }: MeScreenMobileProps) {
     loadUserData()
   }, [])
 
-  const loadUserData = async () => {
+  // Auto-refresh: poll every 30s + refresh on visibility/focus
+  useAutoRefresh(() => loadUserData(true))
+
+  const loadUserData = async (silent = false) => {
     try {
-      setLoading(true)
+      if (!silent) setLoading(true)
       const { profileApi, getStoredUser } = await import('@/lib/api')
       const profileResult = await profileApi.getMyProfile()
       

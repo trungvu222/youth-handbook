@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { ExamTaking } from '../exams/exam-taking'
 import { examApi } from '../../lib/api'
+import { useAutoRefresh } from '@/hooks/use-auto-refresh'
 
 export default function ExamsScreenMobile() {
   const [exams, setExams] = useState<any[]>([])
@@ -18,9 +19,12 @@ export default function ExamsScreenMobile() {
     loadExams()
   }, [])
 
-  const loadExams = async () => {
-    setLoading(true)
-    setError('')
+  // Auto-refresh: poll every 30s + refresh on visibility/focus
+  useAutoRefresh(() => loadExams(true))
+
+  const loadExams = async (silent = false) => {
+    if (!silent) setLoading(true)
+    if (!silent) setError('')
     try {
       const result = await examApi.getExams()
       

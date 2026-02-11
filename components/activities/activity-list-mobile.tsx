@@ -12,6 +12,7 @@ import {
   ChevronRight,
   RefreshCw
 } from "lucide-react"
+import { useAutoRefresh } from "@/hooks/use-auto-refresh"
 
 interface Activity {
   id: string
@@ -49,8 +50,8 @@ export default function ActivityListMobile({ onActivitySelect }: ActivityListMob
   const [error, setError] = useState<string | null>(null)
   const [joinLoading, setJoinLoading] = useState<string | null>(null)
 
-  const loadActivities = async () => {
-    setLoading(true)
+  const loadActivities = async (silent = false) => {
+    if (!silent) setLoading(true)
     setError(null)
     try {
       const { activityApi } = await import('@/lib/api')
@@ -81,6 +82,9 @@ export default function ActivityListMobile({ onActivitySelect }: ActivityListMob
     const timer = setTimeout(loadActivities, 200)
     return () => clearTimeout(timer)
   }, [])
+
+  // Auto-refresh: poll every 30s + refresh on visibility/focus
+  useAutoRefresh(() => loadActivities(true))
 
   const handleJoinActivity = async (activityId: string) => {
     setJoinLoading(activityId)
@@ -268,7 +272,7 @@ export default function ActivityListMobile({ onActivitySelect }: ActivityListMob
         <AlertCircle style={{ width: '48px', height: '48px', color: '#dc2626', margin: '0 auto 16px' }} />
         <p style={{ color: '#dc2626', marginBottom: '16px' }}>{error}</p>
         <button 
-          onClick={loadActivities}
+          onClick={() => loadActivities()}
           style={{ ...buttonStyle, backgroundColor: '#dc2626', color: '#fff', width: 'auto', padding: '10px 24px' }}
         >
           <RefreshCw style={{ width: '16px', height: '16px' }} />

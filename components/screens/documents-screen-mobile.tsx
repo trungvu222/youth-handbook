@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useAutoRefresh } from "@/hooks/use-auto-refresh"
 
 const documentTypes: Record<string, string> = {
   'CIRCULAR': 'Thông tư',
@@ -27,8 +28,11 @@ export default function DocumentsScreenMobile() {
     loadDocuments()
   }, [])
 
-  const loadDocuments = async () => {
-    setLoading(true)
+  // Auto-refresh: poll every 30s + refresh on visibility/focus
+  useAutoRefresh(() => loadDocuments(true))
+
+  const loadDocuments = async (silent = false) => {
+    if (!silent) setLoading(true)
     try {
       const { documentApi } = await import('@/lib/api')
       const result: any = await documentApi.getDocuments({ limit: 50 })

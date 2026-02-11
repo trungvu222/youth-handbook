@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { surveyApi } from "@/lib/api"
+import { useAutoRefresh } from "@/hooks/use-auto-refresh"
 
 interface SurveyQuestion {
   id: string
@@ -38,8 +39,11 @@ export default function SurveysScreenMobile({ onBack }: { onBack?: () => void })
     loadSurveys()
   }, [])
 
-  async function loadSurveys() {
-    setLoading(true)
+  // Auto-refresh: poll every 30s + refresh on visibility/focus
+  useAutoRefresh(() => loadSurveys(true))
+
+  async function loadSurveys(silent = false) {
+    if (!silent) setLoading(true)
     try {
       const result = await surveyApi.getSurveys({ status: 'ACTIVE' })
       if (result.success && result.data) {

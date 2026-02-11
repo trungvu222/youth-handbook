@@ -5,6 +5,7 @@ import { Calendar, RefreshCw } from "lucide-react"
 import ActivityListMobile from "@/components/activities/activity-list-mobile"
 import ActivityDetailMobile from "@/components/activities/activity-detail-mobile"
 import { activityApi, getStoredUser } from "@/lib/api"
+import { useAutoRefresh } from "@/hooks/use-auto-refresh"
 
 export default function ActivitiesScreen() {
   const [selectedActivity, setSelectedActivity] = useState<string | null>(null)
@@ -15,6 +16,9 @@ export default function ActivitiesScreen() {
     setIsReady(true)
     loadStats()
   }, [])
+
+  // Auto-refresh: poll every 30s + refresh on visibility/focus
+  useAutoRefresh(() => loadStats())
 
   async function loadStats() {
     try {

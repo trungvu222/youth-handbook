@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useAutoRefresh } from '@/hooks/use-auto-refresh'
 
 export default function StudyScreenMobile() {
   const [topics, setTopics] = useState<any[]>([])
@@ -13,8 +14,11 @@ export default function StudyScreenMobile() {
     loadTopics()
   }, [])
 
-  const loadTopics = async () => {
-    setLoading(true)
+  // Auto-refresh: poll every 30s + refresh on visibility/focus
+  useAutoRefresh(() => loadTopics(true))
+
+  const loadTopics = async (silent = false) => {
+    if (!silent) setLoading(true)
     try {
       const { studyApi } = await import('@/lib/api')
       const result: any = await studyApi.getStudyTopics()

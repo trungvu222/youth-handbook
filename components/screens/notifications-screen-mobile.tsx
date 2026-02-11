@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { notificationApi } from "@/lib/api"
+import { useAutoRefresh } from "@/hooks/use-auto-refresh"
 
 interface Notification {
   id: string
@@ -21,8 +22,11 @@ export default function NotificationsScreenMobile({ onBack }: { onBack?: () => v
     loadNotifications()
   }, [])
 
-  async function loadNotifications() {
-    setLoading(true)
+  // Auto-refresh: poll every 30s + refresh on visibility/focus
+  useAutoRefresh(() => loadNotifications(true))
+
+  async function loadNotifications(silent = false) {
+    if (!silent) setLoading(true)
     try {
       const result = await notificationApi.getNotifications()
       if (result.success && result.data) {
