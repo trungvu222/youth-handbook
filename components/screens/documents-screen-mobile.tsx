@@ -152,9 +152,9 @@ export default function DocumentsScreenMobile() {
   const filteredDocs = documents.filter(doc => {
     if (!searchText) return true
     const search = searchText.toLowerCase()
-    return doc.title.toLowerCase().includes(search) ||
-           doc.documentNumber.toLowerCase().includes(search) ||
-           doc.description.toLowerCase().includes(search)
+    return (doc.title || '').toLowerCase().includes(search) ||
+           (doc.documentNumber || '').toLowerCase().includes(search) ||
+           (doc.description || '').toLowerCase().includes(search)
   })
 
   // Document Detail View
