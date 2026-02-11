@@ -10,18 +10,17 @@ interface BottomNavigationProps {
 
 const tabs = [
   { id: "home" as TabType, label: "Bảng tin", icon: Home },
-  { id: "docs" as TabType, label: "Tài liệu", icon: FileText },
   { id: "activities" as TabType, label: "Sổ tay", icon: Calendar },
-  { id: "study" as TabType, label: "Trợ lý ảo", icon: MessageSquare },
+  { id: "docs" as TabType, label: "Tài liệu", icon: FileText },
+  { id: "study" as TabType, label: "Học tập", icon: MessageSquare },
   { id: "me" as TabType, label: "Cá nhân", icon: User },
 ]
 
 export function BottomNavigation({ activeTab, onTabChange }: BottomNavigationProps) {
-  // Inline styles for mobile compatibility - ALWAYS VISIBLE
   const navStyle: React.CSSProperties = {
     backgroundColor: '#ffffff',
-    borderTop: '1px solid #e5e7eb',
-    boxShadow: '0 -4px 12px rgba(0, 0, 0, 0.15)',
+    borderTop: '1px solid rgba(0,0,0,0.06)',
+    boxShadow: '0 -2px 16px rgba(0, 0, 0, 0.08)',
     paddingBottom: 'env(safe-area-inset-bottom, 0)',
   }
 
@@ -29,8 +28,8 @@ export function BottomNavigation({ activeTab, onTabChange }: BottomNavigationPro
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-around',
-    padding: '8px 0 10px 0',
-    maxWidth: '448px',
+    padding: '6px 4px 8px 4px',
+    maxWidth: '500px',
     margin: '0 auto',
   }
 
@@ -39,31 +38,45 @@ export function BottomNavigation({ activeTab, onTabChange }: BottomNavigationPro
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '6px 8px',
-    minWidth: '56px',
+    padding: '6px 4px',
+    minWidth: '52px',
     flex: 1,
-    color: isActive ? '#2563eb' : '#6b7280',
-    background: isActive ? '#eff6ff' : 'transparent',
+    color: isActive ? '#dc2626' : '#94a3b8',
+    background: 'transparent',
     border: 'none',
-    borderRadius: '8px',
+    borderRadius: '10px',
     cursor: 'pointer',
-    transition: 'all 0.2s',
+    transition: 'all 0.2s ease',
+    position: 'relative',
+  })
+
+  const getIconWrapStyle = (isActive: boolean): React.CSSProperties => ({
+    width: '36px',
+    height: '28px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: '14px',
+    backgroundColor: isActive ? '#fef2f2' : 'transparent',
+    transition: 'all 0.2s ease',
+    marginBottom: '2px',
   })
 
   const getIconStyle = (isActive: boolean): React.CSSProperties => ({
-    width: '22px',
-    height: '22px',
-    marginBottom: '4px',
-    color: isActive ? '#2563eb' : '#6b7280',
+    width: '20px',
+    height: '20px',
+    color: isActive ? '#dc2626' : '#94a3b8',
+    strokeWidth: isActive ? 2.2 : 1.8,
   })
 
   const getLabelStyle = (isActive: boolean): React.CSSProperties => ({
     fontSize: '10px',
-    fontWeight: isActive ? 600 : 500,
-    color: isActive ? '#2563eb' : '#6b7280',
+    fontWeight: isActive ? 700 : 500,
+    color: isActive ? '#dc2626' : '#94a3b8',
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
+    letterSpacing: isActive ? '0.2px' : '0',
   })
 
   return (
@@ -79,7 +92,9 @@ export function BottomNavigation({ activeTab, onTabChange }: BottomNavigationPro
               onClick={() => onTabChange(tab.id)}
               style={getTabStyle(isActive)}
             >
-              <Icon style={getIconStyle(isActive)} />
+              <div style={getIconWrapStyle(isActive)}>
+                <Icon style={getIconStyle(isActive)} />
+              </div>
               <span style={getLabelStyle(isActive)}>{tab.label}</span>
             </button>
           )

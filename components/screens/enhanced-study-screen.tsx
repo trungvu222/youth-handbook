@@ -10,17 +10,18 @@ export default function EnhancedStudyScreen() {
 
   // Inline styles for mobile compatibility
   const containerStyle: React.CSSProperties = {
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#f5f6fa',
     minHeight: '100%',
   }
 
   const tabsContainerStyle: React.CSSProperties = {
     display: 'flex',
     backgroundColor: '#ffffff',
-    borderBottom: '1px solid #e5e7eb',
+    borderBottom: '1px solid #f1f5f9',
     position: 'sticky',
     top: 0,
     zIndex: 10,
+    boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
   }
 
   const getTabStyle = (isActive: boolean): React.CSSProperties => ({
@@ -29,13 +30,13 @@ export default function EnhancedStudyScreen() {
     alignItems: 'center',
     justifyContent: 'center',
     gap: '8px',
-    padding: '16px',
-    backgroundColor: isActive ? '#eff6ff' : 'transparent',
+    padding: '14px',
+    backgroundColor: isActive ? '#fef2f2' : 'transparent',
     border: 'none',
-    borderBottom: isActive ? '3px solid #2563eb' : '3px solid transparent',
-    color: isActive ? '#2563eb' : '#6b7280',
+    borderBottom: isActive ? '3px solid #dc2626' : '3px solid transparent',
+    color: isActive ? '#dc2626' : '#94a3b8',
     fontWeight: isActive ? 600 : 500,
-    fontSize: '15px',
+    fontSize: '14px',
     cursor: 'pointer',
     transition: 'all 0.2s',
   })

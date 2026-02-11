@@ -42,21 +42,21 @@ export default function StudyScreenMobile() {
   }
 
   const containerStyle: React.CSSProperties = {
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#f5f6fa',
     minHeight: '100%',
-    paddingBottom: '100px', // Extra space for scrolling past bottom nav
+    paddingBottom: '100px',
   }
 
   const headerStyle: React.CSSProperties = {
-    background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
-    padding: '20px 16px',
+    background: 'linear-gradient(135deg, #7c3aed 0%, #8b5cf6 50%, #a78bfa 100%)',
+    padding: '24px 16px 20px',
     color: '#ffffff',
   }
 
   const tabsContainerStyle: React.CSSProperties = {
     display: 'flex',
     backgroundColor: '#ffffff',
-    borderBottom: '1px solid #e5e7eb',
+    borderBottom: '1px solid #f1f5f9',
   }
 
   const getTabStyle = (isActive: boolean): React.CSSProperties => ({
@@ -64,12 +64,12 @@ export default function StudyScreenMobile() {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '8px',
-    padding: '14px',
+    gap: '6px',
+    padding: '13px',
     backgroundColor: 'transparent',
     border: 'none',
-    borderBottom: isActive ? '3px solid #6366f1' : '3px solid transparent',
-    color: isActive ? '#6366f1' : '#6b7280',
+    borderBottom: isActive ? '3px solid #7c3aed' : '3px solid transparent',
+    color: isActive ? '#7c3aed' : '#94a3b8',
     fontWeight: isActive ? 600 : 500,
     fontSize: '14px',
     cursor: 'pointer',
@@ -77,18 +77,18 @@ export default function StudyScreenMobile() {
 
   const cardStyle: React.CSSProperties = {
     backgroundColor: '#ffffff',
-    margin: '12px 16px',
-    borderRadius: '12px',
+    margin: '6px 16px',
+    borderRadius: '14px',
     padding: '16px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-    border: '1px solid #e5e7eb',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+    border: '1px solid #f1f5f9',
   }
 
   const badgeStyle = (bg: string, color: string): React.CSSProperties => ({
     display: 'inline-flex',
     alignItems: 'center',
-    padding: '4px 10px',
-    borderRadius: '20px',
+    padding: '3px 10px',
+    borderRadius: '16px',
     fontSize: '11px',
     fontWeight: 600,
     backgroundColor: bg,
@@ -105,27 +105,28 @@ export default function StudyScreenMobile() {
 
   const welcomeStyle: React.CSSProperties = {
     textAlign: 'center',
-    padding: '40px 20px',
+    padding: '32px 20px',
   }
 
   const chatInputContainerStyle: React.CSSProperties = {
     display: 'flex',
-    gap: '12px',
+    gap: '10px',
     marginTop: 'auto',
   }
 
   const chatInputStyle: React.CSSProperties = {
     flex: 1,
     padding: '12px 16px',
-    border: '2px solid #e5e7eb',
+    border: '1.5px solid #e2e8f0',
     borderRadius: '24px',
     fontSize: '14px',
     outline: 'none',
+    backgroundColor: '#f8fafc',
   }
 
   const sendButtonStyle: React.CSSProperties = {
     padding: '12px 20px',
-    backgroundColor: '#6366f1',
+    backgroundColor: '#7c3aed',
     color: '#ffffff',
     border: 'none',
     borderRadius: '24px',
@@ -134,6 +135,7 @@ export default function StudyScreenMobile() {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    fontSize: '14px',
   }
 
   const getCategoryColor = (category: string) => {
@@ -159,13 +161,8 @@ export default function StudyScreenMobile() {
     <div style={containerStyle}>
       {/* Header */}
       <div style={headerStyle}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
-          <span style={{ fontSize: '24px' }}>🤖</span>
-          <span style={{ fontSize: '18px', fontWeight: 600 }}>Trợ lý ảo</span>
-        </div>
-        <p style={{ textAlign: 'center', fontSize: '13px', color: 'rgba(255,255,255,0.8)' }}>
-          Hỏi đáp và học tập cùng AI
-        </p>
+        <h1 style={{ fontSize: '22px', fontWeight: 700, letterSpacing: '0.3px', marginBottom: '4px', textAlign: 'center' }}>Trợ lý ảo</h1>
+        <p style={{ textAlign: 'center', fontSize: '13px', color: 'rgba(255,255,255,0.75)' }}>Hỏi đáp và học tập cùng AI</p>
       </div>
 
       {/* Tabs */}

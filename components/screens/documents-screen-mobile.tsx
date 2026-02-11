@@ -58,54 +58,56 @@ export default function DocumentsScreenMobile() {
 
   // ===== INLINE STYLES =====
   const containerStyle: React.CSSProperties = {
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#f5f6fa',
     minHeight: '100%',
-    paddingBottom: '100px', // Extra space for scrolling past bottom nav
+    paddingBottom: '100px',
   }
 
   const headerStyle: React.CSSProperties = {
-    background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-    padding: '20px 16px',
+    background: 'linear-gradient(135deg, #0369a1 0%, #0284c7 50%, #0ea5e9 100%)',
+    padding: '24px 16px 20px',
     color: '#ffffff',
   }
 
   const searchContainerStyle: React.CSSProperties = {
-    padding: '16px',
+    padding: '12px 16px',
     backgroundColor: '#ffffff',
-    borderBottom: '1px solid #e5e7eb',
+    borderBottom: '1px solid #f1f5f9',
   }
 
   const searchInputStyle: React.CSSProperties = {
     width: '100%',
-    padding: '12px 12px 12px 40px',
-    border: '1px solid #e5e7eb',
-    borderRadius: '8px',
+    padding: '11px 14px 11px 42px',
+    border: '1.5px solid #e2e8f0',
+    borderRadius: '12px',
     fontSize: '14px',
     outline: 'none',
     boxSizing: 'border-box' as const,
+    backgroundColor: '#f8fafc',
+    color: '#0f172a',
   }
 
   const cardStyle: React.CSSProperties = {
     backgroundColor: '#ffffff',
-    margin: '12px 16px',
-    borderRadius: '12px',
+    margin: '6px 16px',
+    borderRadius: '14px',
     padding: '16px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-    border: '1px solid #e5e7eb',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+    border: '1px solid #f1f5f9',
     cursor: 'pointer',
   }
 
   const badgeStyle = (bg: string, color: string): React.CSSProperties => ({
     display: 'inline-flex',
     alignItems: 'center',
-    padding: '4px 10px',
-    borderRadius: '20px',
+    padding: '3px 10px',
+    borderRadius: '16px',
     fontSize: '11px',
     fontWeight: 600,
     backgroundColor: bg,
     color: color,
-    marginRight: '8px',
-    marginBottom: '8px',
+    marginRight: '6px',
+    marginBottom: '6px',
   })
 
   const backButtonStyle: React.CSSProperties = {
@@ -114,12 +116,13 @@ export default function DocumentsScreenMobile() {
     justifyContent: 'center',
     width: '36px',
     height: '36px',
-    backgroundColor: '#f3f4f6',
-    border: 'none',
-    borderRadius: '8px',
+    backgroundColor: '#f8fafc',
+    border: '1px solid #e2e8f0',
+    borderRadius: '10px',
     cursor: 'pointer',
     marginRight: '12px',
-    fontSize: '18px',
+    fontSize: '16px',
+    color: '#475569',
   }
 
   const formatDate = (dateString: string) => {
@@ -134,13 +137,13 @@ export default function DocumentsScreenMobile() {
     )
   }
 
-  // Show loading state
   if (loading) {
     return (
-      <div style={{ ...containerStyle, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+      <div style={{ backgroundColor: '#f5f6fa', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>⏳</div>
-          <div style={{ color: '#6b7280' }}>Đang tải...</div>
+          <div style={{ width: '40px', height: '40px', border: '3px solid #e0f2fe', borderTopColor: '#0284c7', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
+          <div style={{ color: '#64748b', fontSize: '14px' }}>Đang tải tài liệu...</div>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
       </div>
     )
@@ -159,19 +162,13 @@ export default function DocumentsScreenMobile() {
     return (
       <div style={containerStyle}>
         <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          padding: '16px',
-          backgroundColor: '#ffffff',
-          borderBottom: '1px solid #e5e7eb',
-          position: 'sticky',
-          top: 0,
-          zIndex: 10,
+          display: 'flex', alignItems: 'center', padding: '14px 16px',
+          backgroundColor: '#ffffff', borderBottom: '1px solid #f1f5f9',
+          position: 'sticky', top: 0, zIndex: 10,
+          boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
         }}>
-          <button style={backButtonStyle} onClick={() => setSelectedDoc(null)}>
-            ←
-          </button>
-          <span style={{ fontSize: '18px', fontWeight: 600, color: '#111827' }}>Chi tiết văn bản</span>
+          <button style={backButtonStyle} onClick={() => setSelectedDoc(null)}>←</button>
+          <span style={{ fontSize: '17px', fontWeight: 600, color: '#0f172a' }}>Chi tiết văn bản</span>
         </div>
 
         <div style={cardStyle}>
@@ -236,13 +233,21 @@ export default function DocumentsScreenMobile() {
     <div style={containerStyle}>
       {/* Header */}
       <div style={headerStyle}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
-          <span style={{ fontSize: '24px' }}>📄</span>
-          <span style={{ fontSize: '18px', fontWeight: 600 }}>Tài liệu</span>
+        <h1 style={{ fontSize: '22px', fontWeight: 700, letterSpacing: '0.3px', marginBottom: '4px' }}>Tài liệu</h1>
+        <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)' }}>Kho lưu trữ văn bản, quy định & hướng dẫn</p>
+        <div style={{ backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: '14px', padding: '14px 16px', marginTop: '16px', border: '1px solid rgba(255,255,255,0.1)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-around', textAlign: 'center' }}>
+            <div>
+              <div style={{ fontSize: '22px', fontWeight: 700 }}>{documents.length}</div>
+              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)' }}>Văn bản</div>
+            </div>
+            <div style={{ width: '1px', backgroundColor: 'rgba(255,255,255,0.15)' }} />
+            <div>
+              <div style={{ fontSize: '22px', fontWeight: 700 }}>{favorites.length}</div>
+              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)' }}>Yêu thích</div>
+            </div>
+          </div>
         </div>
-        <p style={{ textAlign: 'center', fontSize: '13px', color: 'rgba(255,255,255,0.8)' }}>
-          Kho lưu trữ văn bản, quy định, hướng dẫn
-        </p>
       </div>
 
       {/* Search */}
@@ -261,9 +266,9 @@ export default function DocumentsScreenMobile() {
 
       {/* Documents List */}
       {filteredDocs.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '40px 16px' }}>
-          <span style={{ fontSize: '48px', display: 'block', marginBottom: '16px' }}>📄</span>
-          <p style={{ color: '#6b7280', fontSize: '15px' }}>Không có văn bản nào.</p>
+        <div style={{ textAlign: 'center', padding: '48px 16px' }}>
+          <span style={{ fontSize: '48px', display: 'block', marginBottom: '12px' }}>📄</span>
+          <p style={{ color: '#64748b', fontSize: '15px', fontWeight: 500 }}>Chưa có văn bản nào</p>
         </div>
       ) : (
         <div style={{ paddingBottom: '20px' }}>

@@ -45,13 +45,13 @@ export default function ActivitiesScreen() {
   // Inline styles for mobile
   const containerStyle: React.CSSProperties = {
     minHeight: '100%',
-    backgroundColor: '#f8fafc',
-    paddingBottom: '100px', // Extra space for scrolling past bottom nav
+    backgroundColor: '#f5f6fa',
+    paddingBottom: '100px',
   }
 
   const headerStyle: React.CSSProperties = {
-    background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #0ea5e9 100%)',
-    padding: '20px',
+    background: 'linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #3b82f6 100%)',
+    padding: '24px 16px 20px',
     color: '#ffffff',
   }
 
@@ -59,28 +59,29 @@ export default function ActivitiesScreen() {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '12px',
-    marginBottom: '16px',
+    gap: '10px',
+    marginBottom: '6px',
   }
 
   const titleStyle: React.CSSProperties = {
-    fontSize: '20px',
+    fontSize: '22px',
     fontWeight: 700,
     textAlign: 'center',
+    letterSpacing: '0.3px',
   }
 
   const subtitleStyle: React.CSSProperties = {
-    fontSize: '14px',
-    color: 'rgba(255,255,255,0.9)',
+    fontSize: '13px',
+    color: 'rgba(255,255,255,0.75)',
     textAlign: 'center',
   }
 
   const statsCardStyle: React.CSSProperties = {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: '16px',
-    padding: '16px',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderRadius: '14px',
+    padding: '14px 16px',
     marginTop: '16px',
-    backdropFilter: 'blur(10px)',
+    border: '1px solid rgba(255,255,255,0.1)',
   }
 
   const statsRowStyle: React.CSSProperties = {
@@ -94,25 +95,25 @@ export default function ActivitiesScreen() {
   }
 
   const statNumberStyle: React.CSSProperties = {
-    fontSize: '24px',
+    fontSize: '22px',
     fontWeight: 700,
-    marginBottom: '4px',
+    marginBottom: '2px',
   }
 
   const statLabelStyle: React.CSSProperties = {
-    fontSize: '12px',
-    color: 'rgba(255,255,255,0.8)',
+    fontSize: '11px',
+    color: 'rgba(255,255,255,0.7)',
   }
 
   const contentStyle: React.CSSProperties = {
-    padding: '20px',
+    padding: '16px',
   }
 
   const sectionTitleStyle: React.CSSProperties = {
     fontSize: '16px',
     fontWeight: 600,
-    color: '#1f2937',
-    marginBottom: '16px',
+    color: '#0f172a',
+    marginBottom: '14px',
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
@@ -124,16 +125,16 @@ export default function ActivitiesScreen() {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)',
+    background: 'linear-gradient(135deg, #1e40af 0%, #2563eb 100%)',
   }
 
   const spinnerStyle: React.CSSProperties = {
     width: '40px',
     height: '40px',
-    border: '3px solid rgba(255,255,255,0.3)',
+    border: '3px solid rgba(255,255,255,0.2)',
     borderTopColor: '#ffffff',
     borderRadius: '50%',
-    animation: 'spin 1s linear infinite',
+    animation: 'spin 0.8s linear infinite',
     marginBottom: '16px',
   }
 
@@ -160,7 +161,7 @@ export default function ActivitiesScreen() {
       {/* Header */}
       <div style={headerStyle}>
         <div style={headerTopStyle}>
-          <Calendar style={{ width: '28px', height: '28px' }} />
+          <Calendar style={{ width: '24px', height: '24px' }} />
           <h1 style={titleStyle}>Sổ tay Đoàn viên</h1>
         </div>
         <p style={subtitleStyle}>Theo dõi và tham gia các hoạt động Đoàn</p>
@@ -172,12 +173,12 @@ export default function ActivitiesScreen() {
               <div style={statNumberStyle}>{stats.total}</div>
               <div style={statLabelStyle}>Hoạt động</div>
             </div>
-            <div style={{ width: '1px', backgroundColor: 'rgba(255,255,255,0.2)' }} />
+            <div style={{ width: '1px', backgroundColor: 'rgba(255,255,255,0.15)' }} />
             <div style={statItemStyle}>
               <div style={statNumberStyle}>{stats.joined}</div>
               <div style={statLabelStyle}>Đã tham gia</div>
             </div>
-            <div style={{ width: '1px', backgroundColor: 'rgba(255,255,255,0.2)' }} />
+            <div style={{ width: '1px', backgroundColor: 'rgba(255,255,255,0.15)' }} />
             <div style={statItemStyle}>
               <div style={statNumberStyle}>{stats.points}</div>
               <div style={statLabelStyle}>Điểm</div>

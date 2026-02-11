@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { BottomNavigation } from "@/components/navigation/bottom-navigation"
-import HomeScreen from "@/components/screens/home-screen"
 import EnhancedStudyScreen from "@/components/screens/enhanced-study-screen"
 import DocumentsScreenMobile from "@/components/screens/documents-screen-mobile"
 import MeScreenMobile from "@/components/screens/me-screen-mobile"
@@ -18,7 +17,7 @@ interface MainAppProps {
 }
 
 export function MainApp({ onLogout }: MainAppProps) {
-  const [activeTab, setActiveTab] = useState<TabType>("activities")
+  const [activeTab, setActiveTab] = useState<TabType>("home")
   const [showPoints, setShowPoints] = useState(false)
   const [showAdmin, setShowAdmin] = useState(false)
 
@@ -29,7 +28,7 @@ export function MainApp({ onLogout }: MainAppProps) {
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#f5f6fa',
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
@@ -39,7 +38,8 @@ export function MainApp({ onLogout }: MainAppProps) {
     flex: 1,
     overflowY: 'auto',
     overflowX: 'hidden',
-    paddingBottom: '70px', // Space for bottom nav
+    paddingBottom: '68px', // Space for bottom nav
+    WebkitOverflowScrolling: 'touch',
   }
 
   const navWrapperStyle: React.CSSProperties = {
@@ -79,7 +79,7 @@ export function MainApp({ onLogout }: MainAppProps) {
 
     switch (activeTab) {
       case "home":
-        return <NewsScreenMobile />
+        return <NewsScreenMobile onShowPoints={() => setShowPoints(true)} />
       case "activities":
         return <ActivitiesScreen />
       case "study":
@@ -89,7 +89,7 @@ export function MainApp({ onLogout }: MainAppProps) {
       case "me":
         return <MeScreenMobile onLogout={onLogout} />
       default:
-        return <HomeScreen onShowPoints={() => setShowPoints(true)} onShowAdmin={() => setShowAdmin(true)} />
+        return <NewsScreenMobile onShowPoints={() => setShowPoints(true)} />
     }
   }
 

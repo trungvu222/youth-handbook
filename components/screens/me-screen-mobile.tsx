@@ -121,25 +121,24 @@ export default function MeScreenMobile({ onLogout }: MeScreenMobileProps) {
 
   // Sub-screen: Back button
   const renderBackButton = (title: string) => (
-    <div style={{ display: 'flex', alignItems: 'center', padding: '16px', backgroundColor: '#fff', borderBottom: '1px solid #e5e7eb' }}>
-      <button onClick={() => setActiveSection('profile')} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', fontSize: '15px', fontWeight: 500 }}>
-        <ChevronLeft style={{ width: '20px', height: '20px' }} />
-        Quay lại
+    <div style={{ display: 'flex', alignItems: 'center', padding: '14px 16px', backgroundColor: '#fff', borderBottom: '1px solid #f1f5f9' }}>
+      <button onClick={() => setActiveSection('profile')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', cursor: 'pointer', color: '#334155', padding: 0 }}>
+        <ChevronLeft style={{ width: '18px', height: '18px' }} />
       </button>
-      <span style={{ flex: 1, textAlign: 'center', fontSize: '16px', fontWeight: 600, color: '#111827', marginRight: '60px' }}>{title}</span>
+      <span style={{ flex: 1, textAlign: 'center', fontSize: '16px', fontWeight: 600, color: '#0f172a', marginRight: '36px' }}>{title}</span>
     </div>
   )
 
   // ===== RENDER EDIT PROFILE =====
   const renderEditProfile = () => {
-    const fieldStyle: React.CSSProperties = { width: '100%', padding: '12px 16px', border: '1px solid #d1d5db', borderRadius: '10px', fontSize: '15px', marginBottom: '12px', outline: 'none', backgroundColor: '#fff' }
-    const labelStyle: React.CSSProperties = { fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '6px', display: 'block' }
+    const fieldStyle: React.CSSProperties = { width: '100%', padding: '12px 16px', border: '1.5px solid #e2e8f0', borderRadius: '12px', fontSize: '15px', marginBottom: '12px', outline: 'none', backgroundColor: '#f8fafc', color: '#0f172a' }
+    const labelStyle: React.CSSProperties = { fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px', display: 'block' }
     
     return (
-      <div style={{ backgroundColor: '#f8fafc', minHeight: '100%', paddingBottom: '100px' }}>
+      <div style={{ backgroundColor: '#f5f6fa', minHeight: '100%', paddingBottom: '100px' }}>
         {renderBackButton('Chỉnh sửa hồ sơ')}
         <div style={{ padding: '16px' }}>
-          <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+          <div style={{ backgroundColor: '#fff', borderRadius: '14px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', border: '1px solid #f1f5f9' }}>
             <label style={labelStyle}>Họ và tên</label>
             <input style={fieldStyle} value={editForm.fullName} onChange={e => setEditForm({...editForm, fullName: e.target.value})} placeholder="Nhập họ và tên" />
             
@@ -161,7 +160,7 @@ export default function MeScreenMobile({ onLogout }: MeScreenMobileProps) {
             <label style={labelStyle}>Nơi làm việc / học tập</label>
             <input style={fieldStyle} value={editForm.workPlace} onChange={e => setEditForm({...editForm, workPlace: e.target.value})} placeholder="Nhập nơi làm việc" />
             
-            <button onClick={handleSaveProfile} disabled={saving} style={{ width: '100%', padding: '14px', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '8px', opacity: saving ? 0.7 : 1 }}>
+            <button onClick={handleSaveProfile} disabled={saving} style={{ width: '100%', padding: '14px', background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)', color: '#fff', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '8px', opacity: saving ? 0.7 : 1 }}>
               {saving ? <Loader2 style={{ width: '18px', height: '18px', animation: 'spin 1s linear infinite' }} /> : <Save style={{ width: '18px', height: '18px' }} />}
               {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
             </button>
@@ -207,7 +206,7 @@ export default function MeScreenMobile({ onLogout }: MeScreenMobileProps) {
   }
 
   // ===== MAIN PROFILE VIEW =====
-  const containerStyle: React.CSSProperties = { backgroundColor: '#f8fafc', minHeight: '100%', paddingBottom: '100px' }
+  const containerStyle: React.CSSProperties = { backgroundColor: '#f5f6fa', minHeight: '100%', paddingBottom: '100px' }
 
   const menuItems = [
     { id: "profile" as SectionType, label: "Xem hồ sơ", icon: User },
@@ -220,10 +219,10 @@ export default function MeScreenMobile({ onLogout }: MeScreenMobileProps) {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', backgroundColor: '#f5f6fa' }}>
         <div style={{ textAlign: 'center' }}>
-          <Loader2 style={{ width: '32px', height: '32px', color: '#2563eb', animation: 'spin 1s linear infinite', margin: '0 auto 12px' }} />
-          <p style={{ color: '#6b7280', fontSize: '14px' }}>Đang tải thông tin...</p>
+          <Loader2 style={{ width: '32px', height: '32px', color: '#dc2626', animation: 'spin 1s linear infinite', margin: '0 auto 12px' }} />
+          <p style={{ color: '#64748b', fontSize: '14px' }}>Đang tải thông tin...</p>
         </div>
       </div>
     )
@@ -231,9 +230,29 @@ export default function MeScreenMobile({ onLogout }: MeScreenMobileProps) {
 
   return (
     <div style={containerStyle}>
+      {/* Profile Card */}
+      <div style={{ background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)', padding: '28px 16px 24px', marginBottom: '0' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{ width: '76px', height: '76px', borderRadius: '50%', background: 'linear-gradient(135deg, #fef2f2, #ffffff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', fontWeight: 700, color: '#dc2626', marginBottom: '12px', border: '3px solid rgba(255,255,255,0.3)', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+            {user?.avatarUrl ? (
+              <img src={user.avatarUrl} alt={getUserName()} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+            ) : (
+              getInitials(getUserName())
+            )}
+          </div>
+          <div style={{ fontSize: '20px', fontWeight: 700, color: '#ffffff', marginBottom: '4px' }}>{getUserName()}</div>
+          <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.8)', marginBottom: '2px' }}>{getUserRole()}</div>
+          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginBottom: '12px' }}>{user?.unit?.name || user?.unitId || 'Chưa có Chi đoàn'}</div>
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+            <span style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: '#ffffff', padding: '5px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, backdropFilter: 'blur(4px)' }}>{getUserPoints()} điểm</span>
+            <span style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: '#ffffff', padding: '5px 14px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, backdropFilter: 'blur(4px)' }}>{getUserRank()}</span>
+          </div>
+        </div>
+      </div>
+
       {/* Menu Section */}
-      <div style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #e5e7eb', marginBottom: '12px' }}>
-        {menuItems.map((item) => {
+      <div style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #f1f5f9', marginBottom: '8px' }}>
+        {menuItems.map((item, index) => {
           const Icon = item.icon
           return (
             <button
@@ -241,43 +260,25 @@ export default function MeScreenMobile({ onLogout }: MeScreenMobileProps) {
               onClick={() => setActiveSection(item.id)}
               style={{
                 display: 'flex', alignItems: 'center', padding: '14px 16px',
-                borderBottom: '1px solid #f3f4f6', cursor: 'pointer',
-                backgroundColor: activeSection === item.id ? '#fef3c7' : '#ffffff',
+                borderBottom: index < menuItems.length - 1 ? '1px solid #f1f5f9' : 'none', cursor: 'pointer',
+                backgroundColor: '#ffffff',
                 width: '100%', border: 'none', textAlign: 'left',
               }}
             >
-              <Icon style={{ width: '20px', height: '20px', marginRight: '12px', color: '#6b7280' }} />
-              <span style={{ flex: 1, fontSize: '15px', color: '#1f2937' }}>{item.label}</span>
-              <ChevronRight style={{ width: '16px', height: '16px', color: '#9ca3af' }} />
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '12px' }}>
+                <Icon style={{ width: '18px', height: '18px', color: '#64748b' }} />
+              </div>
+              <span style={{ flex: 1, fontSize: '14px', color: '#0f172a', fontWeight: 500 }}>{item.label}</span>
+              <ChevronRight style={{ width: '16px', height: '16px', color: '#cbd5e1' }} />
             </button>
           )
         })}
       </div>
 
-      {/* Profile Card */}
-      <div style={{ backgroundColor: '#ffffff', padding: '24px 16px', marginBottom: '12px', borderBottom: '1px solid #e5e7eb' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '16px' }}>
-          <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 600, color: '#92400e', marginBottom: '12px', border: '3px solid #fbbf24' }}>
-            {user?.avatarUrl ? (
-              <img src={user.avatarUrl} alt={getUserName()} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-            ) : (
-              getInitials(getUserName())
-            )}
-          </div>
-          <div style={{ fontSize: '20px', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>{getUserName()}</div>
-          <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '2px' }}>{getUserRole()}</div>
-          <div style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '12px' }}>{user?.unit?.name || user?.unitId || 'Chưa có Chi đoàn'}</div>
-          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-            <span style={{ backgroundColor: '#fef3c7', color: '#92400e', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 600 }}>{getUserPoints()} điểm</span>
-            <span style={{ backgroundColor: '#d1fae5', color: '#065f46', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 600 }}>{getUserRank()}</span>
-          </div>
-        </div>
-      </div>
-
       {/* Contact Info */}
-      <div style={{ backgroundColor: '#ffffff', padding: '16px', marginBottom: '12px', borderBottom: '1px solid #e5e7eb' }}>
-        <div style={{ fontSize: '16px', fontWeight: 600, color: '#111827', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Phone style={{ width: '18px', height: '18px', color: '#f59e0b' }} />
+      <div style={{ backgroundColor: '#ffffff', padding: '16px', marginBottom: '8px', border: '1px solid #f1f5f9', margin: '0 0 8px' }}>
+        <div style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Phone style={{ width: '16px', height: '16px', color: '#dc2626' }} />
           Thông tin liên hệ
         </div>
         {[
@@ -287,23 +288,23 @@ export default function MeScreenMobile({ onLogout }: MeScreenMobileProps) {
           { icon: Calendar, text: `Gia nhập: ${user?.dateJoined ? new Date(user.dateJoined).toLocaleDateString('vi-VN') : 'Chưa rõ'}` },
         ].map((item, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
-            <item.icon style={{ width: '18px', height: '18px', color: '#9ca3af', marginRight: '12px' }} />
-            <span style={{ fontSize: '14px', color: '#374151' }}>{item.text}</span>
+            <item.icon style={{ width: '16px', height: '16px', color: '#94a3b8', marginRight: '12px' }} />
+            <span style={{ fontSize: '13px', color: '#334155' }}>{item.text}</span>
           </div>
         ))}
       </div>
 
       {/* Quick Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', padding: '16px', backgroundColor: '#ffffff', marginBottom: '12px', borderBottom: '1px solid #e5e7eb' }}>
-        <div style={{ backgroundColor: '#f9fafb', padding: '16px', borderRadius: '12px', textAlign: 'center', border: '1px solid #e5e7eb' }}>
-          <Award style={{ width: '32px', height: '32px', color: '#f59e0b', margin: '0 auto 8px' }} />
-          <div style={{ fontSize: '24px', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>{getUserPoints()}</div>
-          <div style={{ fontSize: '12px', color: '#6b7280' }}>Điểm tích lũy</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', padding: '16px', backgroundColor: '#ffffff', marginBottom: '8px' }}>
+        <div style={{ backgroundColor: '#f8fafc', padding: '16px', borderRadius: '14px', textAlign: 'center', border: '1px solid #f1f5f9' }}>
+          <Award style={{ width: '28px', height: '28px', color: '#f59e0b', margin: '0 auto 8px' }} />
+          <div style={{ fontSize: '22px', fontWeight: 700, color: '#0f172a', marginBottom: '4px' }}>{getUserPoints()}</div>
+          <div style={{ fontSize: '11px', color: '#64748b' }}>Điểm tích lũy</div>
         </div>
-        <div style={{ backgroundColor: '#f9fafb', padding: '16px', borderRadius: '12px', textAlign: 'center', border: '1px solid #e5e7eb' }}>
-          <Star style={{ width: '32px', height: '32px', color: '#10b981', margin: '0 auto 8px' }} />
-          <div style={{ fontSize: '24px', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>{getUserRank()}</div>
-          <div style={{ fontSize: '12px', color: '#6b7280' }}>Xếp loại</div>
+        <div style={{ backgroundColor: '#f8fafc', padding: '16px', borderRadius: '14px', textAlign: 'center', border: '1px solid #f1f5f9' }}>
+          <Star style={{ width: '28px', height: '28px', color: '#10b981', margin: '0 auto 8px' }} />
+          <div style={{ fontSize: '22px', fontWeight: 700, color: '#0f172a', marginBottom: '4px' }}>{getUserRank()}</div>
+          <div style={{ fontSize: '11px', color: '#64748b' }}>Xếp loại</div>
         </div>
       </div>
 

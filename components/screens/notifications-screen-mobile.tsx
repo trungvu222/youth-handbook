@@ -72,18 +72,18 @@ export default function NotificationsScreenMobile({ onBack }: { onBack?: () => v
   const unreadCount = notifications.filter(n => !n.isRead).length
 
   return (
-    <div style={{ backgroundColor: '#f8fafc', minHeight: '100%', paddingBottom: 100 }}>
+    <div style={{ backgroundColor: '#f5f6fa', minHeight: '100%', paddingBottom: 100 }}>
       {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)', padding: '20px 16px', color: '#fff' }}>
+      <div style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 50%, #ef4444 100%)', padding: '24px 16px 20px', color: '#fff' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {onBack && (
-            <button onClick={onBack} style={{ background: 'none', border: 'none', color: '#fff', fontSize: 18, cursor: 'pointer' }}>
-              ← Quay lại
+            <button onClick={onBack} style={{ width: 36, height: 36, background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', fontSize: 16, cursor: 'pointer', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              ←
             </button>
           )}
           <h1 style={{ fontSize: 20, fontWeight: 700, flex: 1 }}>Thông báo</h1>
           {unreadCount > 0 && (
-            <span style={{ background: '#fff', color: '#ef4444', padding: '4px 10px', borderRadius: 20, fontSize: 13, fontWeight: 700 }}>
+            <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', padding: '4px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700, backdropFilter: 'blur(4px)' }}>
               {unreadCount} mới
             </span>
           )}
@@ -94,14 +94,15 @@ export default function NotificationsScreenMobile({ onBack }: { onBack?: () => v
       <div style={{ padding: 16 }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: 40 }}>
-            <div style={{ fontSize: 32 }}>⏳</div>
-            <p style={{ color: '#6b7280', marginTop: 8 }}>Đang tải...</p>
+            <div style={{ width: '40px', height: '40px', border: '3px solid #fef3c7', borderTopColor: '#f59e0b', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
+            <p style={{ color: '#64748b', marginTop: 8, fontSize: 14 }}>Đang tải...</p>
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           </div>
         ) : notifications.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 40 }}>
-            <div style={{ fontSize: 48 }}>🔔</div>
-            <h3 style={{ fontSize: 16, fontWeight: 600, color: '#6b7280', marginTop: 12 }}>Không có thông báo</h3>
-            <p style={{ color: '#9ca3af', fontSize: 14, marginTop: 4 }}>Bạn sẽ nhận thông báo khi có hoạt động mới</p>
+            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'linear-gradient(135deg, #fef3c7, #fffbeb)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', fontSize: '24px' }}>🔔</div>
+            <h3 style={{ fontSize: 15, fontWeight: 600, color: '#64748b', marginTop: 12 }}>Không có thông báo</h3>
+            <p style={{ color: '#94a3b8', fontSize: 13, marginTop: 4 }}>Bạn sẽ nhận thông báo khi có hoạt động mới</p>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -114,10 +115,11 @@ export default function NotificationsScreenMobile({ onBack }: { onBack?: () => v
                   textAlign: 'left',
                   padding: 16,
                   background: notification.isRead ? '#fff' : '#eff6ff',
-                  borderRadius: 12,
-                  border: notification.isRead ? '1px solid #e5e7eb' : '1px solid #93c5fd',
+                  borderRadius: 14,
+                  border: notification.isRead ? '1px solid #f1f5f9' : '1px solid #93c5fd',
                   cursor: 'pointer',
                   position: 'relative',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                 }}
               >
                 {!notification.isRead && (
@@ -126,13 +128,13 @@ export default function NotificationsScreenMobile({ onBack }: { onBack?: () => v
                 <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                   <span style={{ fontSize: 24 }}>{getTypeIcon(notification.type)}</span>
                   <div style={{ flex: 1 }}>
-                    <h3 style={{ fontSize: 15, fontWeight: 600, color: '#1f2937', marginBottom: 4 }}>
+                    <h3 style={{ fontSize: 14, fontWeight: 600, color: '#0f172a', marginBottom: 4 }}>
                       {notification.title}
                     </h3>
-                    <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.5 }}>
+                    <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.5 }}>
                       {notification.message}
                     </p>
-                    <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 6 }}>
+                    <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 6 }}>
                       {timeAgo(notification.createdAt)}
                     </p>
                   </div>

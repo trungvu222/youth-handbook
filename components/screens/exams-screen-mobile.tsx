@@ -57,53 +57,55 @@ export default function ExamsScreenMobile() {
   }
   // ===== INLINE STYLES =====
   const containerStyle: React.CSSProperties = {
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#f5f6fa',
     minHeight: '100%',
-    paddingBottom: '100px', // Extra space for scrolling past bottom nav
+    paddingBottom: '100px',
   }
 
   const headerStyle: React.CSSProperties = {
-    background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
-    padding: '20px 16px',
+    background: 'linear-gradient(135deg, #7c3aed 0%, #8b5cf6 50%, #a78bfa 100%)',
+    padding: '24px 16px 20px',
     color: '#ffffff',
   }
 
   const searchContainerStyle: React.CSSProperties = {
-    padding: '16px',
+    padding: '12px 16px',
     backgroundColor: '#ffffff',
-    borderBottom: '1px solid #e5e7eb',
+    borderBottom: '1px solid #f1f5f9',
   }
 
   const searchInputStyle: React.CSSProperties = {
     width: '100%',
-    padding: '12px 12px 12px 40px',
-    border: '1px solid #e5e7eb',
-    borderRadius: '8px',
+    padding: '11px 14px 11px 42px',
+    border: '1.5px solid #e2e8f0',
+    borderRadius: '12px',
     fontSize: '14px',
     outline: 'none',
     boxSizing: 'border-box' as const,
+    backgroundColor: '#f8fafc',
+    color: '#0f172a',
   }
 
   const cardStyle: React.CSSProperties = {
     backgroundColor: '#ffffff',
-    margin: '12px 16px',
-    borderRadius: '12px',
+    margin: '6px 16px',
+    borderRadius: '14px',
     padding: '16px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-    border: '1px solid #e5e7eb',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+    border: '1px solid #f1f5f9',
   }
 
   const badgeStyle = (bg: string, color: string): React.CSSProperties => ({
     display: 'inline-flex',
     alignItems: 'center',
-    padding: '4px 10px',
-    borderRadius: '20px',
+    padding: '3px 10px',
+    borderRadius: '16px',
     fontSize: '11px',
     fontWeight: 600,
     backgroundColor: bg,
     color: color,
     marginRight: '6px',
-    marginBottom: '8px',
+    marginBottom: '6px',
   })
 
   const buttonStyle: React.CSSProperties = {
@@ -111,11 +113,11 @@ export default function ExamsScreenMobile() {
     alignItems: 'center',
     justifyContent: 'center',
     gap: '6px',
-    padding: '10px 16px',
+    padding: '11px 16px',
     backgroundColor: '#7c3aed',
     color: '#ffffff',
     border: 'none',
-    borderRadius: '8px',
+    borderRadius: '12px',
     fontSize: '14px',
     fontWeight: 600,
     cursor: 'pointer',
@@ -164,10 +166,11 @@ export default function ExamsScreenMobile() {
   // Show loading state
   if (loading) {
     return (
-      <div style={{ ...containerStyle, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+      <div style={{ backgroundColor: '#f5f6fa', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>⏳</div>
-          <div style={{ color: '#6b7280' }}>Đang tải kỳ thi...</div>
+          <div style={{ width: '40px', height: '40px', border: '3px solid #ede9fe', borderTopColor: '#7c3aed', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }} />
+          <div style={{ color: '#64748b', fontSize: '14px' }}>Đang tải kỳ thi...</div>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
       </div>
     )
@@ -178,42 +181,36 @@ export default function ExamsScreenMobile() {
     return (
       <div style={containerStyle}>
         <div style={headerStyle}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
-            <span style={{ fontSize: '24px' }}>🏆</span>
-            <span style={{ fontSize: '18px', fontWeight: 600 }}>Kỳ thi trực tuyến</span>
-          </div>
-          <p style={{ textAlign: 'center', fontSize: '13px', color: 'rgba(255,255,255,0.8)' }}>
-            Tham gia các kỳ thi và kiểm tra kiến thức
-          </p>
+          <h1 style={{ fontSize: '22px', fontWeight: 700, textAlign: 'center', letterSpacing: '0.3px', marginBottom: '4px' }}>Kỳ thi trực tuyến</h1>
+          <p style={{ textAlign: 'center', fontSize: '13px', color: 'rgba(255,255,255,0.75)' }}>Tham gia các kỳ thi và kiểm tra kiến thức</p>
         </div>
         
         <div style={{ padding: '40px 16px', textAlign: 'center' }}>
           <div style={{ 
             backgroundColor: '#fef2f2', 
-            border: '2px solid #fca5a5', 
-            borderRadius: '12px', 
+            border: '1.5px solid #fecaca', 
+            borderRadius: '14px', 
             padding: '24px',
-            marginBottom: '20px'
           }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
-            <div style={{ fontSize: '16px', fontWeight: 600, color: '#dc2626', marginBottom: '8px' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: '22px' }}>!</div>
+            <div style={{ fontSize: '15px', fontWeight: 600, color: '#dc2626', marginBottom: '8px' }}>
               {error}
             </div>
             <button
               onClick={loadExams}
               style={{
                 marginTop: '16px',
-                padding: '12px 24px',
-                background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+                padding: '11px 24px',
+                background: 'linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%)',
                 color: '#ffffff',
                 border: 'none',
-                borderRadius: '8px',
+                borderRadius: '12px',
                 fontSize: '14px',
                 fontWeight: 600,
                 cursor: 'pointer',
               }}
             >
-              🔄 Thử lại
+              Thử lại
             </button>
           </div>
         </div>
@@ -234,13 +231,8 @@ export default function ExamsScreenMobile() {
     <div style={containerStyle}>
       {/* Header */}
       <div style={headerStyle}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '8px' }}>
-          <span style={{ fontSize: '24px' }}>🏆</span>
-          <span style={{ fontSize: '18px', fontWeight: 600 }}>Kỳ thi trực tuyến</span>
-        </div>
-        <p style={{ textAlign: 'center', fontSize: '13px', color: 'rgba(255,255,255,0.8)' }}>
-          Tham gia các kỳ thi và kiểm tra kiến thức
-        </p>
+        <h1 style={{ fontSize: '22px', fontWeight: 700, textAlign: 'center', letterSpacing: '0.3px', marginBottom: '4px' }}>Kỳ thi trực tuyến</h1>
+        <p style={{ textAlign: 'center', fontSize: '13px', color: 'rgba(255,255,255,0.75)' }}>Tham gia các kỳ thi và kiểm tra kiến thức</p>
       </div>
 
       {/* Search */}
@@ -261,16 +253,16 @@ export default function ExamsScreenMobile() {
       {filteredExams.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 16px' }}>
           <div style={{ 
-            backgroundColor: '#f9fafb', 
-            border: '2px dashed #d1d5db', 
-            borderRadius: '12px', 
+            backgroundColor: '#ffffff', 
+            border: '1.5px dashed #cbd5e1', 
+            borderRadius: '14px', 
             padding: '32px 16px'
           }}>
-            <span style={{ fontSize: '64px', display: 'block', marginBottom: '16px' }}>📝</span>
-            <p style={{ color: '#374151', fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>
+            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'linear-gradient(135deg, #ede9fe, #f5f3ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: '24px' }}>📝</div>
+            <p style={{ color: '#0f172a', fontSize: '15px', fontWeight: 600, marginBottom: '6px' }}>
               {searchText ? 'Không tìm thấy kỳ thi phù hợp' : 'Chưa có kỳ thi nào'}
             </p>
-            <p style={{ color: '#6b7280', fontSize: '13px' }}>
+            <p style={{ color: '#64748b', fontSize: '13px' }}>
               {searchText ? 'Thử tìm kiếm với từ khóa khác' : 'Admin chưa tạo kỳ thi. Vui lòng quay lại sau.'}
             </p>
           </div>
@@ -292,17 +284,17 @@ export default function ExamsScreenMobile() {
                 </div>
 
                 {/* Title */}
-                <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#111827', marginBottom: '8px', lineHeight: 1.4 }}>
+                <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#0f172a', marginBottom: '8px', lineHeight: 1.4 }}>
                   {exam.title}
                 </h3>
 
                 {/* Description */}
-                <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '12px', lineHeight: 1.5 }}>
+                <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '12px', lineHeight: 1.5 }}>
                   {exam.description}
                 </p>
 
                 {/* Meta */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', fontSize: '12px', color: '#6b7280', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', fontSize: '12px', color: '#64748b', marginBottom: '12px' }}>
                   <span>⏱️ {formatDuration(exam.duration)}</span>
                   <span>🏆 Điểm đạt: {exam.passingScore}%</span>
                   <span>📊 Tối đa: {exam.maxAttempts} lần</span>
@@ -311,13 +303,13 @@ export default function ExamsScreenMobile() {
                 {/* Attempts info */}
                 {attemptCount > 0 && (
                   <div style={{
-                    padding: '10px',
-                    backgroundColor: '#f9fafb',
-                    borderRadius: '8px',
+                    padding: '10px 12px',
+                    backgroundColor: '#f5f3ff',
+                    borderRadius: '10px',
                     marginBottom: '12px',
                     fontSize: '13px',
                   }}>
-                    <span style={{ color: '#374151', fontWeight: 500 }}>
+                    <span style={{ color: '#5b21b6', fontWeight: 500 }}>
                       Đã thi: {attemptCount}/{exam.maxAttempts} lần
                     </span>
                   </div>
@@ -368,16 +360,16 @@ export default function ExamsScreenMobile() {
           }}>
             {/* Header */}
             <div style={{
-              background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+              background: 'linear-gradient(135deg, #7c3aed 0%, #8b5cf6 50%, #a78bfa 100%)',
               padding: '24px',
               borderTopLeftRadius: '16px',
               borderTopRightRadius: '16px',
               color: '#ffffff',
             }}>
-              <div style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px' }}>
+              <div style={{ fontSize: '20px', fontWeight: 700, marginBottom: '6px' }}>
                 Xác nhận bắt đầu thi
               </div>
-              <div style={{ fontSize: '14px', opacity: 0.9 }}>
+              <div style={{ fontSize: '13px', opacity: 0.85 }}>
                 Vui lòng đọc kỹ thông tin trước khi bắt đầu
               </div>
             </div>
@@ -418,8 +410,8 @@ export default function ExamsScreenMobile() {
                 gap: '12px', 
                 marginBottom: '20px',
                 padding: '16px',
-                backgroundColor: '#f9fafb',
-                borderRadius: '12px',
+                backgroundColor: '#f8fafc',
+                borderRadius: '14px',
               }}>
                 <div>
                   <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '4px', fontWeight: 600 }}>
@@ -508,8 +500,8 @@ export default function ExamsScreenMobile() {
                     padding: '14px 16px',
                     backgroundColor: '#ffffff',
                     color: '#374151',
-                    border: '2px solid #e5e7eb',
-                    borderRadius: '8px',
+                    border: '1.5px solid #e2e8f0',
+                    borderRadius: '12px',
                     fontSize: '14px',
                     fontWeight: 600,
                     cursor: 'pointer',
@@ -522,14 +514,14 @@ export default function ExamsScreenMobile() {
                   style={{
                     flex: 1,
                     padding: '14px 16px',
-                    background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+                    background: 'linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%)',
                     color: '#ffffff',
                     border: 'none',
-                    borderRadius: '8px',
+                    borderRadius: '12px',
                     fontSize: '14px',
                     fontWeight: 600,
                     cursor: 'pointer',
-                    boxShadow: '0 4px 6px rgba(124, 58, 237, 0.3)',
+                    boxShadow: '0 4px 8px rgba(124, 58, 237, 0.25)',
                   }}
                 >
                   ✅ Bắt đầu thi
