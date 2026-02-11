@@ -1,12 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Progress } from "@/components/ui/progress"
-import { TrendingUp, Trophy, Medal, Crown, Award, Clock, ArrowLeft, Loader2 } from "lucide-react"
+import { Trophy, ArrowLeft, Clock, Award, TrendingUp, Crown, Medal } from "lucide-react"
 import { pointsApi, getStoredUser } from "@/lib/api"
+import { useAutoRefresh } from "@/hooks/use-auto-refresh"
 
 interface LeaderboardUser {
   id: string
@@ -14,13 +11,10 @@ interface LeaderboardUser {
   points: number
   rank: string
   unitName: string
-  avatarUrl?: string
 }
 
 interface PointsHistoryItem {
   id: string
-  memberName: string
-  memberUnit: string
   action: string
   points: number
   reason: string
@@ -31,11 +25,11 @@ interface PointsHistoryItem {
 
 function getRankLabel(rank: string) {
   switch (rank) {
-    case 'XUAT_SAC': return { label: 'Xuất sắc', color: 'bg-green-100 text-green-800' }
-    case 'KHA': return { label: 'Khá', color: 'bg-blue-100 text-blue-800' }
-    case 'TRUNG_BINH': return { label: 'Trung bình', color: 'bg-yellow-100 text-yellow-800' }
-    case 'YEU': return { label: 'Yếu', color: 'bg-red-100 text-red-800' }
-    default: return { label: 'Chưa xếp hạng', color: 'bg-gray-100 text-gray-800' }
+    case 'XUAT_SAC': return { label: 'Xuất sắc', emoji: '🏆', bg: '#dcfce7', color: '#166534', border: '#bbf7d0' }
+    case 'KHA': return { label: 'Khá', emoji: '🥈', bg: '#dbeafe', color: '#1e40af', border: '#bfdbfe' }
+    case 'TRUNG_BINH': return { label: 'Trung bình', emoji: '🥉', bg: '#fef9c3', color: '#854d0e', border: '#fde68a' }
+    case 'YEU': return { label: 'Yếu', emoji: '📉', bg: '#fef2f2', color: '#991b1b', border: '#fecaca' }
+    default: return { label: 'Chưa xếp hạng', emoji: '—', bg: '#f3f4f6', color: '#374151', border: '#e5e7eb' }
   }
 }
 
@@ -52,320 +46,388 @@ export default function PointsDashboard({ onBack }: { onBack?: () => void }) {
 
   const currentUser = getStoredUser()
   const myPoints = currentUser?.points || 0
-
-  // Calculate user rank
   const myRank = myPoints >= 800 ? 'XUAT_SAC' : myPoints >= 600 ? 'KHA' : myPoints >= 400 ? 'TRUNG_BINH' : 'YEU'
   const myRankInfo = getRankLabel(myRank)
-
-  // Find user position in leaderboard
   const myPosition = leaderboard.findIndex(u => u.id === currentUser?.id) + 1
 
-  useEffect(() => {
-    loadData()
-  }, [])
+  useEffect(() => { loadData() }, [])
+  useAutoRefresh(() => loadData(true))
 
-  async function loadData() {
-    setLoading(true)
+  async function loadData(silent = false) {
+    if (!silent) setLoading(true)
     try {
       const [leaderboardRes, historyRes] = await Promise.all([
         pointsApi.getLeaderboard({ sortBy: 'points', sortOrder: 'desc' }),
         pointsApi.getHistory({ userId: currentUser?.id, limit: 10 }),
       ])
-
       if (leaderboardRes.success && leaderboardRes.data) {
         setLeaderboard(leaderboardRes.data)
-        if ((leaderboardRes as any).stats) {
-          setStats((leaderboardRes as any).stats)
-        }
+        if ((leaderboardRes as any).stats) setStats((leaderboardRes as any).stats)
       }
-
-      if (historyRes.success && historyRes.data) {
-        setHistory(historyRes.data)
-      }
+      if (historyRes.success && historyRes.data) setHistory(historyRes.data)
     } catch (err) {
-      console.error('[Points] Error loading data:', err)
+      console.error('[Points] Error:', err)
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }
 
+  const nextTarget = myRank === 'YEU' ? 400 : myRank === 'TRUNG_BINH' ? 600 : myRank === 'KHA' ? 800 : 1000
+  const prevTarget = myRank === 'YEU' ? 0 : myRank === 'TRUNG_BINH' ? 400 : myRank === 'KHA' ? 600 : 800
+  const progressPct = myRank === 'XUAT_SAC' ? 100 : Math.min(100, ((myPoints - prevTarget) / (nextTarget - prevTarget)) * 100)
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[300px]">
-        <Loader2 className="w-8 h-8 animate-spin text-amber-600" />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
+        <div style={{ width: '36px', height: '36px', border: '3px solid #f59e0b', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
       </div>
     )
   }
 
+  const tabs = [
+    { id: 'overview', label: 'Tổng quan', icon: '📊' },
+    { id: 'leaderboard', label: 'Xếp hạng', icon: '🏆' },
+    { id: 'achievements', label: 'Thành tích', icon: '🎯' },
+  ]
+
   return (
-    <div className="max-w-md mx-auto bg-white min-h-screen">
+    <div style={{ minHeight: '100%', backgroundColor: '#f5f6fa', paddingBottom: '100px' }}>
       {/* Header */}
-      <div className="bg-gradient-to-r from-amber-500 to-orange-600 text-white p-6">
-        <div className="flex items-center gap-3 mb-4">
+      <div style={{
+        background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #b45309 100%)',
+        padding: '24px 16px 28px', color: '#fff',
+        borderRadius: '0 0 24px 24px',
+        boxShadow: '0 4px 20px rgba(245,158,11,0.3)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
           {onBack && (
-            <button onClick={onBack} className="p-1">
-              <ArrowLeft className="w-5 h-5 text-white" />
+            <button onClick={onBack} style={{
+              background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
+              borderRadius: '12px', padding: '8px', cursor: 'pointer', color: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <ArrowLeft style={{ width: '20px', height: '20px' }} />
             </button>
           )}
-          <h1 className="text-xl font-bold flex-1">Điểm rèn luyện</h1>
+          <h1 style={{ fontSize: '22px', fontWeight: 700, flex: 1 }}>Điểm rèn luyện</h1>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
-            <Trophy className="w-8 h-8 text-white" />
+        {/* Score Card */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '16px',
+          backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: '16px',
+          padding: '16px', border: '1px solid rgba(255,255,255,0.15)',
+        }}>
+          <div style={{
+            width: '64px', height: '64px', borderRadius: '50%',
+            background: 'rgba(255,255,255,0.2)', display: 'flex',
+            alignItems: 'center', justifyContent: 'center', fontSize: '28px',
+          }}>
+            {myRankInfo.emoji}
           </div>
-          <div>
-            <p className="text-3xl font-bold">{myPoints}</p>
-            <p className="text-amber-100">điểm hiện tại</p>
-            <Badge className={`mt-1 ${myRankInfo.color}`}>{myRankInfo.label}</Badge>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '36px', fontWeight: 800, lineHeight: 1.1 }}>{myPoints}</div>
+            <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', marginTop: '2px' }}>điểm hiện tại</div>
+            <div style={{
+              display: 'inline-block', marginTop: '6px', padding: '3px 10px',
+              backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '20px',
+              fontSize: '12px', fontWeight: 600,
+            }}>
+              {myRankInfo.label}
+            </div>
           </div>
-          <div className="ml-auto text-right">
-            {myPosition > 0 && (
-              <>
-                <p className="text-2xl font-bold">#{myPosition}</p>
-                <p className="text-amber-100">xếp hạng</p>
-              </>
-            )}
+          {myPosition > 0 && (
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '28px', fontWeight: 800 }}>#{myPosition}</div>
+              <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>xếp hạng</div>
+            </div>
+          )}
+        </div>
+
+        {/* Progress Bar */}
+        {myRank !== 'XUAT_SAC' && (
+          <div style={{ marginTop: '14px', padding: '0 4px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'rgba(255,255,255,0.6)', marginBottom: '6px' }}>
+              <span>Tiến đến {getRankLabel(myRank === 'YEU' ? 'TRUNG_BINH' : myRank === 'TRUNG_BINH' ? 'KHA' : 'XUAT_SAC').label}</span>
+              <span>{myPoints}/{nextTarget}</span>
+            </div>
+            <div style={{ height: '6px', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: '3px', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${progressPct}%`, backgroundColor: '#fff', borderRadius: '3px', transition: 'width 0.5s ease' }} />
+            </div>
           </div>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div style={{ padding: '16px 16px 0' }}>
+        <div style={{
+          display: 'flex', backgroundColor: '#fff', borderRadius: '14px',
+          padding: '4px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', gap: '4px',
+        }}>
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                flex: 1, padding: '10px 8px', borderRadius: '10px', border: 'none',
+                cursor: 'pointer', fontSize: '13px', fontWeight: 600,
+                backgroundColor: activeTab === tab.id ? '#f59e0b' : 'transparent',
+                color: activeTab === tab.id ? '#fff' : '#6b7280',
+                transition: 'all 0.2s',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+              }}
+            >
+              <span style={{ fontSize: '14px' }}>{tab.icon}</span>
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="p-4">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full">
-            <TabsTrigger value="overview" className="flex-1">Tổng quan</TabsTrigger>
-            <TabsTrigger value="leaderboard" className="flex-1">Bảng xếp hạng</TabsTrigger>
-            <TabsTrigger value="achievements" className="flex-1">Thành tích</TabsTrigger>
-          </TabsList>
-
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-4">
-            {/* Stats Cards */}
+      {/* Tab Content */}
+      <div style={{ padding: '16px' }}>
+        {/* === OVERVIEW TAB === */}
+        {activeTab === 'overview' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {stats && (
-              <div className="grid grid-cols-2 gap-3">
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <p className="text-2xl font-bold text-blue-600">{stats.avgPoints || 0}</p>
-                    <p className="text-xs text-gray-600">Điểm TB</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4 text-center">
-                    <p className="text-2xl font-bold text-green-600">{stats.excellentCount || 0}</p>
-                    <p className="text-xs text-gray-600">Xuất sắc</p>
-                  </CardContent>
-                </Card>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ backgroundColor: '#fff', borderRadius: '14px', padding: '16px', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+                  <div style={{ fontSize: '28px', fontWeight: 800, color: '#2563eb' }}>{stats.avgPoints || 0}</div>
+                  <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>Điểm TB toàn đoàn</div>
+                </div>
+                <div style={{ backgroundColor: '#fff', borderRadius: '14px', padding: '16px', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+                  <div style={{ fontSize: '28px', fontWeight: 800, color: '#16a34a' }}>{stats.excellentCount || 0}</div>
+                  <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>Đoàn viên xuất sắc</div>
+                </div>
               </div>
             )}
 
             {/* Recent History */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-amber-600" />
-                  Lịch sử điểm gần đây
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {history.length === 0 ? (
-                  <p className="text-sm text-gray-500 text-center py-4">Chưa có lịch sử điểm</p>
-                ) : (
-                  <div className="space-y-3">
-                    {history.slice(0, 5).map(item => (
-                      <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div className="flex-1">
-                          <p className="font-medium text-gray-900 text-sm">{item.reason}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <p className="text-xs text-gray-600">
-                              {new Date(item.date).toLocaleDateString('vi-VN')}
-                            </p>
-                            {item.activityName && (
-                              <Badge variant="outline" className="text-xs">{item.activityName}</Badge>
-                            )}
-                          </div>
-                        </div>
-                        <Badge className={item.action === 'add' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
-                          {item.action === 'add' ? '+' : '-'}{item.points}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Points Rules */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Award className="w-5 h-5 text-amber-600" />
-                  Quy định điểm rèn luyện
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <p className="text-sm font-medium text-blue-800">Khởi điểm: 100 điểm/tháng</p>
-                    <p className="text-xs text-blue-600 mt-1">Reset mỗi đầu tháng, lưu lịch sử</p>
-                  </div>
-                  <div className="grid grid-cols-1 gap-2">
-                    <div className="p-2 bg-green-50 rounded border border-green-200">
-                      <p className="text-xs font-medium text-green-800">≥ 800 điểm: Xuất sắc</p>
-                    </div>
-                    <div className="p-2 bg-blue-50 rounded border border-blue-200">
-                      <p className="text-xs font-medium text-blue-800">≥ 600 điểm: Khá</p>
-                    </div>
-                    <div className="p-2 bg-yellow-50 rounded border border-yellow-200">
-                      <p className="text-xs font-medium text-yellow-800">≥ 400 điểm: Trung bình</p>
-                    </div>
-                    <div className="p-2 bg-red-50 rounded border border-red-200">
-                      <p className="text-xs font-medium text-red-800">&lt; 400 điểm: Yếu</p>
-                    </div>
-                  </div>
+            <div style={{ backgroundColor: '#fff', borderRadius: '16px', padding: '16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                <Clock style={{ width: '18px', height: '18px', color: '#f59e0b' }} />
+                <span style={{ fontSize: '15px', fontWeight: 700, color: '#111827' }}>Lịch sử điểm gần đây</span>
+              </div>
+              {history.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '24px 0', color: '#9ca3af' }}>
+                  <Clock style={{ width: '40px', height: '40px', margin: '0 auto 8px', opacity: 0.3 }} />
+                  <p style={{ fontSize: '14px' }}>Chưa có lịch sử điểm</p>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Leaderboard Tab */}
-          <TabsContent value="leaderboard" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Trophy className="w-5 h-5 text-amber-600" />
-                  Bảng xếp hạng
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {leaderboard.length === 0 ? (
-                  <p className="text-sm text-gray-500 text-center py-4">Chưa có dữ liệu</p>
-                ) : (
-                  <div className="space-y-3">
-                    {leaderboard.slice(0, 20).map((user, index) => {
-                      const rankInfo = getRankLabel(user.rank)
-                      const isCurrentUser = user.id === currentUser?.id
-                      const isTop3 = index < 3
-                      return (
-                        <div
-                          key={user.id}
-                          className={`flex items-center gap-4 p-4 rounded-lg ${
-                            isTop3
-                              ? 'bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200'
-                              : isCurrentUser
-                              ? 'bg-blue-50 border border-blue-200'
-                              : 'bg-gray-50'
-                          }`}
-                        >
-                          {index === 0 ? (
-                            <Crown className="w-5 h-5 text-yellow-500" />
-                          ) : index < 3 ? (
-                            <Medal className="w-5 h-5 text-gray-400" />
-                          ) : (
-                            <span className="w-5 text-center text-sm font-bold text-gray-500">{index + 1}</span>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {history.slice(0, 5).map(item => (
+                    <div key={item.id} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '12px', backgroundColor: '#f9fafb', borderRadius: '12px',
+                      border: '1px solid #f3f4f6',
+                    }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {item.reason}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                          <span style={{ fontSize: '12px', color: '#9ca3af' }}>
+                            {new Date(item.date).toLocaleDateString('vi-VN')}
+                          </span>
+                          {item.activityName && (
+                            <span style={{
+                              fontSize: '11px', padding: '2px 8px', backgroundColor: '#eff6ff',
+                              color: '#2563eb', borderRadius: '10px', border: '1px solid #bfdbfe',
+                            }}>
+                              {item.activityName}
+                            </span>
                           )}
-                          <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center font-semibold text-amber-800 text-sm">
-                            {getInitials(user.fullName)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-gray-900 truncate">
-                              {user.fullName} {isCurrentUser && '(Bạn)'}
-                            </p>
-                            <div className="flex items-center gap-2">
-                              <p className="text-sm text-gray-600 truncate">{user.unitName}</p>
-                              <Badge className={`text-xs ${rankInfo.color}`}>{rankInfo.label}</Badge>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-bold text-gray-900">{user.points}</p>
-                            <p className="text-sm text-gray-600">điểm</p>
-                          </div>
                         </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Achievements Tab */}
-          <TabsContent value="achievements" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-amber-600" />
-                  Thống kê cá nhân
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4 text-center">
-                  <div className="p-4 bg-blue-50 rounded-lg">
-                    <p className="text-2xl font-bold text-blue-600">{myPoints}</p>
-                    <p className="text-sm text-blue-600">Điểm hiện tại</p>
-                  </div>
-                  <div className="p-4 bg-green-50 rounded-lg">
-                    <p className="text-2xl font-bold text-green-600">{history.length}</p>
-                    <p className="text-sm text-green-600">Lần thay đổi</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Award className="w-5 h-5 text-amber-600" />
-                  Xếp loại hiện tại
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="p-4 rounded-lg border bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200">
-                  <div className="flex items-center gap-3">
-                    <div className="text-3xl">🏆</div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">{myRankInfo.label}</h3>
-                      <p className="text-sm text-gray-600">Điểm hiện tại: {myPoints}</p>
-                      {myRank !== 'XUAT_SAC' && (
-                        <div className="mt-2">
-                          <div className="flex justify-between text-sm text-gray-600 mb-1">
-                            <span>Tiến độ đến mức tiếp theo</span>
-                            <span>{myPoints}/{myRank === 'YEU' ? 400 : myRank === 'TRUNG_BINH' ? 600 : 800}</span>
-                          </div>
-                          <Progress
-                            value={
-                              myRank === 'YEU' ? (myPoints / 400) * 100
-                              : myRank === 'TRUNG_BINH' ? ((myPoints - 400) / 200) * 100
-                              : ((myPoints - 600) / 200) * 100
-                            }
-                            className="h-2"
-                          />
-                        </div>
-                      )}
+                      </div>
+                      <div style={{
+                        padding: '4px 12px', borderRadius: '20px', fontWeight: 700, fontSize: '14px',
+                        backgroundColor: item.action === 'add' ? '#dcfce7' : '#fef2f2',
+                        color: item.action === 'add' ? '#166534' : '#991b1b',
+                        border: `1px solid ${item.action === 'add' ? '#bbf7d0' : '#fecaca'}`,
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {item.action === 'add' ? '+' : '-'}{item.points}
+                      </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
+              )}
+            </div>
 
-                {/* Full History */}
-                {history.length > 0 && (
-                  <div className="mt-4 space-y-2">
-                    <h4 className="font-medium text-gray-900">Lịch sử thay đổi điểm</h4>
-                    {history.map(item => (
-                      <div key={item.id} className="flex justify-between items-center p-2 rounded bg-gray-50 text-sm">
-                        <div>
-                          <span className="text-gray-700">{item.reason}</span>
-                          <span className="text-gray-400 ml-2">{new Date(item.date).toLocaleDateString('vi-VN')}</span>
+            {/* Scoring Rules */}
+            <div style={{ backgroundColor: '#fff', borderRadius: '16px', padding: '16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                <Award style={{ width: '18px', height: '18px', color: '#f59e0b' }} />
+                <span style={{ fontSize: '15px', fontWeight: 700, color: '#111827' }}>Quy định xếp loại</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {[
+                  { label: '≥ 800 điểm: Xuất sắc', bg: '#dcfce7', color: '#166534', border: '#bbf7d0' },
+                  { label: '≥ 600 điểm: Khá', bg: '#dbeafe', color: '#1e40af', border: '#bfdbfe' },
+                  { label: '≥ 400 điểm: Trung bình', bg: '#fef9c3', color: '#854d0e', border: '#fde68a' },
+                  { label: '< 400 điểm: Yếu', bg: '#fef2f2', color: '#991b1b', border: '#fecaca' },
+                ].map((rule, i) => (
+                  <div key={i} style={{
+                    padding: '10px 14px', backgroundColor: rule.bg, borderRadius: '10px',
+                    border: `1px solid ${rule.border}`, fontSize: '13px', fontWeight: 600, color: rule.color,
+                  }}>
+                    {rule.label}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* === LEADERBOARD TAB === */}
+        {activeTab === 'leaderboard' && (
+          <div style={{ backgroundColor: '#fff', borderRadius: '16px', padding: '16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+              <Trophy style={{ width: '18px', height: '18px', color: '#f59e0b' }} />
+              <span style={{ fontSize: '15px', fontWeight: 700, color: '#111827' }}>Bảng xếp hạng đoàn viên</span>
+            </div>
+            {leaderboard.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '24px 0', color: '#9ca3af' }}>
+                <Trophy style={{ width: '40px', height: '40px', margin: '0 auto 8px', opacity: 0.3 }} />
+                <p style={{ fontSize: '14px' }}>Chưa có dữ liệu xếp hạng</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {leaderboard.slice(0, 20).map((user, index) => {
+                  const rankInfo = getRankLabel(user.rank)
+                  const isMe = user.id === currentUser?.id
+                  const isTop3 = index < 3
+                  const medalColors = ['#f59e0b', '#9ca3af', '#b45309']
+                  return (
+                    <div key={user.id} style={{
+                      display: 'flex', alignItems: 'center', gap: '12px', padding: '12px',
+                      borderRadius: '12px', transition: 'all 0.2s',
+                      backgroundColor: isTop3 ? '#fffbeb' : isMe ? '#eff6ff' : '#f9fafb',
+                      border: `1px solid ${isTop3 ? '#fde68a' : isMe ? '#bfdbfe' : '#f3f4f6'}`,
+                    }}>
+                      <div style={{
+                        width: '28px', height: '28px', borderRadius: '50%', display: 'flex',
+                        alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700,
+                        backgroundColor: isTop3 ? medalColors[index] : '#e5e7eb',
+                        color: isTop3 ? '#fff' : '#6b7280', flexShrink: 0,
+                      }}>
+                        {index + 1}
+                      </div>
+                      <div style={{
+                        width: '40px', height: '40px', borderRadius: '50%',
+                        background: isTop3 ? 'linear-gradient(135deg, #f59e0b, #d97706)' : '#e5e7eb',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontWeight: 700, fontSize: '14px', color: isTop3 ? '#fff' : '#6b7280', flexShrink: 0,
+                      }}>
+                        {getInitials(user.fullName)}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {user.fullName} {isMe && <span style={{ color: '#2563eb' }}>(Bạn)</span>}
                         </div>
-                        <span className={item.action === 'add' ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
-                          {item.action === 'add' ? '+' : '-'}{item.points}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                          <span style={{ fontSize: '12px', color: '#6b7280' }}>{user.unitName}</span>
+                          <span style={{
+                            fontSize: '10px', padding: '1px 6px', borderRadius: '10px',
+                            backgroundColor: rankInfo.bg, color: rankInfo.color,
+                            border: `1px solid ${rankInfo.border}`, fontWeight: 600,
+                          }}>
+                            {rankInfo.label}
+                          </span>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <div style={{ fontSize: '16px', fontWeight: 800, color: isTop3 ? '#d97706' : '#111827' }}>{user.points}</div>
+                        <div style={{ fontSize: '11px', color: '#9ca3af' }}>điểm</div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* === ACHIEVEMENTS TAB === */}
+        {activeTab === 'achievements' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ backgroundColor: '#fff', borderRadius: '14px', padding: '16px', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+                <div style={{ fontSize: '28px', fontWeight: 800, color: '#2563eb' }}>{myPoints}</div>
+                <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>Điểm hiện tại</div>
+              </div>
+              <div style={{ backgroundColor: '#fff', borderRadius: '14px', padding: '16px', textAlign: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+                <div style={{ fontSize: '28px', fontWeight: 800, color: '#16a34a' }}>{history.length}</div>
+                <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>Lần thay đổi</div>
+              </div>
+            </div>
+
+            {/* Current Rank */}
+            <div style={{ backgroundColor: '#fff', borderRadius: '16px', padding: '16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                <Award style={{ width: '18px', height: '18px', color: '#f59e0b' }} />
+                <span style={{ fontSize: '15px', fontWeight: 700, color: '#111827' }}>Xếp loại hiện tại</span>
+              </div>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '14px', padding: '16px',
+                background: 'linear-gradient(135deg, #fffbeb, #fef3c7)', borderRadius: '14px',
+                border: '1px solid #fde68a',
+              }}>
+                <div style={{ fontSize: '40px' }}>{myRankInfo.emoji}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '18px', fontWeight: 700, color: '#111827' }}>{myRankInfo.label}</div>
+                  <div style={{ fontSize: '13px', color: '#6b7280', marginTop: '2px' }}>Điểm hiện tại: {myPoints}</div>
+                  {myRank !== 'XUAT_SAC' && (
+                    <div style={{ marginTop: '10px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#6b7280', marginBottom: '4px' }}>
+                        <span>Tiến độ đến mức tiếp theo</span>
+                        <span>{myPoints}/{nextTarget}</span>
+                      </div>
+                      <div style={{ height: '6px', backgroundColor: '#e5e7eb', borderRadius: '3px', overflow: 'hidden' }}>
+                        <div style={{
+                          height: '100%', width: `${progressPct}%`, borderRadius: '3px',
+                          background: 'linear-gradient(90deg, #f59e0b, #d97706)',
+                          transition: 'width 0.5s ease',
+                        }} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Full History */}
+            {history.length > 0 && (
+              <div style={{ backgroundColor: '#fff', borderRadius: '16px', padding: '16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                  <TrendingUp style={{ width: '18px', height: '18px', color: '#f59e0b' }} />
+                  <span style={{ fontSize: '15px', fontWeight: 700, color: '#111827' }}>Lịch sử thay đổi điểm</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {history.map(item => (
+                    <div key={item.id} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '10px 12px', backgroundColor: '#f9fafb', borderRadius: '10px',
+                    }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ fontSize: '13px', color: '#374151', fontWeight: 500 }}>{item.reason}</span>
+                        <span style={{ fontSize: '12px', color: '#9ca3af', marginLeft: '8px' }}>
+                          {new Date(item.date).toLocaleDateString('vi-VN')}
                         </span>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                      <span style={{
+                        fontSize: '14px', fontWeight: 700, marginLeft: '8px', whiteSpace: 'nowrap',
+                        color: item.action === 'add' ? '#16a34a' : '#dc2626',
+                      }}>
+                        {item.action === 'add' ? '+' : '-'}{item.points}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

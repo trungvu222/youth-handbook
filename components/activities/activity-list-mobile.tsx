@@ -49,6 +49,12 @@ export default function ActivityListMobile({ onActivitySelect }: ActivityListMob
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [joinLoading, setJoinLoading] = useState<string | null>(null)
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 3000)
+  }
 
   const loadActivities = async (silent = false) => {
     if (!silent) setLoading(true)
@@ -92,12 +98,13 @@ export default function ActivityListMobile({ onActivitySelect }: ActivityListMob
       const { activityApi } = await import('@/lib/api')
       const result = await activityApi.joinActivity(activityId)
       if (result.success) {
+        showToast('Đã đăng ký thành công', 'success')
         await loadActivities()
       } else {
-        alert(result.error || 'Có lỗi xảy ra')
+        showToast(result.error || 'Có lỗi xảy ra', 'error')
       }
     } catch (err) {
-      alert('Có lỗi xảy ra khi đăng ký')
+      showToast('Có lỗi xảy ra khi đăng ký', 'error')
     } finally {
       setJoinLoading(null)
     }
@@ -379,7 +386,28 @@ export default function ActivityListMobile({ onActivitySelect }: ActivityListMob
           </div>
         )
       })}
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } } @keyframes toastSlideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } } @keyframes toastSlideOut { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-20px); opacity: 0; } }`}</style>
+
+      {/* Toast Notification */}
+      {toast && (
+        <div style={{
+          position: 'fixed', top: '24px', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 9999, padding: '14px 24px', borderRadius: '14px',
+          backgroundColor: toast.type === 'success' ? '#16a34a' : '#dc2626',
+          color: '#fff', fontSize: '15px', fontWeight: 600,
+          boxShadow: '0 8px 30px rgba(0,0,0,0.2)',
+          display: 'flex', alignItems: 'center', gap: '10px',
+          animation: 'toastSlideIn 0.3s ease-out',
+          maxWidth: '90vw', whiteSpace: 'nowrap',
+        }}>
+          {toast.type === 'success' ? (
+            <CheckCircle style={{ width: '20px', height: '20px', flexShrink: 0 }} />
+          ) : (
+            <AlertCircle style={{ width: '20px', height: '20px', flexShrink: 0 }} />
+          )}
+          {toast.message}
+        </div>
+      )}
     </div>
   )
 }
