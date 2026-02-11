@@ -3,8 +3,8 @@ const bcrypt = require('bcryptjs');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key';
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'your-super-secret-refresh-key';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '30m'; // Access token: 30 minutes
-const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d'; // Refresh token: 7 days
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'; // Access token: 7 days
+const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '30d'; // Refresh token: 30 days
 
 // Generate access token
 const generateToken = (id, role) => {

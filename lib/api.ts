@@ -273,7 +273,8 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 // Utility function to make API calls with fallback to mock
 async function apiCall<T>(
   endpoint: string, 
-  options: RequestInit = {}
+  options: RequestInit = {},
+  _isRetry = false
 ): Promise<ApiResponse<T>> {
   try {
     const url = `${API_BASE_URL}${endpoint}`;
@@ -300,6 +301,35 @@ async function apiCall<T>(
     
     const data = await response.json();
     console.log('[API] Response data:', data);
+
+    // Auto-refresh token on 401 (expired token)
+    if (response.status === 401 && !_isRetry && typeof window !== 'undefined') {
+      console.log('[API] Token expired, attempting refresh...');
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (refreshToken) {
+        try {
+          const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refreshToken }),
+          });
+          const refreshData = await refreshResponse.json();
+          if (refreshData.success && refreshData.accessToken) {
+            localStorage.setItem('accessToken', refreshData.accessToken);
+            localStorage.setItem('auth_token', refreshData.accessToken);
+            document.cookie = `accessToken=${refreshData.accessToken}; path=/; max-age=${7 * 24 * 60 * 60}`;
+            // Retry the original request with new token
+            const newHeaders = { ...options.headers } as Record<string, string>;
+            if (newHeaders['Authorization']) {
+              newHeaders['Authorization'] = `Bearer ${refreshData.accessToken}`;
+            }
+            return apiCall<T>(endpoint, { ...options, headers: newHeaders }, true);
+          }
+        } catch (refreshError) {
+          console.warn('[API] Token refresh failed:', refreshError);
+        }
+      }
+    }
 
     if (!response.ok) {
       return {
@@ -583,13 +613,20 @@ export const authApi = {
     });
 
     // Save token and user to localStorage on successful login
-    if (result.success && result.token && result.user) {
+    if (result.success && (result.accessToken || result.token) && result.user) {
       if (typeof window !== 'undefined') {
+        const token = result.accessToken || result.token;
         // Lưu cả 2 key để tương thích
-        localStorage.setItem('accessToken', result.token);
-        localStorage.setItem('auth_token', result.token);
+        localStorage.setItem('accessToken', token);
+        localStorage.setItem('auth_token', token);
+        if (result.refreshToken) {
+          localStorage.setItem('refreshToken', result.refreshToken);
+        }
         localStorage.setItem('currentUser', JSON.stringify(result.user));
         localStorage.setItem('user', JSON.stringify(result.user));
+        
+        // Set cookie for middleware
+        document.cookie = `accessToken=${token}; path=/; max-age=${7 * 24 * 60 * 60}`;
         
         // Trigger storage event to notify other components
         window.dispatchEvent(new Event('storage'));
@@ -770,7 +807,7 @@ export const userApi = {
       });
     }
 
-    return apiCall(`/api/users?${searchParams.toString()}`, {
+    return apiCall(`/users?${searchParams.toString()}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
@@ -784,7 +821,7 @@ export const userApi = {
       return { success: false, error: 'Không có token' };
     }
 
-    return apiCall(`/api/users/${id}`, {
+    return apiCall(`/users/${id}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
@@ -798,7 +835,7 @@ export const userApi = {
       return { success: false, error: 'Không có token' };
     }
 
-    return apiCall(`/api/users/${id}`, {
+    return apiCall(`/users/${id}`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -815,7 +852,7 @@ export const userApi = {
       return { success: false, error: 'Không có token' };
     }
 
-    return apiCall(`/api/users/${id}/unit`, {
+    return apiCall(`/users/${id}/unit`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -832,7 +869,7 @@ export const userApi = {
       return { success: false, error: 'Không có token' };
     }
 
-    return apiCall(`/api/users/${id}/role`, {
+    return apiCall(`/users/${id}/role`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,
