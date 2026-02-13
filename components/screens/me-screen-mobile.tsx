@@ -314,11 +314,11 @@ export default function MeScreenMobile({ onLogout }: MeScreenMobileProps) {
   const rankColor = getRankColor()
 
   // Info row helper - always show, display 'Chưa cập nhật' for empty
-  const infoRow = (icon: any, label: string, value: string | null | undefined, color: string = '#64748b') => {
+  const infoRow = (icon: any, label: string, value: string | null | undefined, color: string = '#64748b', key?: string) => {
     const Icon = icon
     const hasValue = !!value
     return (
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px 0', borderBottom: '1px solid #f8fafc' }}>
+      <div key={key || label} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px 0', borderBottom: '1px solid #f8fafc' }}>
         <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: `${color}10`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }}>
           <Icon style={{ width: '14px', height: '14px', color }} />
         </div>
@@ -449,39 +449,39 @@ export default function MeScreenMobile({ onLogout }: MeScreenMobileProps) {
 
         {/* Personal Info - matches admin "Thông tin cá nhân" */}
         {sectionCard(User, 'Thông tin cá nhân', '#3b82f6', [
-          infoRow(User, 'Họ và tên', getUserName(), '#3b82f6'),
-          infoRow(Heart, 'Giới tính', renderVal(user?.gender), '#ec4899'),
-          infoRow(Cake, 'Ngày sinh', formatDate(user?.dateOfBirth), '#f59e0b'),
-          infoRow(MapPin, 'Quê quán', renderVal(user?.birthPlace), '#10b981'),
-          infoRow(Home, 'Nơi thường trú', renderVal(user?.permanentAddress), '#8b5cf6'),
-          infoRow(Globe, 'Dân tộc', renderVal(user?.ethnicity), '#06b6d4'),
-          infoRow(Flag, 'Tôn giáo', renderVal(user?.religion), '#f97316'),
+          infoRow(User, 'Họ và tên', getUserName(), '#3b82f6', 'fullName'),
+          infoRow(Heart, 'Giới tính', renderVal(user?.gender), '#ec4899', 'gender'),
+          infoRow(Cake, 'Ngày sinh', formatDate(user?.dateOfBirth), '#f59e0b', 'dateOfBirth'),
+          infoRow(MapPin, 'Quê quán', renderVal(user?.birthPlace), '#10b981', 'birthPlace'),
+          infoRow(Home, 'Nơi thường trú', renderVal(user?.permanentAddress), '#8b5cf6', 'permanentAddress'),
+          infoRow(Globe, 'Dân tộc', renderVal(user?.ethnicity), '#06b6d4', 'ethnicity'),
+          infoRow(Flag, 'Tôn giáo', renderVal(user?.religion), '#f97316', 'religion'),
         ])}
 
         {/* Contact - matches admin "Liên hệ" */}
         {sectionCard(Phone, 'Thông tin liên hệ', '#10b981', [
-          infoRow(Phone, 'Số điện thoại', renderVal(user?.phone), '#10b981'),
-          infoRow(Mail, 'Email', renderVal(user?.email), '#3b82f6'),
-          infoRow(MapPin, 'Địa chỉ liên hệ', renderVal(user?.address), '#f59e0b'),
+          infoRow(Phone, 'Số điện thoại', renderVal(user?.phone), '#10b981', 'phone'),
+          infoRow(Mail, 'Email', renderVal(user?.email), '#3b82f6', 'email'),
+          infoRow(MapPin, 'Địa chỉ liên hệ', renderVal(user?.address), '#f59e0b', 'address'),
         ])}
 
         {/* Youth Organization - matches admin "Thông tin Đoàn" */}
         {sectionCard(Users, 'Thông tin Đoàn', '#ef4444', [
-          infoRow(Users, 'Nơi sinh hoạt Đoàn', renderVal(user?.unit?.name), '#3b82f6'),
-          infoRow(Shield, 'Chức vụ Đoàn', renderVal(user?.youthPosition), '#ef4444'),
-          infoRow(Calendar, 'Ngày vào Đoàn', formatDate(user?.dateJoined), '#10b981'),
-          infoRow(Flag, 'Ngày vào Đảng', formatDate(user?.partyJoinDate), '#f59e0b'),
-          infoRow(Swords, 'Cấp bậc', renderVal(user?.militaryRank), '#64748b'),
-          infoRow(Landmark, 'Chức vụ chính quyền', renderVal(user?.governmentPosition), '#06b6d4'),
+          infoRow(Users, 'Nơi sinh hoạt Đoàn', renderVal(user?.unit?.name), '#3b82f6', 'unit'),
+          infoRow(Shield, 'Chức vụ Đoàn', renderVal(user?.youthPosition), '#ef4444', 'youthPosition'),
+          infoRow(Calendar, 'Ngày vào Đoàn', formatDate(user?.dateJoined), '#10b981', 'dateJoined'),
+          infoRow(Flag, 'Ngày vào Đảng', formatDate(user?.partyJoinDate), '#f59e0b', 'partyJoinDate'),
+          infoRow(Swords, 'Cấp bậc', renderVal(user?.militaryRank), '#64748b', 'militaryRank'),
+          infoRow(Landmark, 'Chức vụ chính quyền', renderVal(user?.governmentPosition), '#06b6d4', 'governmentPosition'),
         ])}
 
         {/* Education & Skills - matches admin "Trình độ" */}
         {sectionCard(GraduationCap, 'Trình độ', '#8b5cf6', [
-          infoRow(GraduationCap, 'Trình độ văn hóa', renderVal(user?.educationLevel), '#8b5cf6'),
-          infoRow(BookOpen, 'Trình độ chuyên môn', renderVal(user?.majorLevel), '#3b82f6'),
-          infoRow(Monitor, 'Trình độ tin học', renderVal(user?.itLevel), '#10b981'),
-          infoRow(Languages, 'Trình độ ngoại ngữ', renderVal(user?.languageLevel), '#06b6d4'),
-          infoRow(Flag, 'Lý luận chính trị', renderVal(user?.politicsLevel), '#ef4444'),
+          infoRow(GraduationCap, 'Trình độ văn hóa', renderVal(user?.educationLevel), '#8b5cf6', 'educationLevel'),
+          infoRow(BookOpen, 'Trình độ chuyên môn', renderVal(user?.majorLevel), '#3b82f6', 'majorLevel'),
+          infoRow(Monitor, 'Trình độ tin học', renderVal(user?.itLevel), '#10b981', 'itLevel'),
+          infoRow(Languages, 'Trình độ ngoại ngữ', renderVal(user?.languageLevel), '#06b6d4', 'languageLevel'),
+          infoRow(Flag, 'Lý luận chính trị', renderVal(user?.politicsLevel), '#ef4444', 'politicsLevel'),
         ])}
 
         {/* Points History */}
