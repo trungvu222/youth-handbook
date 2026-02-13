@@ -24,9 +24,7 @@ import {
   Heart,
   Globe,
   Users,
-  Building2,
   Cake,
-  Home,
   BookOpen,
   Monitor,
   Languages,
@@ -35,7 +33,6 @@ import {
   Swords,
   CheckCircle,
   AlertCircle,
-  Camera,
   Settings,
 } from "lucide-react"
 
@@ -87,12 +84,7 @@ export default function MeScreenMobile({ onLogout }: MeScreenMobileProps) {
           dateOfBirth: userData.dateOfBirth ? userData.dateOfBirth.substring(0, 10) : '',
           gender: userData.gender || '',
           birthPlace: userData.birthPlace || '',
-          hometown: userData.hometown || '',
           permanentAddress: userData.permanentAddress || '',
-          province: userData.province || '',
-          district: userData.district || '',
-          ward: userData.ward || '',
-          workPlace: userData.workPlace || '',
           ethnicity: userData.ethnicity || '',
           religion: userData.religion || '',
           educationLevel: userData.educationLevel || '',
@@ -197,6 +189,7 @@ export default function MeScreenMobile({ onLogout }: MeScreenMobileProps) {
   // ===== RENDER EDIT PROFILE =====
   const renderEditProfile = () => {
     const fieldStyle: React.CSSProperties = { width: '100%', padding: '10px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', marginBottom: '4px', outline: 'none', backgroundColor: '#f8fafc', color: '#0f172a', boxSizing: 'border-box' }
+    const disabledFieldStyle: React.CSSProperties = { ...fieldStyle, backgroundColor: '#f1f5f9', color: '#94a3b8', cursor: 'not-allowed' }
     const labelStyle: React.CSSProperties = { fontSize: '12px', fontWeight: 600, color: '#64748b', marginBottom: '4px', display: 'block', marginTop: '10px' }
     const sectionTitle = (icon: any, title: string, color: string) => {
       const Icon = icon
@@ -214,10 +207,17 @@ export default function MeScreenMobile({ onLogout }: MeScreenMobileProps) {
       <div style={{ backgroundColor: '#f0f2f5', minHeight: '100%', paddingBottom: '100px' }}>
         {renderBackButton('Chỉnh sửa hồ sơ')}
         {renderToast()}
+
+        {/* Notice */}
+        <div style={{ margin: '12px 12px 0', padding: '10px 14px', backgroundColor: '#eff6ff', borderRadius: '10px', border: '1px solid #bfdbfe', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Shield style={{ width: '16px', height: '16px', color: '#3b82f6', flexShrink: 0 }} />
+          <span style={{ fontSize: '12px', color: '#1e40af', lineHeight: 1.4 }}>Một số thông tin chỉ được cập nhật bởi quản trị viên (vai trò, Chi đoàn, chức vụ Đoàn...)</span>
+        </div>
+
         <div style={{ padding: '12px' }}>
           {/* Basic Info */}
           <div style={{ backgroundColor: '#fff', borderRadius: '14px', padding: '16px', marginBottom: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            {sectionTitle(User, 'Thông tin cơ bản', '#3b82f6')}
+            {sectionTitle(User, 'Thông tin cá nhân', '#3b82f6')}
             <label style={labelStyle}>Họ và tên</label>
             <input style={fieldStyle} value={editForm.fullName} onChange={e => setEditForm({...editForm, fullName: e.target.value})} placeholder="Nhập họ và tên" />
             <label style={labelStyle}>Giới tính</label>
@@ -228,10 +228,10 @@ export default function MeScreenMobile({ onLogout }: MeScreenMobileProps) {
             </select>
             <label style={labelStyle}>Ngày sinh</label>
             <input style={fieldStyle} value={editForm.dateOfBirth} onChange={e => setEditForm({...editForm, dateOfBirth: e.target.value})} type="date" />
-            <label style={labelStyle}>Nơi sinh</label>
-            <input style={fieldStyle} value={editForm.birthPlace} onChange={e => setEditForm({...editForm, birthPlace: e.target.value})} placeholder="Nhập nơi sinh" />
             <label style={labelStyle}>Quê quán</label>
-            <input style={fieldStyle} value={editForm.hometown} onChange={e => setEditForm({...editForm, hometown: e.target.value})} placeholder="Nhập quê quán" />
+            <input style={fieldStyle} value={editForm.birthPlace} onChange={e => setEditForm({...editForm, birthPlace: e.target.value})} placeholder="Nhập quê quán" />
+            <label style={labelStyle}>Nơi thường trú</label>
+            <input style={fieldStyle} value={editForm.permanentAddress} onChange={e => setEditForm({...editForm, permanentAddress: e.target.value})} placeholder="Nhập nơi thường trú" />
             <label style={labelStyle}>Dân tộc</label>
             <input style={fieldStyle} value={editForm.ethnicity} onChange={e => setEditForm({...editForm, ethnicity: e.target.value})} placeholder="Nhập dân tộc" />
             <label style={labelStyle}>Tôn giáo</label>
@@ -240,37 +240,27 @@ export default function MeScreenMobile({ onLogout }: MeScreenMobileProps) {
 
           {/* Contact */}
           <div style={{ backgroundColor: '#fff', borderRadius: '14px', padding: '16px', marginBottom: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-            {sectionTitle(Phone, 'Liên hệ & Địa chỉ', '#10b981')}
+            {sectionTitle(Phone, 'Thông tin liên hệ', '#10b981')}
             <label style={labelStyle}>Số điện thoại</label>
             <input style={fieldStyle} value={editForm.phone} onChange={e => setEditForm({...editForm, phone: e.target.value})} placeholder="Nhập số điện thoại" />
             <label style={labelStyle}>Email</label>
-            <input style={fieldStyle} value={editForm.email} onChange={e => setEditForm({...editForm, email: e.target.value})} placeholder="Nhập email" type="email" />
-            <label style={labelStyle}>Địa chỉ hiện tại</label>
-            <input style={fieldStyle} value={editForm.address} onChange={e => setEditForm({...editForm, address: e.target.value})} placeholder="Nhập địa chỉ" />
-            <label style={labelStyle}>Địa chỉ thường trú</label>
-            <input style={fieldStyle} value={editForm.permanentAddress} onChange={e => setEditForm({...editForm, permanentAddress: e.target.value})} placeholder="Nhập địa chỉ thường trú" />
-            <label style={labelStyle}>Tỉnh/Thành phố</label>
-            <input style={fieldStyle} value={editForm.province} onChange={e => setEditForm({...editForm, province: e.target.value})} placeholder="Nhập tỉnh/thành" />
-            <label style={labelStyle}>Quận/Huyện</label>
-            <input style={fieldStyle} value={editForm.district} onChange={e => setEditForm({...editForm, district: e.target.value})} placeholder="Nhập quận/huyện" />
-            <label style={labelStyle}>Phường/Xã</label>
-            <input style={fieldStyle} value={editForm.ward} onChange={e => setEditForm({...editForm, ward: e.target.value})} placeholder="Nhập phường/xã" />
+            <input style={disabledFieldStyle} value={editForm.email} readOnly placeholder="Email" />
+            <label style={labelStyle}>Địa chỉ liên hệ</label>
+            <input style={fieldStyle} value={editForm.address} onChange={e => setEditForm({...editForm, address: e.target.value})} placeholder="Nhập địa chỉ liên hệ" />
           </div>
 
           {/* Education */}
           <div style={{ backgroundColor: '#fff', borderRadius: '14px', padding: '16px', marginBottom: '10px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
             {sectionTitle(GraduationCap, 'Trình độ', '#8b5cf6')}
-            <label style={labelStyle}>Nơi làm việc / học tập</label>
-            <input style={fieldStyle} value={editForm.workPlace} onChange={e => setEditForm({...editForm, workPlace: e.target.value})} placeholder="Nhập nơi làm việc" />
-            <label style={labelStyle}>Trình độ học vấn</label>
-            <input style={fieldStyle} value={editForm.educationLevel} onChange={e => setEditForm({...editForm, educationLevel: e.target.value})} placeholder="VD: Đại học, Cao đẳng..." />
+            <label style={labelStyle}>Trình độ văn hóa</label>
+            <input style={fieldStyle} value={editForm.educationLevel} onChange={e => setEditForm({...editForm, educationLevel: e.target.value})} placeholder="VD: 12/12, 11/12..." />
             <label style={labelStyle}>Trình độ chuyên môn</label>
-            <input style={fieldStyle} value={editForm.majorLevel} onChange={e => setEditForm({...editForm, majorLevel: e.target.value})} placeholder="VD: Cử nhân CNTT..." />
+            <input style={fieldStyle} value={editForm.majorLevel} onChange={e => setEditForm({...editForm, majorLevel: e.target.value})} placeholder="VD: Cử nhân, Thạc sỹ..." />
             <label style={labelStyle}>Trình độ tin học</label>
-            <input style={fieldStyle} value={editForm.itLevel} onChange={e => setEditForm({...editForm, itLevel: e.target.value})} placeholder="VD: IC3, MOS..." />
+            <input style={fieldStyle} value={editForm.itLevel} onChange={e => setEditForm({...editForm, itLevel: e.target.value})} placeholder="VD: Chứng chỉ A, B, C..." />
             <label style={labelStyle}>Trình độ ngoại ngữ</label>
             <input style={fieldStyle} value={editForm.languageLevel} onChange={e => setEditForm({...editForm, languageLevel: e.target.value})} placeholder="VD: IELTS 6.5, TOEIC 750..." />
-            <label style={labelStyle}>Trình độ lý luận chính trị</label>
+            <label style={labelStyle}>Lý luận chính trị</label>
             <input style={fieldStyle} value={editForm.politicsLevel} onChange={e => setEditForm({...editForm, politicsLevel: e.target.value})} placeholder="VD: Sơ cấp, Trung cấp..." />
           </div>
 
@@ -322,10 +312,10 @@ export default function MeScreenMobile({ onLogout }: MeScreenMobileProps) {
   const roleBadge = getRoleBadgeColor()
   const rankColor = getRankColor()
 
-  // Info row helper
+  // Info row helper - always show, display 'Chưa cập nhật' for empty
   const infoRow = (icon: any, label: string, value: string | null | undefined, color: string = '#64748b') => {
-    if (!value) return null
     const Icon = icon
+    const hasValue = !!value
     return (
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px 0', borderBottom: '1px solid #f8fafc' }}>
         <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: `${color}10`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }}>
@@ -333,19 +323,15 @@ export default function MeScreenMobile({ onLogout }: MeScreenMobileProps) {
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 500, marginBottom: '2px' }}>{label}</div>
-          <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 500, wordBreak: 'break-word' }}>{value}</div>
+          <div style={{ fontSize: '13px', color: hasValue ? '#1e293b' : '#cbd5e1', fontWeight: 500, wordBreak: 'break-word', fontStyle: hasValue ? 'normal' : 'italic' }}>{hasValue ? value : 'Chưa cập nhật'}</div>
         </div>
       </div>
     )
   }
 
-  // Section card
+  // Section card - always show
   const sectionCard = (icon: any, title: string, color: string, children: React.ReactNode) => {
     const Icon = icon
-    // Filter out null children
-    const filtered = Array.isArray(children) ? children.filter(Boolean) : children
-    const hasContent = Array.isArray(filtered) ? filtered.length > 0 : !!filtered
-    if (!hasContent) return null
     return (
       <div style={{ backgroundColor: '#fff', borderRadius: '16px', padding: '14px', marginBottom: '10px', boxShadow: '0 1px 4px rgba(0,0,0,0.04)', border: '1px solid #f1f5f9' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
@@ -460,46 +446,40 @@ export default function MeScreenMobile({ onLogout }: MeScreenMobileProps) {
       {/* ===== INFO SECTIONS ===== */}
       <div style={{ padding: '0 12px' }}>
 
-        {/* Personal Info */}
+        {/* Personal Info - matches admin "Thông tin cá nhân" */}
         {sectionCard(User, 'Thông tin cá nhân', '#3b82f6', [
           infoRow(User, 'Họ và tên', getUserName(), '#3b82f6'),
           infoRow(Heart, 'Giới tính', renderVal(user?.gender), '#ec4899'),
           infoRow(Cake, 'Ngày sinh', formatDate(user?.dateOfBirth), '#f59e0b'),
-          infoRow(MapPin, 'Nơi sinh', renderVal(user?.birthPlace), '#10b981'),
-          infoRow(Home, 'Quê quán', renderVal(user?.hometown), '#8b5cf6'),
+          infoRow(MapPin, 'Quê quán', renderVal(user?.birthPlace), '#10b981'),
+          infoRow(Home, 'Nơi thường trú', renderVal(user?.permanentAddress), '#8b5cf6'),
           infoRow(Globe, 'Dân tộc', renderVal(user?.ethnicity), '#06b6d4'),
           infoRow(Flag, 'Tôn giáo', renderVal(user?.religion), '#f97316'),
         ])}
 
-        {/* Contact */}
+        {/* Contact - matches admin "Liên hệ" */}
         {sectionCard(Phone, 'Thông tin liên hệ', '#10b981', [
           infoRow(Phone, 'Số điện thoại', renderVal(user?.phone), '#10b981'),
           infoRow(Mail, 'Email', renderVal(user?.email), '#3b82f6'),
-          infoRow(MapPin, 'Địa chỉ hiện tại', renderVal(user?.address), '#f59e0b'),
-          infoRow(Home, 'Địa chỉ thường trú', renderVal(user?.permanentAddress), '#8b5cf6'),
-          infoRow(Building2, 'Tỉnh/TP', renderVal(user?.province), '#06b6d4'),
-          infoRow(Building2, 'Quận/Huyện', renderVal(user?.district), '#64748b'),
-          infoRow(MapPin, 'Phường/Xã', renderVal(user?.ward), '#94a3b8'),
+          infoRow(MapPin, 'Địa chỉ liên hệ', renderVal(user?.address), '#f59e0b'),
         ])}
 
-        {/* Youth Organization */}
+        {/* Youth Organization - matches admin "Thông tin Đoàn" */}
         {sectionCard(Users, 'Thông tin Đoàn', '#ef4444', [
+          infoRow(Users, 'Nơi sinh hoạt Đoàn', renderVal(user?.unit?.name), '#3b82f6'),
           infoRow(Shield, 'Chức vụ Đoàn', renderVal(user?.youthPosition), '#ef4444'),
-          infoRow(Users, 'Chi đoàn', renderVal(user?.unit?.name), '#3b82f6'),
           infoRow(Calendar, 'Ngày vào Đoàn', formatDate(user?.dateJoined), '#10b981'),
           infoRow(Flag, 'Ngày vào Đảng', formatDate(user?.partyJoinDate), '#f59e0b'),
-          infoRow(Briefcase, 'Chức danh', renderVal(user?.title), '#8b5cf6'),
-          infoRow(Swords, 'Quân hàm', renderVal(user?.militaryRank), '#64748b'),
+          infoRow(Swords, 'Cấp bậc', renderVal(user?.militaryRank), '#64748b'),
           infoRow(Landmark, 'Chức vụ chính quyền', renderVal(user?.governmentPosition), '#06b6d4'),
         ])}
 
-        {/* Education & Skills */}
+        {/* Education & Skills - matches admin "Trình độ" */}
         {sectionCard(GraduationCap, 'Trình độ', '#8b5cf6', [
-          infoRow(Briefcase, 'Nơi làm việc', renderVal(user?.workPlace), '#f59e0b'),
-          infoRow(GraduationCap, 'Học vấn', renderVal(user?.educationLevel), '#8b5cf6'),
-          infoRow(BookOpen, 'Chuyên môn', renderVal(user?.majorLevel), '#3b82f6'),
-          infoRow(Monitor, 'Tin học', renderVal(user?.itLevel), '#10b981'),
-          infoRow(Languages, 'Ngoại ngữ', renderVal(user?.languageLevel), '#06b6d4'),
+          infoRow(GraduationCap, 'Trình độ văn hóa', renderVal(user?.educationLevel), '#8b5cf6'),
+          infoRow(BookOpen, 'Trình độ chuyên môn', renderVal(user?.majorLevel), '#3b82f6'),
+          infoRow(Monitor, 'Trình độ tin học', renderVal(user?.itLevel), '#10b981'),
+          infoRow(Languages, 'Trình độ ngoại ngữ', renderVal(user?.languageLevel), '#06b6d4'),
           infoRow(Flag, 'Lý luận chính trị', renderVal(user?.politicsLevel), '#ef4444'),
         ])}
 
