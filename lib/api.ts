@@ -753,6 +753,23 @@ export const authApi = {
     if (typeof window !== 'undefined') {
       document.cookie = 'accessToken=; path=/; max-age=0';
     }
+  },
+
+  // Change password
+  async changePassword(oldPassword: string, newPassword: string): Promise<ApiResponse> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall('/auth/password', {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ currentPassword: oldPassword, newPassword }),
+    });
   }
 };
 

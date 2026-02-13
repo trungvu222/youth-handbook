@@ -35,6 +35,11 @@ import {
   AlertCircle,
   Home,
   Settings,
+  Lock,
+  Info,
+  X,
+  Eye,
+  EyeOff,
 } from "lucide-react"
 
 interface MeScreenMobileProps {
@@ -50,6 +55,13 @@ export default function MeScreenMobile({ onLogout }: MeScreenMobileProps) {
   const [editForm, setEditForm] = useState<any>({})
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({ show: false, message: '', type: 'success' })
+  const [showSettings, setShowSettings] = useState(false)
+  const [showChangePassword, setShowChangePassword] = useState(false)
+  const [passwordForm, setPasswordForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' })
+  const [showOldPass, setShowOldPass] = useState(false)
+  const [showNewPass, setShowNewPass] = useState(false)
+  const [showConfirmPass, setShowConfirmPass] = useState(false)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true)
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ show: true, message, type })
@@ -134,6 +146,39 @@ export default function MeScreenMobile({ onLogout }: MeScreenMobileProps) {
     }
   }
 
+  const handleChangePassword = async () => {
+    if (!passwordForm.oldPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      showToast('Vui lòng điền đầy đủ thông tin', 'error')
+      return
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      showToast('Mật khẩu xác nhận không khớp', 'error')
+      return
+    }
+    if (passwordForm.newPassword.length < 6) {
+      showToast('Mật khẩu mới phải có ít nhất 6 ký tự', 'error')
+      return
+    }
+    
+    setSaving(true)
+    try {
+      const { authApi } = await import('@/lib/api')
+      const result = await authApi.changePassword(passwordForm.oldPassword, passwordForm.newPassword)
+      if (result.success) {
+        showToast('Đổi mật khẩu thành công!', 'success')
+        setPasswordForm({ oldPassword: '', newPassword: '', confirmPassword: '' })
+        setShowChangePassword(false)
+        setShowSettings(false)
+      } else {
+        showToast(result.message || 'Đổi mật khẩu thất bại', 'error')
+      }
+    } catch (error: any) {
+      showToast(error?.message || 'Có lỗi xảy ra', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const getUserName = () => user?.fullName || 'Người dùng'
   const getUserRole = () => {
     if (user?.role === 'ADMIN') return 'Quản trị viên'
@@ -184,6 +229,144 @@ export default function MeScreenMobile({ onLogout }: MeScreenMobileProps) {
         <Icon style={{ width: '18px', height: '18px' }} />
         {toast.message}
       </div>
+    )
+  }
+
+  // ===== SETTINGS MODAL =====
+  const renderSettingsModal = () => {
+    if (!showSettings) return null
+    
+    const menuItem = (icon: any, label: string, color: string, onClick: () => void, isDanger = false) => {
+      const Icon = icon
+      return (
+        <button onClick={onClick} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px', border: 'none', background: '#fff', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#fff'}>
+          <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: isDanger ? 'rgba(239,68,68,0.1)' : `${color}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Icon style={{ width: '18px', height: '18px', color: isDanger ? '#ef4444' : color }} />
+          </div>
+          <span style={{ fontSize: '14px', fontWeight: 600, color: isDanger ? '#ef4444' : '#0f172a', flex: 1, textAlign: 'left' }}>{label}</span>
+          <ChevronLeft style={{ width: '18px', height: '18px', color: '#94a3b8', transform: 'rotate(180deg)' }} />
+        </button>
+      )
+    }
+
+    return (
+      <>
+        {/* Backdrop */}
+        <div onClick={() => setShowSettings(false)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9998, animation: 'fadeIn 0.3s ease' }} />
+        
+        {/* Settings Sheet */}
+        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', maxHeight: '85vh', overflowY: 'auto', zIndex: 9999, animation: 'slideUp 0.3s ease', boxShadow: '0 -4px 24px rgba(0,0,0,0.15)' }}>
+          {/* Header */}
+          <div style={{ padding: '20px 16px 16px', borderBottom: '1px solid #f1f5f9', position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: 'linear-gradient(135deg, #3b82f6, #2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Settings style={{ width: '18px', height: '18px', color: '#fff' }} />
+                </div>
+                <span style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>Cài đặt</span>
+              </div>
+              <button onClick={() => setShowSettings(false)} style={{ width: '36px', height: '36px', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <X style={{ width: '18px', height: '18px', color: '#64748b' }} />
+              </button>
+            </div>
+          </div>
+
+          {/* Menu Items */}
+          <div>
+            {menuItem(Lock, 'Đổi mật khẩu', '#3b82f6', () => { setShowSettings(false); setShowChangePassword(true) })}
+            {menuItem(Bell, notificationsEnabled ? 'Tắt thông báo' : 'Bật thông báo', '#f59e0b', () => { setNotificationsEnabled(!notificationsEnabled); showToast(notificationsEnabled ? 'Đã tắt thông báo' : 'Đã bật thông báo') })}
+            {menuItem(Info, 'Về ứng dụng', '#10b981', () => showToast('Youth Handbook v1.0.0 - Sổ tay Đoàn viên'))}
+            {menuItem(LogOut, 'Đăng xuất', '#ef4444', () => { setShowSettings(false); handleLogout() }, true)}
+          </div>
+
+          {/* Footer */}
+          <div style={{ padding: '16px', textAlign: 'center', borderTop: '1px solid #f1f5f9' }}>
+            <span style={{ fontSize: '12px', color: '#94a3b8' }}>Youth Handbook © 2026</span>
+          </div>
+        </div>
+
+        <style>{`
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+          @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+          }
+        `}</style>
+      </>
+    )
+  }
+
+  // ===== CHANGE PASSWORD MODAL =====
+  const renderChangePasswordModal = () => {
+    if (!showChangePassword) return null
+
+    const fieldStyle: React.CSSProperties = { width: '100%', padding: '12px 14px', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontSize: '14px', outline: 'none', backgroundColor: '#f8fafc', color: '#0f172a', boxSizing: 'border-box' }
+    const labelStyle: React.CSSProperties = { fontSize: '13px', fontWeight: 600, color: '#64748b', marginBottom: '6px', display: 'block' }
+
+    return (
+      <>
+        {/* Backdrop */}
+        <div onClick={() => setShowChangePassword(false)} style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9998, animation: 'fadeIn 0.3s ease' }} />
+        
+        {/* Modal */}
+        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: '24px', borderTopRightRadius: '24px', zIndex: 9999, animation: 'slideUp 0.3s ease', boxShadow: '0 -4px 24px rgba(0,0,0,0.15)' }}>
+          {/* Header */}
+          <div style={{ padding: '20px 16px 16px', borderBottom: '1px solid #f1f5f9' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '12px', background: 'linear-gradient(135deg, #3b82f6, #2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Lock style={{ width: '18px', height: '18px', color: '#fff' }} />
+                </div>
+                <span style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>Đổi mật khẩu</span>
+              </div>
+              <button onClick={() => setShowChangePassword(false)} style={{ width: '36px', height: '36px', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <X style={{ width: '18px', height: '18px', color: '#64748b' }} />
+              </button>
+            </div>
+          </div>
+
+          {/* Form */}
+          <div style={{ padding: '20px 16px 24px' }}>
+            <label style={labelStyle}>Mật khẩu hiện tại</label>
+            <div style={{ position: 'relative', marginBottom: '14px' }}>
+              <input type={showOldPass ? 'text' : 'password'} style={fieldStyle} value={passwordForm.oldPassword} onChange={e => setPasswordForm({...passwordForm, oldPassword: e.target.value})} placeholder="Nhập mật khẩu hiện tại" />
+              <button onClick={() => setShowOldPass(!showOldPass)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'transparent', cursor: 'pointer', padding: '4px' }}>
+                {showOldPass ? <EyeOff style={{ width: '18px', height: '18px', color: '#94a3b8' }} /> : <Eye style={{ width: '18px', height: '18px', color: '#94a3b8' }} />}
+              </button>
+            </div>
+
+            <label style={labelStyle}>Mật khẩu mới</label>
+            <div style={{ position: 'relative', marginBottom: '14px' }}>
+              <input type={showNewPass ? 'text' : 'password'} style={fieldStyle} value={passwordForm.newPassword} onChange={e => setPasswordForm({...passwordForm, newPassword: e.target.value})} placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)" />
+              <button onClick={() => setShowNewPass(!showNewPass)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'transparent', cursor: 'pointer', padding: '4px' }}>
+                {showNewPass ? <EyeOff style={{ width: '18px', height: '18px', color: '#94a3b8' }} /> : <Eye style={{ width: '18px', height: '18px', color: '#94a3b8' }} />}
+              </button>
+            </div>
+
+            <label style={labelStyle}>Xác nhận mật khẩu mới</label>
+            <div style={{ position: 'relative', marginBottom: '20px' }}>
+              <input type={showConfirmPass ? 'text' : 'password'} style={fieldStyle} value={passwordForm.confirmPassword} onChange={e => setPasswordForm({...passwordForm, confirmPassword: e.target.value})} placeholder="Nhập lại mật khẩu mới" />
+              <button onClick={() => setShowConfirmPass(!showConfirmPass)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'transparent', cursor: 'pointer', padding: '4px' }}>
+                {showConfirmPass ? <EyeOff style={{ width: '18px', height: '18px', color: '#94a3b8' }} /> : <Eye style={{ width: '18px', height: '18px', color: '#94a3b8' }} />}
+              </button>
+            </div>
+
+            {/* Buttons */}
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={() => setShowChangePassword(false)} disabled={saving} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1.5px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>
+                Hủy
+              </button>
+              <button onClick={handleChangePassword} disabled={saving} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: 'none', background: saving ? '#94a3b8' : 'linear-gradient(135deg, #3b82f6, #2563eb)', color: '#fff', fontSize: '14px', fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                {saving && <Loader2 style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} />}
+                {saving ? 'Đang lưu...' : 'Xác nhận'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </>
     )
   }
 
@@ -372,7 +555,7 @@ export default function MeScreenMobile({ onLogout }: MeScreenMobileProps) {
           <div style={{ position: 'absolute', top: '20px', left: '30%', width: '50px', height: '50px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)' }} />
 
           {/* Settings icon top right */}
-          <button onClick={() => setActiveSection('edit')} style={{ position: 'absolute', top: '14px', right: '14px', width: '36px', height: '36px', borderRadius: '12px', background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
+          <button onClick={() => setShowSettings(true)} style={{ position: 'absolute', top: '14px', right: '14px', width: '36px', height: '36px', borderRadius: '12px', background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
             <Settings style={{ width: '18px', height: '18px', color: '#fff' }} />
           </button>
 
@@ -515,6 +698,10 @@ export default function MeScreenMobile({ onLogout }: MeScreenMobileProps) {
           Đăng xuất
         </button>
       </div>
+
+      {/* ===== MODALS ===== */}
+      {renderSettingsModal()}
+      {renderChangePasswordModal()}
     </div>
   )
 }
