@@ -33,6 +33,7 @@ import {
   Swords,
   CheckCircle,
   AlertCircle,
+  Home,
   Settings,
 } from "lucide-react"
 
