@@ -20,8 +20,8 @@ const prisma = new PrismaClient({
   log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
 });
 
-// Keep connection alive - ping every 4 minutes to prevent Neon from closing idle connections
-const KEEP_ALIVE_INTERVAL = 4 * 60 * 1000; // 4 minutes
+// Keep connection alive - ping every 2 minutes to prevent Neon from closing idle connections
+const KEEP_ALIVE_INTERVAL = 2 * 60 * 1000; // 2 minutes
 let keepAliveTimer = null;
 
 const startKeepAlive = () => {
