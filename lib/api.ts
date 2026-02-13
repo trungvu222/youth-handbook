@@ -14,17 +14,18 @@ if (typeof window !== 'undefined') {
 }
 
 // API Response types
-interface ApiResponse<T = any> {
+export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
   error?: string;
+  message?: string;
   token?: string;
   accessToken?: string;
   refreshToken?: string;
   user?: User;
 }
 
-interface User {
+export interface User {
   id: string;
   username: string;
   fullName: string;
@@ -35,7 +36,9 @@ interface User {
   phone?: string;
   avatarUrl?: string;
   dateOfBirth?: string;
+  gender?: string;
   birthPlace?: string;
+  permanentAddress?: string;
   address?: string;
   province?: string;
   district?: string;
@@ -616,17 +619,18 @@ export const authApi = {
     if (result.success && (result.accessToken || result.token) && result.user) {
       if (typeof window !== 'undefined') {
         const token = result.accessToken || result.token;
-        // Lưu cả 2 key để tương thích
-        localStorage.setItem('accessToken', token);
-        localStorage.setItem('auth_token', token);
+        if (token) {
+          // Lưu cả 2 key để tương thích
+          localStorage.setItem('accessToken', token);
+          localStorage.setItem('auth_token', token);
+          // Set cookie for middleware
+          document.cookie = `accessToken=${token}; path=/; max-age=${7 * 24 * 60 * 60}`;
+        }
         if (result.refreshToken) {
           localStorage.setItem('refreshToken', result.refreshToken);
         }
         localStorage.setItem('currentUser', JSON.stringify(result.user));
         localStorage.setItem('user', JSON.stringify(result.user));
-        
-        // Set cookie for middleware
-        document.cookie = `accessToken=${token}; path=/; max-age=${7 * 24 * 60 * 60}`;
         
         // Trigger storage event to notify other components
         window.dispatchEvent(new Event('storage'));
