@@ -306,32 +306,43 @@ async function apiCall<T>(
     console.log('[API] Response data:', data);
 
     // Auto-refresh token on 401 (expired token)
-    if (response.status === 401 && !_isRetry && typeof window !== 'undefined') {
-      console.log('[API] Token expired, attempting refresh...');
-      const refreshToken = localStorage.getItem('refreshToken');
-      if (refreshToken) {
-        try {
-          const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refreshToken }),
-          });
-          const refreshData = await refreshResponse.json();
-          if (refreshData.success && refreshData.accessToken) {
-            localStorage.setItem('accessToken', refreshData.accessToken);
-            localStorage.setItem('auth_token', refreshData.accessToken);
-            document.cookie = `accessToken=${refreshData.accessToken}; path=/; max-age=${7 * 24 * 60 * 60}`;
-            // Retry the original request with new token
-            const newHeaders = { ...options.headers } as Record<string, string>;
-            if (newHeaders['Authorization']) {
-              newHeaders['Authorization'] = `Bearer ${refreshData.accessToken}`;
+    if (response.status === 401 && typeof window !== 'undefined') {
+      if (!_isRetry) {
+        console.log('[API] Token expired, attempting refresh...');
+        const storedRefreshToken = localStorage.getItem('refreshToken');
+        if (storedRefreshToken) {
+          try {
+            const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ refreshToken: storedRefreshToken }),
+            });
+            const refreshData = await refreshResponse.json();
+            if (refreshData.success && refreshData.accessToken) {
+              localStorage.setItem('accessToken', refreshData.accessToken);
+              localStorage.setItem('auth_token', refreshData.accessToken);
+              document.cookie = `accessToken=${refreshData.accessToken}; path=/; max-age=${7 * 24 * 60 * 60}`;
+              // Retry the original request with new token
+              const newHeaders = { ...options.headers } as Record<string, string>;
+              if (newHeaders['Authorization']) {
+                newHeaders['Authorization'] = `Bearer ${refreshData.accessToken}`;
+              }
+              return apiCall<T>(endpoint, { ...options, headers: newHeaders }, true);
             }
-            return apiCall<T>(endpoint, { ...options, headers: newHeaders }, true);
+          } catch (refreshError) {
+            console.warn('[API] Token refresh failed:', refreshError);
           }
-        } catch (refreshError) {
-          console.warn('[API] Token refresh failed:', refreshError);
         }
       }
+      // Refresh failed, no refresh token, or retry also got 401 → force logout
+      console.log('[API] Force logout due to 401 - clearing auth data');
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('user');
+      document.cookie = 'accessToken=; path=/; max-age=0';
+      window.dispatchEvent(new CustomEvent('force_logout'));
     }
 
     if (!response.ok) {
@@ -594,6 +605,7 @@ export function clearAuth(): void {
   if (typeof window === 'undefined') return;
   localStorage.removeItem('accessToken');
   localStorage.removeItem('auth_token');
+  localStorage.removeItem('refreshToken');
   localStorage.removeItem('currentUser');
   localStorage.removeItem('user');
 }
@@ -2274,7 +2286,12 @@ export const documentApi = {
       }
 
       const data = await response.json();
-      return { success: true, data };
+      // Backend trả về { success: true, data: { fileUrl, fileName, fileSize } }
+      // Cần unwrap đúng lớp data
+      if (data.success && data.data) {
+        return { success: true, data: data.data };
+      }
+      return { success: false, error: data.error || 'Upload failed' };
     } catch (error: any) {
       return { success: false, error: error.message || 'Upload failed' };
     }
@@ -2601,6 +2618,34 @@ export const examApi = {
       },
     });
   },
+
+  async getPendingGrading(): Promise<ApiResponse<any[]>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall('/exams/admin/pending-grading', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+
+  async gradeExamAttempt(attemptId: string): Promise<ApiResponse<any>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall(`/exams/attempts/${attemptId}/grade`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+  },
 };
 
 // =====================================
@@ -2876,6 +2921,27 @@ export const adminApi = {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
+    });
+  },
+};
+
+// =====================================
+// CHAT API (AI Assistant)
+// =====================================
+
+export const chatApi = {
+  async chatWithAI(message: string, history: Array<{role: string, parts: Array<{text: string}>}> = []): Promise<ApiResponse<{message: string, timestamp: Date}>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall('/chat', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ message, history }),
     });
   },
 };

@@ -13,6 +13,8 @@ export default function ExamsScreenMobile() {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [takingExam, setTakingExam] = useState(false)
   const [error, setError] = useState<string>('')
+  const [viewingResult, setViewingResult] = useState<any>(null)
+  const [examPage, setExamPage] = useState(1)
 
   // Load exams from API
   useEffect(() => {
@@ -201,7 +203,7 @@ export default function ExamsScreenMobile() {
               {error}
             </div>
             <button
-              onClick={loadExams}
+              onClick={() => loadExams()}
               style={{
                 marginTop: '16px',
                 padding: '11px 24px',
@@ -231,6 +233,11 @@ export default function ExamsScreenMobile() {
            category.toLowerCase().includes(search)
   })
 
+  const EXAM_PER_PAGE = 5
+  const totalExamPages = Math.ceil(filteredExams.length / EXAM_PER_PAGE)
+  const safeExamPage = Math.min(examPage, Math.max(1, totalExamPages))
+  const paginatedExams = filteredExams.slice((safeExamPage - 1) * EXAM_PER_PAGE, safeExamPage * EXAM_PER_PAGE)
+
   return (
     <div style={containerStyle}>
       {/* Header */}
@@ -247,7 +254,7 @@ export default function ExamsScreenMobile() {
             type="text"
             placeholder="Tìm kiếm kỳ thi..."
             value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
+            onChange={(e) => { setSearchText(e.target.value); setExamPage(1) }}
             style={searchInputStyle}
           />
         </div>
@@ -273,7 +280,7 @@ export default function ExamsScreenMobile() {
         </div>
       ) : (
         <div style={{ paddingBottom: '20px' }}>
-          {filteredExams.map((exam) => {
+          {paginatedExams.map((exam) => {
             const attemptCount = exam.userAttempts || exam.attemptCount || 0
             const canTakeExam = attemptCount < exam.maxAttempts
             const category = exam.category || 'Chưa phân loại'
@@ -304,18 +311,54 @@ export default function ExamsScreenMobile() {
                   <span>📊 Tối đa: {exam.maxAttempts} lần</span>
                 </div>
 
-                {/* Attempts info */}
+                {/* Attempts info + Xem điểm */}
                 {attemptCount > 0 && (
                   <div style={{
                     padding: '10px 12px',
-                    backgroundColor: '#f5f3ff',
+                    backgroundColor: exam.lastAttempt?.isGraded ? '#f5f3ff' : '#f1f5f9',
                     borderRadius: '10px',
                     marginBottom: '12px',
                     fontSize: '13px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
                   }}>
-                    <span style={{ color: '#5b21b6', fontWeight: 500 }}>
+                    <span style={{ color: exam.lastAttempt?.isGraded ? '#5b21b6' : '#64748b', fontWeight: 500 }}>
                       Đã thi: {attemptCount}/{exam.maxAttempts} lần
+                      {exam.lastAttempt?.isGraded && exam.lastAttempt?.score !== null && exam.lastAttempt?.score !== undefined && (
+                        <span style={{ marginLeft: '8px', color: exam.lastAttempt.isPassed ? '#15803d' : '#dc2626' }}>
+                          &bull; {exam.lastAttempt.isPassed ? '✓' : '✗'} {Math.round(exam.lastAttempt.score)}%
+                        </span>
+                      )}
                     </span>
+                    {exam.lastAttempt?.isGraded ? (
+                      <button
+                        onClick={() => setViewingResult(exam)}
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: '8px',
+                          border: '1.5px solid #7c3aed',
+                          backgroundColor: 'white',
+                          color: '#7c3aed',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Xem điểm
+                      </button>
+                    ) : (
+                      <span style={{
+                        padding: '4px 10px',
+                        borderRadius: '8px',
+                        backgroundColor: '#e2e8f0',
+                        color: '#64748b',
+                        fontSize: '12px',
+                        fontWeight: 500,
+                      }}>
+                        ⏳ Đang chấm điểm
+                      </span>
+                    )}
                   </div>
                 )}
 
@@ -338,6 +381,23 @@ export default function ExamsScreenMobile() {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* ===== PHÂN TRANG ===== */}
+      {totalExamPages > 1 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '6px 16px 16px' }}>
+          <button onClick={() => setExamPage(p => Math.max(1, p - 1))} disabled={safeExamPage <= 1}
+            style={{ padding: '8px 16px', borderRadius: 10, border: '1.5px solid #e2e8f0', backgroundColor: safeExamPage <= 1 ? '#f8fafc' : 'white', color: safeExamPage <= 1 ? '#cbd5e1' : '#1e293b', fontSize: 13, fontWeight: 600, cursor: safeExamPage <= 1 ? 'not-allowed' : 'pointer' }}>
+            ← Trước
+          </button>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#475569', minWidth: 90, textAlign: 'center' }}>
+            Trang {safeExamPage} / {totalExamPages}
+          </span>
+          <button onClick={() => setExamPage(p => Math.min(totalExamPages, p + 1))} disabled={safeExamPage >= totalExamPages}
+            style={{ padding: '8px 16px', borderRadius: 10, border: '1.5px solid #e2e8f0', backgroundColor: safeExamPage >= totalExamPages ? '#f8fafc' : 'white', color: safeExamPage >= totalExamPages ? '#cbd5e1' : '#1e293b', fontSize: 13, fontWeight: 600, cursor: safeExamPage >= totalExamPages ? 'not-allowed' : 'pointer' }}>
+            Sau →
+          </button>
         </div>
       )}
 
@@ -531,6 +591,115 @@ export default function ExamsScreenMobile() {
                   ✅ Bắt đầu thi
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Result Modal */}
+      {viewingResult && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 50,
+          padding: '16px',
+        }} onClick={() => setViewingResult(null)}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '20px',
+            width: '100%',
+            maxWidth: '400px',
+            overflow: 'hidden',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+          }} onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div style={{
+              background: 'linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%)',
+              padding: '20px 24px',
+              color: 'white',
+              textAlign: 'center',
+            }}>
+              <div style={{ fontSize: '17px', fontWeight: 700 }}>Kết quả lần thi gần nhất</div>
+              <div style={{ fontSize: '13px', opacity: 0.85, marginTop: '4px' }}>{viewingResult.title}</div>
+            </div>
+
+            {/* Score */}
+            <div style={{ padding: '28px 24px' }}>
+              {viewingResult.lastAttempt ? (() => {
+                const attempt = viewingResult.lastAttempt
+                const score = attempt.score !== null ? Math.round(attempt.score) : null
+                const isPassed = attempt.isPassed
+                return (
+                  <>
+                    {/* Score */}
+                    <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                      <div style={{ fontSize: '52px', fontWeight: 800, color: isPassed ? '#15803d' : '#dc2626', lineHeight: 1, marginBottom: '8px' }}>
+                        {score !== null ? `${score}%` : 'N/A'}
+                      </div>
+                      <div style={{ color: isPassed ? '#15803d' : '#dc2626', fontWeight: 600, fontSize: '15px' }}>
+                        {isPassed ? '✓ Đạt yêu cầu' : '✗ Chưa đạt'}
+                      </div>
+                    </div>
+
+                    {/* Info rows */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '24px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', backgroundColor: '#f8fafc', borderRadius: '10px' }}>
+                        <span style={{ color: '#64748b', fontSize: '13px' }}>Lần thi số</span>
+                        <span style={{ fontWeight: 600, fontSize: '13px' }}>#{attempt.attemptNumber}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', backgroundColor: '#f8fafc', borderRadius: '10px' }}>
+                        <span style={{ color: '#64748b', fontSize: '13px' }}>Điểm đạt yêu cầu</span>
+                        <span style={{ fontWeight: 600, fontSize: '13px' }}>{viewingResult.passingScore}%</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', backgroundColor: '#f8fafc', borderRadius: '10px' }}>
+                        <span style={{ color: '#64748b', fontSize: '13px' }}>Tổng số lần đã thi</span>
+                        <span style={{ fontWeight: 600, fontSize: '13px' }}>{viewingResult.userAttempts}/{viewingResult.maxAttempts}</span>
+                      </div>
+                      {attempt.submittedAt && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', backgroundColor: '#f8fafc', borderRadius: '10px' }}>
+                          <span style={{ color: '#64748b', fontSize: '13px' }}>Nộp bài lúc</span>
+                          <span style={{ fontWeight: 600, fontSize: '13px' }}>
+                            {new Date(attempt.submittedAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      )}
+                      {attempt.gradedAt && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', backgroundColor: '#ecfdf5', borderRadius: '10px' }}>
+                          <span style={{ color: '#64748b', fontSize: '13px' }}>Đã chấm điểm lúc</span>
+                          <span style={{ fontWeight: 600, fontSize: '13px', color: '#15803d' }}>
+                            {new Date(attempt.gradedAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )
+              })() : (
+                <div style={{ textAlign: 'center', color: '#64748b', padding: '20px' }}>
+                  Chưa có kết quả nào
+                </div>
+              )}
+
+              <button
+                onClick={() => setViewingResult(null)}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  backgroundColor: '#7c3aed',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontSize: '15px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Đóng
+              </button>
             </div>
           </div>
         </div>

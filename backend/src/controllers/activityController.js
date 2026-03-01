@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma');
+const { broadcastCheckin } = require('../utils/attendanceEvents');
 const crypto = require('crypto');
 
 // @desc    Get all activities
@@ -88,9 +89,18 @@ const getActivities = async (req, res, next) => {
       prisma.activity.count({ where: whereClause })
     ]);
 
+    // Add userParticipation field for current user (so mobile knows if user is registered)
+    const activitiesWithUserParticipation = activities.map(activity => {
+      const userParticipation = activity.participants.find(p => p.userId === currentUser.id) || null;
+      return {
+        ...activity,
+        userParticipation
+      };
+    });
+
     res.status(200).json({
       success: true,
-      data: activities,
+      data: activitiesWithUserParticipation,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -522,6 +532,16 @@ const checkInActivity = async (req, res, next) => {
       }
     });
 
+    // Broadcast real-time SSE event to admin clients
+    broadcastCheckin({
+      activityId: id,
+      userId: currentUser.id,
+      userName: currentUser.fullName || currentUser.email,
+      activityTitle: activity.title,
+      checkInTime: now.toISOString(),
+      pointsEarned
+    });
+
     res.status(200).json({
       success: true,
       data: {
@@ -865,6 +885,17 @@ const checkInWithGPS = async (req, res, next) => {
         }
       });
     }
+
+    // Broadcast real-time SSE event to admin clients
+    broadcastCheckin({
+      activityId: id,
+      userId,
+      userName: req.user.fullName || req.user.email,
+      activityTitle: activity.title,
+      checkInTime: now.toISOString(),
+      pointsEarned: points,
+      isLate
+    });
 
     res.status(200).json({
       success: true,

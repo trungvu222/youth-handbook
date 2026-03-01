@@ -13,6 +13,17 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // Limit webpack cache size to prevent ENOSPC errors
+  webpack: (config, { dev }) => {
+    if (dev) {
+      config.cache = {
+        type: 'filesystem',
+        maxMemoryGenerations: 1,
+        compression: 'gzip',
+      }
+    }
+    return config
+  },
   // Use static export for mobile builds
   ...(isMobileBuild && {
     output: 'export',

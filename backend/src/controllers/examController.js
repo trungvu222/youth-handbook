@@ -66,7 +66,9 @@ const getExams = async (req, res, next) => {
             status: true,
             score: true,
             isPassed: true,
-            submittedAt: true
+            submittedAt: true,
+            isGraded: true,
+            gradedAt: true
           },
           orderBy: { attemptNumber: 'desc' }
         },
@@ -240,8 +242,8 @@ const startExamAttempt = async (req, res, next) => {
           }
         },
         attempts: {
-          where: { userId },
-          select: { attemptNumber: true }
+          where: { userId },  // Get ALL attempts for this user
+          select: { id: true, attemptNumber: true, status: true }
         }
       }
     });
@@ -255,7 +257,7 @@ const startExamAttempt = async (req, res, next) => {
 
     // Check if exam is available
     const now = new Date();
-    if (exam.status !== 'ACTIVE' && exam.status !== 'PUBLISHED') {
+    if (exam.status !== 'PUBLISHED') {
       return res.status(400).json({
         success: false,
         error: 'Exam is not available'
@@ -276,31 +278,30 @@ const startExamAttempt = async (req, res, next) => {
       });
     }
 
-    // Check attempt limit
-    const userAttempts = exam.attempts.length;
-    if (userAttempts >= exam.maxAttempts) {
+    // Check for existing in-progress attempt
+    const existingInProgress = exam.attempts.find(a => a.status === 'IN_PROGRESS');
+    if (existingInProgress) {
+      return res.status(400).json({
+        success: false,
+        error: 'You have an exam in progress',
+        attemptId: existingInProgress.id
+      });
+    }
+
+    // Check attempt limit (only count completed attempts)
+    const submittedAttempts = exam.attempts.filter(a => a.status === 'SUBMITTED');
+    if (submittedAttempts.length >= exam.maxAttempts) {
       return res.status(400).json({
         success: false,
         error: 'Maximum attempts reached'
       });
     }
 
-    // Check for existing in-progress attempt
-    const existingAttempt = await prisma.examAttempt.findFirst({
-      where: {
-        examId: id,
-        userId,
-        status: 'IN_PROGRESS'
-      }
-    });
-
-    if (existingAttempt) {
-      return res.status(400).json({
-        success: false,
-        error: 'You have an exam in progress',
-        attemptId: existingAttempt.id
-      });
-    }
+    // Calculate next attempt number based on ALL attempts (including IN_PROGRESS)
+    const maxAttemptNumber = exam.attempts.length > 0 
+      ? Math.max(...exam.attempts.map(a => a.attemptNumber))
+      : 0;
+    const nextAttemptNumber = maxAttemptNumber + 1;
 
     // Prepare questions (remove correct answers from client response)
     let questions = exam.questions;
@@ -330,15 +331,60 @@ const startExamAttempt = async (req, res, next) => {
       };
     });
 
-    // Create attempt
-    const attempt = await prisma.examAttempt.create({
-      data: {
-        examId: id,
-        userId,
-        attemptNumber: userAttempts + 1,
-        status: 'IN_PROGRESS'
+    // Create attempt - handle race condition with try-catch
+    let attempt;
+    try {
+      attempt = await prisma.examAttempt.create({
+        data: {
+          examId: id,
+          userId,
+          attemptNumber: nextAttemptNumber,
+          status: 'IN_PROGRESS'
+        }
+      });
+    } catch (createError) {
+      // P2002 = unique constraint violation (race condition / double request)
+      if (createError.code === 'P2002') {
+        // Return the existing IN_PROGRESS attempt
+        const existing = await prisma.examAttempt.findFirst({
+          where: { examId: id, userId, status: 'IN_PROGRESS' }
+        });
+        if (existing) {
+          // Re-fetch exam questions to return full response
+          const examData = await prisma.exam.findUnique({
+            where: { id },
+            include: {
+              questions: {
+                where: { isActive: true },
+                orderBy: { orderIndex: 'asc' },
+                select: { id: true, questionText: true, questionType: true, answers: true, points: true }
+              }
+            }
+          });
+          const clientQs = (examData?.questions || []).map(q => ({
+            id: q.id,
+            questionText: q.questionText,
+            questionType: q.questionType,
+            answers: Array.isArray(q.answers) ? q.answers.map(a => ({ id: a.id, text: a.text })) : q.answers,
+            points: q.points
+          }));
+          return res.status(201).json({
+            success: true,
+            data: {
+              attemptId: existing.id,
+              exam: {
+                id: exam.id, title: exam.title, instructions: exam.instructions,
+                duration: exam.duration, totalQuestions: clientQs.length,
+                passingScore: exam.passingScore, showResults: exam.showResults, showAnswers: exam.showAnswers
+              },
+              questions: clientQs,
+              startedAt: existing.startedAt
+            }
+          });
+        }
       }
-    });
+      throw createError; // Re-throw if not P2002
+    }
 
     res.status(201).json({
       success: true,
@@ -453,7 +499,7 @@ const submitExamAttempt = async (req, res, next) => {
     // Calculate time spent
     const timeSpent = Math.floor((new Date() - new Date(attempt.startedAt)) / 1000);
 
-    // Update attempt
+    // Update attempt - score calculated but NOT graded yet (admin must confirm)
     const submittedAttempt = await prisma.examAttempt.update({
       where: { id: attemptId },
       data: {
@@ -463,46 +509,20 @@ const submitExamAttempt = async (req, res, next) => {
         answers,
         score: scorePercentage,
         isPassed,
-        pointsEarned
+        pointsEarned: isPassed ? attempt.exam.pointsAwarded : 0,
+        isGraded: false  // Admin must grade before user can see result
       }
     });
 
-    // Add points to user if passed
-    if (isPassed && pointsEarned > 0) {
-      await prisma.user.update({
-        where: { id: userId },
-        data: { points: { increment: pointsEarned } }
-      });
-
-      // Record points history
-      await prisma.pointsHistory.create({
-        data: {
-          userId,
-          points: pointsEarned,
-          reason: `Passed exam: ${attempt.exam.title}`,
-          type: 'EXAM_PASSED'
-        }
-      });
-    }
-
-    const result = {
-      attemptId: submittedAttempt.id,
-      score: scorePercentage,
-      isPassed,
-      pointsEarned,
-      timeSpent,
-      totalQuestions: questionResults.length,
-      correctAnswers: questionResults.filter(q => q.isCorrect).length
-    };
-
-    // Include detailed results if exam allows
-    if (attempt.exam.showResults) {
-      result.questionResults = questionResults;
-    }
+    // Do NOT award points yet - wait for admin to grade
 
     res.status(200).json({
       success: true,
-      data: result
+      data: {
+        attemptId: submittedAttempt.id,
+        message: 'Bài thi đã được nộp thành công. Vui lòng đợi admin chấm điểm.',
+        isGraded: false
+      }
     });
 
   } catch (error) {
@@ -611,7 +631,7 @@ const createExam = async (req, res, next) => {
         shuffleAnswers,
         creatorId: req.user.id,
         unitId,
-        status: 'DRAFT'
+        status: req.body.status || 'PUBLISHED'  // Default to PUBLISHED so users can take exams immediately
       }
     });
 
@@ -990,6 +1010,124 @@ const getExamAttempts = async (req, res, next) => {
   }
 };
 
+// @desc    Get pending grading list (admin/leader)
+// @route   GET /api/exams/admin/pending-grading
+// @access  Private (Admin/Leader)
+const getPendingGrading = async (req, res, next) => {
+  try {
+    const pendingAttempts = await prisma.examAttempt.findMany({
+      where: {
+        status: 'SUBMITTED',
+        isGraded: false
+      },
+      include: {
+        exam: { select: { id: true, title: true, passingScore: true, category: true } },
+        user: { select: { id: true, fullName: true, unit: { select: { name: true } } } }
+      },
+      orderBy: { submittedAt: 'asc' }
+    });
+
+    res.status(200).json({
+      success: true,
+      data: pendingAttempts.map(a => ({
+        id: a.id,
+        examId: a.exam.id,
+        examTitle: a.exam.title,
+        examCategory: a.exam.category,
+        passingScore: a.exam.passingScore,
+        userId: a.user.id,
+        userName: a.user.fullName,
+        unitName: a.user.unit?.name || '',
+        attemptNumber: a.attemptNumber,
+        score: Math.round(a.score || 0),
+        isPassed: a.isPassed,
+        submittedAt: a.submittedAt,
+        timeSpent: a.timeSpent
+      }))
+    });
+  } catch (error) {
+    console.error('Get pending grading error:', error);
+    next(error);
+  }
+};
+
+// @desc    Grade an exam attempt (publish result to user)
+// @route   POST /api/exams/attempts/:attemptId/grade
+// @access  Private (Admin/Leader)
+const gradeExamAttempt = async (req, res, next) => {
+  try {
+    const { attemptId } = req.params;
+    const adminId = req.user.id;
+
+    const attempt = await prisma.examAttempt.findUnique({
+      where: { id: attemptId },
+      include: {
+        exam: { select: { id: true, title: true, pointsAwarded: true, passingScore: true } },
+        user: { select: { id: true, fullName: true } }
+      }
+    });
+
+    if (!attempt) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy bài thi' });
+    }
+    if (attempt.status !== 'SUBMITTED') {
+      return res.status(400).json({ success: false, error: 'Bài thi chưa được nộp' });
+    }
+    if (attempt.isGraded) {
+      return res.status(400).json({ success: false, error: 'Bài thi đã được chấm điểm rồi' });
+    }
+
+    // Mark as graded
+    await prisma.examAttempt.update({
+      where: { id: attemptId },
+      data: {
+        isGraded: true,
+        gradedAt: new Date(),
+        gradedBy: adminId
+      }
+    });
+
+    // Award points if passed
+    if (attempt.isPassed && attempt.pointsEarned > 0) {
+      await prisma.user.update({
+        where: { id: attempt.userId },
+        data: { points: { increment: attempt.pointsEarned } }
+      });
+      await prisma.pointsHistory.create({
+        data: {
+          userId: attempt.userId,
+          points: attempt.pointsEarned,
+          reason: `Đạt bài thi: ${attempt.exam.title}`,
+          type: 'EXAM_PASSED'
+        }
+      });
+    }
+
+    // Send notification to user
+    const scoreText = `${Math.round(attempt.score || 0)}%`;
+    const resultText = attempt.isPassed ? 'ĐẠT' : 'CHƯA ĐẠT';
+    await prisma.notification.create({
+      data: {
+        userId: attempt.userId,
+        title: `Kết quả bài thi: ${attempt.exam.title}`,
+        message: attempt.isPassed
+          ? `Chúc mừng! Bạn đã ${resultText} bài thi "${attempt.exam.title}" với số điểm ${scoreText}. Bạn nhận được ${attempt.pointsEarned} điểm thưởng!`
+          : `Bạn ${resultText} bài thi "${attempt.exam.title}" với số điểm ${scoreText}. Điểm đạt yêu cầu là ${attempt.exam.passingScore || 70}%. Hãy cố gắng hơn ở lần sau!`,
+        type: 'EXAM_RESULT',
+        relatedId: attempt.examId
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Đã chấm điểm và gửi kết quả đến ${attempt.user.fullName}`
+    });
+  } catch (error) {
+    console.error('Grade exam attempt error:', error);
+    next(error);
+  }
+};
+
 module.exports = {
   getExams,
   getExam,
@@ -1000,7 +1138,9 @@ module.exports = {
   updateExam,
   deleteExam,
   getExamStats,
-  getExamAttempts
+  getExamAttempts,
+  gradeExamAttempt,
+  getPendingGrading
 };
 
 

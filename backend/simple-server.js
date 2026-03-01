@@ -42,7 +42,7 @@ app.post('/api/auth/login', (req, res) => {
   } else {
     res.status(401).json({
       success: false,
-      error: 'Invalid credentials'
+      error: 'Thông tin tài khoản hoặc mật khẩu không đúng. Vui lòng thử lại'
     });
   }
 });

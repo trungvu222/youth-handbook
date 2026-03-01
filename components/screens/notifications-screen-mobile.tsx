@@ -14,7 +14,12 @@ interface Notification {
   relatedId?: string
 }
 
-export default function NotificationsScreenMobile({ onBack }: { onBack?: () => void }) {
+interface NotificationsScreenMobileProps {
+  onBack?: () => void
+  onOpenDocument?: (docId: string) => void
+}
+
+export default function NotificationsScreenMobile({ onBack, onOpenDocument }: NotificationsScreenMobileProps) {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -113,7 +118,12 @@ export default function NotificationsScreenMobile({ onBack }: { onBack?: () => v
             {notifications.map(notification => (
               <button
                 key={notification.id}
-                onClick={() => !notification.isRead && handleMarkRead(notification.id)}
+                onClick={() => {
+                  if (!notification.isRead) handleMarkRead(notification.id)
+                  if (notification.type === 'DOCUMENT' && notification.relatedId && onOpenDocument) {
+                    onOpenDocument(notification.relatedId)
+                  }
+                }}
                 style={{
                   width: '100%',
                   textAlign: 'left',
@@ -141,6 +151,11 @@ export default function NotificationsScreenMobile({ onBack }: { onBack?: () => v
                     <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 6 }}>
                       {timeAgo(notification.createdAt)}
                     </p>
+                    {notification.type === 'DOCUMENT' && notification.relatedId && onOpenDocument && (
+                      <p style={{ fontSize: 12, color: '#0284c7', fontWeight: 600, marginTop: 6 }}>
+                        📂 Nhấn để xem tài liệu →
+                      </p>
+                    )}
                   </div>
                 </div>
               </button>

@@ -75,7 +75,7 @@ export default function RootLayout({
         {/* Critical CSS for mobile app */}
         <style dangerouslySetInnerHTML={{ __html: criticalCSS }} />
       </head>
-      <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
+      <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
         <script dangerouslySetInnerHTML={{ __html: capacitorDetectionScript }} />
         {children}
         <Toaster />

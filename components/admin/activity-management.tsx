@@ -107,6 +107,10 @@ export default function ActivityManagement() {
   const [checkinSendMode, setCheckinSendMode] = useState<'all' | 'select'>('all')
   const [checkinSelectedUsers, setCheckinSelectedUsers] = useState<string[]>([])
   const [copiedCode, setCopiedCode] = useState(false)
+  const [attendanceFlash, setAttendanceFlash] = useState(false) // Visual flash when new check-in detected
+  const [lastCheckedInCount, setLastCheckedInCount] = useState<number>(0) // Track previous count to detect changes
+  const [attendanceAutoRefresh, setAttendanceAutoRefresh] = useState(true) // Toggle auto-refresh
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null) // Last refresh timestamp
   const [sendNotification, setSendNotification] = useState(false)
   const [notifyAll, setNotifyAll] = useState(true)
   const [notifyUserIds, setNotifyUserIds] = useState<string[]>([])
@@ -201,6 +205,8 @@ export default function ActivityManagement() {
       if (res.ok) {
         const data = await res.json()
         setActivityStats(data.data)
+        setLastCheckedInCount(data.data?.checkedIn || 0)
+        setLastRefreshTime(new Date())
       } else {
         toast({ title: "Lỗi", description: "Không thể tải thống kê điểm danh", variant: "destructive" })
       }
@@ -211,6 +217,98 @@ export default function ActivityManagement() {
       setLoadingStats(false)
     }
   }
+
+  // Silent refresh (no loading spinner) for auto-polling
+  const fetchActivityStatsQuiet = async (activityId: string) => {
+    try {
+      const token = localStorage.getItem("accessToken")
+      const res = await fetch(`${API_URL}/api/activities/${activityId}/stats`, {
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}` 
+        }
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const newCheckedIn = data.data?.checkedIn || 0
+        
+        // Detect new check-in → flash animation + toast
+        if (newCheckedIn > lastCheckedInCount) {
+          setAttendanceFlash(true)
+          setTimeout(() => setAttendanceFlash(false), 2000)
+          const diff = newCheckedIn - lastCheckedInCount
+          toast({ 
+            title: "🔔 Điểm danh mới!", 
+            description: `${diff} đoàn viên vừa điểm danh thành công`,
+          })
+        }
+        
+        setActivityStats(data.data)
+        setLastCheckedInCount(newCheckedIn)
+        setLastRefreshTime(new Date())
+      }
+    } catch (error) {
+      console.error("[ActivityManagement] Silent refresh error:", error)
+    }
+  }
+
+  // Auto-refresh attendance stats when dialog is open
+  // Uses SSE (real-time) with polling fallback (every 5s)
+  useEffect(() => {
+    if (!showAttendanceDialog || !selectedActivity || !attendanceAutoRefresh) return
+
+    const activityId = selectedActivity.id
+    let pollInterval: NodeJS.Timeout | null = null
+    let eventSource: EventSource | null = null
+
+    // Try SSE connection for instant updates
+    const token = localStorage.getItem("accessToken")
+    if (token) {
+      try {
+        const sseUrl = `${API_URL}/api/activities/attendance-stream?token=${encodeURIComponent(token)}`
+        eventSource = new EventSource(sseUrl)
+        
+        eventSource.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data)
+            if (data.type === 'checkin' && data.activityId === activityId) {
+              console.log('[Attendance SSE] New check-in:', data.userName)
+              fetchActivityStatsQuiet(activityId)
+            }
+          } catch (err) {
+            // Ignore parse errors
+          }
+        }
+
+        eventSource.onerror = () => {
+          console.log('[Attendance SSE] Connection error, falling back to polling')
+          eventSource?.close()
+          eventSource = null
+          // Start polling as fallback
+          if (!pollInterval) {
+            pollInterval = setInterval(() => {
+              fetchActivityStatsQuiet(activityId)
+            }, 5000)
+          }
+        }
+      } catch (err) {
+        console.log('[Attendance SSE] Failed to connect:', err)
+      }
+    }
+
+    // Also poll every 10s as a safety net (even with SSE, in case events are missed)
+    pollInterval = setInterval(() => {
+      fetchActivityStatsQuiet(activityId)
+    }, 10000)
+
+    return () => {
+      if (pollInterval) clearInterval(pollInterval)
+      if (eventSource) {
+        eventSource.close()
+        eventSource = null
+      }
+    }
+  }, [showAttendanceDialog, selectedActivity?.id, attendanceAutoRefresh])
 
   // Open attendance dialog
   const openAttendanceDialog = async (activity: Activity) => {
@@ -1534,11 +1632,62 @@ export default function ActivityManagement() {
 
       {/* Attendance List Dialog - Danh sách điểm danh */}
       <Dialog open={showAttendanceDialog} onOpenChange={setShowAttendanceDialog}>
-        <DialogContent className="w-[98vw] max-w-none h-[95vh] flex flex-col p-0">
+        <DialogContent className={`w-[98vw] max-w-none h-[95vh] flex flex-col p-0 transition-all duration-500 ${attendanceFlash ? 'ring-4 ring-green-400 ring-opacity-75' : ''}`}>
           <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
-            <DialogTitle className="flex items-center gap-2">
-              <ClipboardList className="h-5 w-5 text-green-600" />
-              Danh sách điểm danh
+            <DialogTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ClipboardList className="h-5 w-5 text-green-600" />
+                Danh sách điểm danh
+              </div>
+              <div className="flex items-center gap-3">
+                {/* Auto-refresh indicator */}
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  {attendanceAutoRefresh && (
+                    <span className="flex items-center gap-1.5 bg-green-50 text-green-700 px-2.5 py-1 rounded-full border border-green-200">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                      </span>
+                      Tự động cập nhật
+                    </span>
+                  )}
+                  {lastRefreshTime && (
+                    <span className="text-muted-foreground">
+                      Cập nhật: {lastRefreshTime.toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+                    </span>
+                  )}
+                </div>
+                {/* Toggle auto-refresh */}
+                <Button
+                  variant={attendanceAutoRefresh ? "default" : "outline"}
+                  size="sm"
+                  className={attendanceAutoRefresh ? "bg-green-600 hover:bg-green-700 text-white h-8" : "h-8"}
+                  onClick={() => setAttendanceAutoRefresh(!attendanceAutoRefresh)}
+                  title={attendanceAutoRefresh ? "Tắt tự động cập nhật" : "Bật tự động cập nhật"}
+                >
+                  {attendanceAutoRefresh ? (
+                    <><PlayCircle className="h-3.5 w-3.5 mr-1" /> Auto</>
+                  ) : (
+                    <><Ban className="h-3.5 w-3.5 mr-1" /> Auto</>
+                  )}
+                </Button>
+                {/* Manual refresh button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  onClick={() => {
+                    if (selectedActivity) {
+                      fetchActivityStats(selectedActivity.id)
+                      toast({ title: "✅ Đã tải lại", description: "Dữ liệu điểm danh đã được cập nhật" })
+                    }
+                  }}
+                  disabled={loadingStats}
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 mr-1 ${loadingStats ? 'animate-spin' : ''}`} />
+                  Tải lại
+                </Button>
+              </div>
             </DialogTitle>
           </DialogHeader>
           {selectedActivity && (
@@ -1573,16 +1722,16 @@ export default function ActivityManagement() {
                 </div>
               ) : activityStats ? (
                 <>
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  <div className={`grid grid-cols-2 md:grid-cols-5 gap-3 transition-all duration-700 ${attendanceFlash ? 'scale-[1.02]' : ''}`}>
                     <div className="p-3 bg-blue-50 rounded-lg text-center">
                       <p className="text-2xl font-bold text-blue-600">{activityStats.totalRegistered}</p>
                       <p className="text-xs text-muted-foreground">Đăng ký</p>
                     </div>
-                    <div className="p-3 bg-purple-50 rounded-lg text-center">
+                    <div className={`p-3 rounded-lg text-center transition-all duration-700 ${attendanceFlash ? 'bg-purple-200 ring-2 ring-purple-400' : 'bg-purple-50'}`}>
                       <p className="text-2xl font-bold text-purple-600">{activityStats.checkedIn}</p>
                       <p className="text-xs text-muted-foreground">Đã điểm danh</p>
                     </div>
-                    <div className="p-3 bg-green-50 rounded-lg text-center">
+                    <div className={`p-3 rounded-lg text-center transition-all duration-700 ${attendanceFlash ? 'bg-green-200 ring-2 ring-green-400' : 'bg-green-50'}`}>
                       <p className="text-2xl font-bold text-green-600">{activityStats.onTime || 0}</p>
                       <p className="text-xs text-muted-foreground">Đúng giờ</p>
                     </div>

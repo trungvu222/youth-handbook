@@ -2,30 +2,12 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { examApi } from '../../lib/api'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
-import { Button } from '../ui/button'
-import { Badge } from '../ui/badge'
-import { Progress } from '../ui/progress'
-import { Alert, AlertDescription } from '../ui/alert'
-import { 
-  Clock, 
-  ChevronLeft, 
-  ChevronRight, 
-  CheckCircle, 
-  AlertCircle,
-  Brain,
-  Timer
-} from 'lucide-react'
-import { toast } from '@/hooks/use-toast'
 
 interface ExamQuestion {
   id: string;
-  question: string;
-  options: string[];
-  correctAnswer: number;
-  explanation?: string;
-  difficulty: 'EASY' | 'MEDIUM' | 'HARD';
-  category?: string;
+  questionText: string;
+  questionType: string;
+  answers: Array<{ id: string; text: string }>;
   points: number;
 }
 
@@ -40,19 +22,8 @@ interface Exam {
   maxAttempts: number;
   pointsReward: number;
   status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
-  startDate?: string;
-  endDate?: string;
-  isRandomOrder: boolean;
-  allowReview: boolean;
-  createdAt: string;
-  updatedAt: string;
-  author: {
-    id: string;
-    fullName: string;
-  };
   questions?: ExamQuestion[];
-  myAttempts?: any[];
-  canRetake?: boolean;
+  [key: string]: any;
 }
 
 interface ExamTakingProps {
@@ -66,394 +37,259 @@ export function ExamTaking({ exam, onComplete, onBack }: ExamTakingProps) {
   const [attemptId, setAttemptId] = useState<string>('')
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<string, number>>({})
-  const [timeLeft, setTimeLeft] = useState(exam.duration * 60) // Convert to seconds
+  const [timeLeft, setTimeLeft] = useState((exam.duration || 60) * 60)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false)
+  const [error, setError] = useState('')
+  const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'info' }>({ show: false, message: '', type: 'success' })
   const timerRef = useRef<NodeJS.Timeout>()
+  const startedRef = useRef(false)
 
   useEffect(() => {
+    if (startedRef.current) return
+    startedRef.current = true
     startExam()
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
-      }
-    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [])
 
   useEffect(() => {
-    // Start countdown timer
+    if (loading) return
     timerRef.current = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          handleSubmitExam(true) // Auto submit when time is up
-          return 0
-        }
+      setTimeLeft(prev => {
+        if (prev <= 1) { handleSubmitExam(true); return 0 }
         return prev - 1
       })
     }, 1000)
-
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
-      }
-    }
-  }, [])
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
+  }, [loading])
 
   const startExam = async () => {
     try {
       setLoading(true)
       const response = await examApi.startExam(exam.id)
-
       if (response.success && response.data) {
         setAttemptId(response.data.attemptId)
         setQuestions(response.data.questions)
       } else {
-        toast({
-          title: 'Lỗi',
-          description: response.error || 'Không thể bắt đầu kỳ thi',
-          variant: 'destructive'
-        })
-        onBack()
+        setError(response.error || 'Khong the bat dau ky thi')
       }
-    } catch (error) {
-      console.error('Error starting exam:', error)
-      toast({
-        title: 'Lỗi',
-        description: 'Không thể bắt đầu kỳ thi',
-        variant: 'destructive'
-      })
-      onBack()
+    } catch {
+      setError('Khong the ket noi server')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleAnswerSelect = async (questionId: string, answerIndex: number) => {
-    setAnswers(prev => ({
-      ...prev,
-      [questionId]: answerIndex
-    }))
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success', duration = 3000) => {
+    setToast({ show: true, message, type })
+    setTimeout(() => setToast(prev => ({ ...prev, show: false })), duration)
+  }
 
-    // Submit answer immediately
-    try {
-      await examApi.submitAnswer(attemptId, questionId, answerIndex)
-    } catch (error) {
-      console.error('Error submitting answer:', error)
-      // Don't show error to user as it might be a network issue
-      // The answer is still stored locally
-    }
+  const handleAnswerSelect = (questionId: string, answerIndex: number) => {
+    setAnswers(prev => ({ ...prev, [questionId]: answerIndex }))
   }
 
   const handleSubmitExam = async (autoSubmit = false) => {
     try {
       setSubmitting(true)
-      
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
-      }
-
-      const response = await examApi.completeExam(attemptId)
-
+      if (timerRef.current) clearInterval(timerRef.current)
+      const formattedAnswers = Object.entries(answers).map(([questionId, answerIndex]) => {
+        const question = questions.find(q => q.id === questionId)
+        if (!question || !question.answers || answerIndex >= question.answers.length) return null
+        return { questionId, answerId: question.answers[answerIndex].id }
+      }).filter(Boolean)
+      const response = await examApi.submitExam(attemptId, formattedAnswers as any)
       if (response.success) {
-        toast({
-          title: 'Thành công',
-          description: autoSubmit 
-            ? 'Hết giờ! Bài thi đã được nộp tự động'
-            : 'Đã nộp bài thi thành công'
-        })
-        onComplete()
+        showToast(
+          autoSubmit
+            ? 'Hết giờ! Bài thi đã được nộp tự động. Vui lòng đợi admin chấm điểm.'
+            : 'Nộp bài thành công! Vui lòng đợi admin chấm điểm để xem kết quả.',
+          'success', 3500
+        )
+        setTimeout(() => onComplete(), 3600)
       } else {
-        toast({
-          title: 'Lỗi',
-          description: response.error || 'Không thể nộp bài thi',
-          variant: 'destructive'
-        })
+        showToast('Lỗi: ' + (response.error || 'Không thể nộp bài thi'), 'error')
       }
-    } catch (error) {
-      console.error('Error submitting exam:', error)
-      toast({
-        title: 'Lỗi',
-        description: 'Không thể nộp bài thi',
-        variant: 'destructive'
-      })
+    } catch {
+      showToast('Lỗi kết nối, vui lòng thử lại', 'error')
     } finally {
       setSubmitting(false)
       setShowConfirmSubmit(false)
     }
   }
 
-  const formatTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600)
-    const minutes = Math.floor((seconds % 3600) / 60)
-    const secs = seconds % 60
+  const formatTime = (s: number) => `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`
+  const getTimeColor = () => { const p=(timeLeft/((exam.duration||60)*60))*100; return p<=10?'#ef4444':p<=25?'#f97316':'#16a34a' }
+  const answeredCount = Object.keys(answers).length
+  const isAnswered = (idx: number) => answers[questions[idx]?.id] !== undefined
+  const isLowTime = timeLeft <= 300
 
-    if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-    }
-    return `${minutes}:${secs.toString().padStart(2, '0')}`
-  }
+  if (loading) return (
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'60vh',flexDirection:'column',gap:'16px'}}>
+      <div style={{width:'40px',height:'40px',border:'4px solid #e9d5ff',borderTopColor:'#7c3aed',borderRadius:'50%',animation:'spin 1s linear infinite'}}/>
+      <p style={{color:'#64748b',fontSize:'15px'}}>Đang chuẩn bị kỳ thi...</p>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes slideDown{from{opacity:0;transform:translateX(-50%) translateY(-12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}`}</style>
+    </div>
+  )
 
-  const getTimeColor = () => {
-    const percentage = (timeLeft / (exam.duration * 60)) * 100
-    if (percentage <= 10) return 'text-red-500'
-    if (percentage <= 25) return 'text-orange-500'
-    return 'text-green-600'
-  }
+  if (error) return (
+    <div style={{padding:'32px',textAlign:'center'}}>
+      <div style={{fontSize:'40px',marginBottom:'12px'}}>❌</div>
+      <p style={{color:'#dc2626',marginBottom:'16px'}}>{error}</p>
+      <button onClick={onBack} style={{padding:'10px 24px',backgroundColor:'#7c3aed',color:'white',border:'none',borderRadius:'10px',fontSize:'14px',fontWeight:600,cursor:'pointer'}}>Quay lai</button>
+    </div>
+  )
 
-  const getAnsweredCount = () => {
-    return Object.keys(answers).length
-  }
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'EASY': return 'bg-green-100 text-green-800'
-      case 'MEDIUM': return 'bg-yellow-100 text-yellow-800'
-      case 'HARD': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getDifficultyLabel = (difficulty: string) => {
-    switch (difficulty) {
-      case 'EASY': return 'Dễ'
-      case 'MEDIUM': return 'Trung bình'
-      case 'HARD': return 'Khó'
-      default: return difficulty
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-6">
-        <Card>
-          <CardContent className="py-8 text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p>Đang chuẩn bị kỳ thi...</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  if (questions.length === 0) {
-    return (
-      <div className="container mx-auto px-4 py-6">
-        <Card>
-          <CardContent className="py-8 text-center">
-            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <p>Không thể tải câu hỏi. Vui lòng thử lại.</p>
-            <Button onClick={onBack} className="mt-4">
-              Quay lại
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
+  if (questions.length === 0) return (
+    <div style={{padding:'32px',textAlign:'center'}}>
+      <div style={{fontSize:'40px',marginBottom:'12px'}}>⚠️</div>
+      <p style={{color:'#64748b',marginBottom:'16px'}}>Khong co cau hoi nao</p>
+      <button onClick={onBack} style={{padding:'10px 24px',backgroundColor:'#7c3aed',color:'white',border:'none',borderRadius:'10px',fontSize:'14px',fontWeight:600,cursor:'pointer'}}>Quay lai</button>
+    </div>
+  )
 
   const currentQuestion = questions[currentQuestionIndex]
 
+  const toastBg = toast.type === 'success' ? '#10b981' : toast.type === 'error' ? '#ef4444' : '#3b82f6'
+  const toastIcon = toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : 'ℹ️'
+
   return (
-    <div className="container mx-auto px-4 py-6 max-w-4xl">
-      {/* Header */}
-      <Card className="mb-6">
-        <CardHeader>
-          <div className="flex justify-between items-start">
-            <div>
-              <CardTitle className="text-xl">{exam.title}</CardTitle>
-              <CardDescription className="mt-1">
-                Câu {currentQuestionIndex + 1} / {questions.length}
-              </CardDescription>
-            </div>
-            
-            <div className="text-right">
-              <div className={`text-2xl font-bold ${getTimeColor()}`}>
-                <Timer className="h-5 w-5 inline mr-2" />
-                {formatTime(timeLeft)}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Đã trả lời: {getAnsweredCount()}/{questions.length}
-              </div>
-            </div>
-          </div>
+    <div style={{backgroundColor:'#f5f6fa',minHeight:'100%',paddingBottom:'100px'}}>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes slideDown{from{opacity:0;transform:translateX(-50%) translateY(-12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}`}</style>
 
-          <Progress 
-            value={(currentQuestionIndex + 1) / questions.length * 100} 
-            className="mt-4"
-          />
-        </CardHeader>
-      </Card>
-
-      {/* Time Warning */}
-      {timeLeft <= 300 && ( // 5 minutes warning
-        <Alert className="mb-4 border-orange-200 bg-orange-50">
-          <AlertCircle className="h-4 w-4 text-orange-600" />
-          <AlertDescription className="text-orange-800">
-            Chú ý: Chỉ còn {formatTime(timeLeft)} để hoàn thành bài thi!
-          </AlertDescription>
-        </Alert>
+      {/* TOAST */}
+      {toast.show && (
+        <div style={{position:'fixed',top:'20px',left:'50%',transform:'translateX(-50%)',zIndex:9999,backgroundColor:toastBg,color:'#fff',padding:'12px 20px',borderRadius:'14px',fontSize:'14px',fontWeight:600,display:'flex',alignItems:'center',gap:'8px',boxShadow:'0 8px 24px rgba(0,0,0,0.2)',animation:'slideDown 0.3s ease',minWidth:'240px',maxWidth:'320px',textAlign:'center',justifyContent:'center'}}>
+          <span>{toastIcon}</span>
+          <span>{toast.message}</span>
+        </div>
       )}
 
-      {/* Question Card */}
-      <Card className="mb-6">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Badge className={getDifficultyColor(currentQuestion.difficulty)}>
-                {getDifficultyLabel(currentQuestion.difficulty)}
-              </Badge>
-              <Badge variant="outline">
-                {currentQuestion.points} điểm
-              </Badge>
-              {currentQuestion.category && (
-                <Badge variant="secondary">
-                  {currentQuestion.category}
-                </Badge>
-              )}
-            </div>
-            
-            {answers[currentQuestion.id] !== undefined && (
-              <CheckCircle className="h-5 w-5 text-green-500" />
-            )}
+      {/* TOP BAR */}
+      <div style={{background:'linear-gradient(135deg,#7c3aed 0%,#8b5cf6 50%,#a78bfa 100%)',padding:'16px',color:'white',position:'sticky',top:0,zIndex:10}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:'12px',opacity:0.85,marginBottom:'2px'}}>Cau {currentQuestionIndex+1} / {questions.length}</div>
+            <div style={{fontSize:'15px',fontWeight:700,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{exam.title}</div>
           </div>
-        </CardHeader>
-
-        <CardContent>
-          <h3 className="text-lg font-medium mb-6 leading-relaxed">
-            {currentQuestion.question}
-          </h3>
-
-          <div className="space-y-3">
-            {currentQuestion.options.map((option, index) => {
-              const isSelected = answers[currentQuestion.id] === index
-              return (
-                <div
-                  key={index}
-                  className={`p-4 rounded-lg border cursor-pointer transition-all hover:border-primary ${
-                    isSelected 
-                      ? 'border-primary bg-primary/5 shadow-sm' 
-                      : 'border-gray-200 hover:bg-gray-50'
-                  }`}
-                  onClick={() => handleAnswerSelect(currentQuestion.id, index)}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 mt-0.5 ${
-                      isSelected 
-                        ? 'border-primary bg-primary' 
-                        : 'border-gray-300'
-                    }`}>
-                      {isSelected && (
-                        <div className="w-full h-full rounded-full bg-white scale-50"></div>
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <span className={`${isSelected ? 'text-primary font-medium' : 'text-gray-700'}`}>
-                        {String.fromCharCode(65 + index)}. {option}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Navigation */}
-      <div className="flex justify-between items-center">
-        <Button
-          variant="outline"
-          onClick={() => setCurrentQuestionIndex(Math.max(0, currentQuestionIndex - 1))}
-          disabled={currentQuestionIndex === 0}
-        >
-          <ChevronLeft className="h-4 w-4 mr-1" />
-          Câu trước
-        </Button>
-
-        <div className="flex items-center gap-2">
-          {/* Question Navigation Dots */}
-          <div className="flex gap-1 overflow-x-auto max-w-xs">
-            {questions.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentQuestionIndex(index)}
-                className={`w-8 h-8 rounded-full text-xs font-medium transition-all ${
-                  index === currentQuestionIndex
-                    ? 'bg-primary text-white'
-                    : answers[questions[index].id] !== undefined
-                    ? 'bg-green-100 text-green-800 border border-green-200'
-                    : 'bg-gray-100 text-gray-600 border border-gray-200'
-                }`}
-              >
-                {index + 1}
-              </button>
-            ))}
+          <div style={{textAlign:'right',marginLeft:'12px',flexShrink:0}}>
+            <div style={{fontSize:'22px',fontWeight:800,color:isLowTime?'#fca5a5':'white'}}>⏱ {formatTime(timeLeft)}</div>
+            <div style={{fontSize:'11px',opacity:0.85}}>Da tra loi: {answeredCount}/{questions.length}</div>
           </div>
         </div>
-
-        <div className="flex gap-2">
-          {currentQuestionIndex === questions.length - 1 ? (
-            <Button
-              onClick={() => setShowConfirmSubmit(true)}
-              disabled={submitting}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {submitting ? 'Đang nộp bài...' : 'Nộp bài'}
-            </Button>
-          ) : (
-            <Button
-              onClick={() => setCurrentQuestionIndex(Math.min(questions.length - 1, currentQuestionIndex + 1))}
-            >
-              Câu sau
-              <ChevronRight className="h-4 w-4 ml-1" />
-            </Button>
-          )}
+        <div style={{marginTop:'10px',backgroundColor:'rgba(255,255,255,0.25)',borderRadius:'99px',height:'5px',overflow:'hidden'}}>
+          <div style={{height:'100%',backgroundColor:'white',borderRadius:'99px',width:`${((currentQuestionIndex+1)/questions.length)*100}%`,transition:'width 0.3s'}}/>
         </div>
       </div>
 
-      {/* Submit Confirmation Dialog */}
-      {showConfirmSubmit && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle>Xác nhận nộp bài</CardTitle>
-              <CardDescription>
-                Bạn có chắc chắn muốn nộp bài không?
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="text-sm space-y-1">
-                    <div>Đã trả lời: {getAnsweredCount()}/{questions.length} câu</div>
-                    <div>Thời gian còn lại: {formatTime(timeLeft)}</div>
-                  </div>
+      {/* LOW TIME WARNING */}
+      {isLowTime && (
+        <div style={{backgroundColor:'#fef3c7',border:'1px solid #fcd34d',padding:'10px 16px',display:'flex',alignItems:'center',gap:'8px'}}>
+          <span>⚠️</span>
+          <span style={{fontSize:'13px',color:'#92400e',fontWeight:500}}>Chi con {formatTime(timeLeft)} de hoan thanh bai thi!</span>
+        </div>
+      )}
+
+      {/* QUESTION CARD */}
+      <div style={{margin:'12px 16px',backgroundColor:'white',borderRadius:'16px',overflow:'hidden',boxShadow:'0 1px 4px rgba(0,0,0,0.06)',border:'1px solid #f1f5f9'}}>
+        <div style={{padding:'14px 16px 10px',borderBottom:'1px solid #f1f5f9',display:'flex',alignItems:'center',gap:'8px'}}>
+          <span style={{padding:'3px 10px',backgroundColor:'#ede9fe',color:'#5b21b6',borderRadius:'99px',fontSize:'12px',fontWeight:600}}>Cau {currentQuestionIndex+1}/{questions.length}</span>
+          <span style={{padding:'3px 10px',backgroundColor:'#f0fdf4',color:'#15803d',borderRadius:'99px',fontSize:'12px',fontWeight:600}}>{currentQuestion.points} diem</span>
+          {isAnswered(currentQuestionIndex) && <span style={{marginLeft:'auto',color:'#16a34a',fontSize:'18px'}}>✓</span>}
+        </div>
+        <div style={{padding:'16px 16px 12px'}}>
+          <p style={{fontSize:'15px',fontWeight:600,color:'#0f172a',lineHeight:1.6,margin:0}}>{currentQuestion.questionText}</p>
+        </div>
+        <div style={{padding:'0 16px 16px',display:'flex',flexDirection:'column',gap:'10px'}}>
+          {currentQuestion.answers.map((answer, index) => {
+            const isSelected = answers[currentQuestion.id] === index
+            return (
+              <div key={answer.id} onClick={() => handleAnswerSelect(currentQuestion.id, index)}
+                style={{padding:'13px 14px',borderRadius:'12px',border:`2px solid ${isSelected?'#7c3aed':'#e2e8f0'}`,backgroundColor:isSelected?'#faf5ff':'#ffffff',cursor:'pointer',display:'flex',alignItems:'flex-start',gap:'12px'}}>
+                <div style={{width:'20px',height:'20px',borderRadius:'50%',flexShrink:0,border:`2px solid ${isSelected?'#7c3aed':'#cbd5e1'}`,backgroundColor:isSelected?'#7c3aed':'white',display:'flex',alignItems:'center',justifyContent:'center',marginTop:'1px'}}>
+                  {isSelected && <div style={{width:'8px',height:'8px',borderRadius:'50%',backgroundColor:'white'}}/>}
                 </div>
-                
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowConfirmSubmit(false)}
-                    disabled={submitting}
-                    className="flex-1"
-                  >
-                    Hủy
-                  </Button>
-                  <Button
-                    onClick={() => handleSubmitExam()}
-                    disabled={submitting}
-                    className="flex-1 bg-green-600 hover:bg-green-700"
-                  >
-                    {submitting ? 'Đang nộp...' : 'Nộp bài'}
-                  </Button>
-                </div>
+                <span style={{fontSize:'14px',color:isSelected?'#5b21b6':'#374151',fontWeight:isSelected?600:400,lineHeight:1.5}}>
+                  {String.fromCharCode(65+index)}. {answer.text}
+                </span>
               </div>
-            </CardContent>
-          </Card>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* QUESTION NAVIGATOR */}
+      <div style={{margin:'0 16px 12px',backgroundColor:'white',borderRadius:'14px',padding:'12px',boxShadow:'0 1px 3px rgba(0,0,0,0.04)',border:'1px solid #f1f5f9'}}>
+        <div style={{fontSize:'11px',color:'#64748b',fontWeight:600,marginBottom:'8px',textTransform:'uppercase'}}>Chuyen cau</div>
+        <div style={{display:'flex',flexWrap:'wrap',gap:'6px'}}>
+          {questions.map((_,idx) => (
+            <button key={idx} onClick={() => setCurrentQuestionIndex(idx)}
+              style={{width:'34px',height:'34px',borderRadius:'8px',border:idx===currentQuestionIndex?'2px solid #7c3aed':'1.5px solid #e2e8f0',backgroundColor:idx===currentQuestionIndex?'#7c3aed':isAnswered(idx)?'#f0fdf4':'white',color:idx===currentQuestionIndex?'white':isAnswered(idx)?'#15803d':'#64748b',fontSize:'12px',fontWeight:600,cursor:'pointer'}}>
+              {idx+1}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* NAVIGATION BUTTONS */}
+      <div style={{display:'flex',gap:'10px',padding:'0 16px',marginBottom:'12px'}}>
+        <button onClick={() => setCurrentQuestionIndex(Math.max(0,currentQuestionIndex-1))} disabled={currentQuestionIndex===0}
+          style={{flex:1,padding:'13px',borderRadius:'12px',border:'1.5px solid #e2e8f0',backgroundColor:currentQuestionIndex===0?'#f8fafc':'white',color:currentQuestionIndex===0?'#cbd5e1':'#374151',fontSize:'14px',fontWeight:600,cursor:currentQuestionIndex===0?'not-allowed':'pointer'}}>
+          ‹ Cau truoc
+        </button>
+        {currentQuestionIndex===questions.length-1 ? (
+          <button onClick={() => setShowConfirmSubmit(true)} disabled={submitting}
+            style={{flex:1.5,padding:'13px',borderRadius:'12px',border:'none',background:'linear-gradient(135deg,#16a34a,#15803d)',color:'white',fontSize:'14px',fontWeight:700,cursor:'pointer',boxShadow:'0 4px 10px rgba(22,163,74,0.3)'}}>
+            {submitting?'⏳ Dang nop...':'✅ Nop bai'}
+          </button>
+        ) : (
+          <button onClick={() => setCurrentQuestionIndex(Math.min(questions.length-1,currentQuestionIndex+1))}
+            style={{flex:1,padding:'13px',borderRadius:'12px',border:'none',background:'linear-gradient(135deg,#7c3aed,#8b5cf6)',color:'white',fontSize:'14px',fontWeight:600,cursor:'pointer'}}>
+            Cau sau ›
+          </button>
+        )}
+      </div>
+
+      {/* SUBMIT CONFIRM DIALOG */}
+      {showConfirmSubmit && (
+        <div style={{position:'fixed',inset:0,backgroundColor:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:50,padding:'20px'}} onClick={() => !submitting && setShowConfirmSubmit(false)}>
+          <div style={{backgroundColor:'white',borderRadius:'20px',width:'100%',maxWidth:'380px',overflow:'hidden',boxShadow:'0 20px 40px rgba(0,0,0,0.15)'}} onClick={e => e.stopPropagation()}>
+            <div style={{background:'linear-gradient(135deg,#16a34a,#15803d)',padding:'20px 24px',color:'white',textAlign:'center'}}>
+              <div style={{fontSize:'32px',marginBottom:'6px'}}>📝</div>
+              <div style={{fontSize:'18px',fontWeight:700}}>Xac nhan nop bai</div>
+              <div style={{fontSize:'13px',opacity:0.85,marginTop:'4px'}}>Ban co chac muon nop bai khong?</div>
+            </div>
+            <div style={{padding:'20px 24px'}}>
+              <div style={{backgroundColor:'#f8fafc',borderRadius:'12px',padding:'14px',marginBottom:'16px'}}>
+                <div style={{display:'flex',justifyContent:'space-between',marginBottom:'8px'}}>
+                  <span style={{color:'#64748b',fontSize:'13px'}}>Da tra loi</span>
+                  <span style={{fontWeight:700,fontSize:'13px',color:answeredCount===questions.length?'#16a34a':'#f97316'}}>{answeredCount}/{questions.length} cau</span>
+                </div>
+                <div style={{display:'flex',justifyContent:'space-between'}}>
+                  <span style={{color:'#64748b',fontSize:'13px'}}>Thoi gian con lai</span>
+                  <span style={{fontWeight:700,fontSize:'13px',color:getTimeColor()}}>{formatTime(timeLeft)}</span>
+                </div>
+                {answeredCount<questions.length && (
+                  <div style={{marginTop:'10px',padding:'8px 10px',backgroundColor:'#fff7ed',borderRadius:'8px',border:'1px solid #fed7aa'}}>
+                    <span style={{fontSize:'12px',color:'#c2410c'}}>⚠️ Con {questions.length-answeredCount} cau chua tra loi</span>
+                  </div>
+                )}
+              </div>
+              <div style={{display:'flex',gap:'10px'}}>
+                <button onClick={() => setShowConfirmSubmit(false)} disabled={submitting}
+                  style={{flex:1,padding:'13px',borderRadius:'12px',border:'1.5px solid #e2e8f0',backgroundColor:'white',color:'#374151',fontSize:'14px',fontWeight:600,cursor:'pointer'}}>
+                  Tiep tuc
+                </button>
+                <button onClick={() => handleSubmitExam()} disabled={submitting}
+                  style={{flex:1,padding:'13px',borderRadius:'12px',border:'none',background:'linear-gradient(135deg,#16a34a,#15803d)',color:'white',fontSize:'14px',fontWeight:700,cursor:submitting?'not-allowed':'pointer',opacity:submitting?0.7:1}}>
+                  {submitting?'⏳ Dang nop...':'✅ Nop bai'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
   )
 }
-

@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const prisma = require('../lib/prisma');
+const { withRetry } = require('../lib/prisma');
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key';
 
 // Protect routes - require authentication
@@ -24,13 +25,13 @@ const protect = async (req, res, next) => {
       // Verify token
       const decoded = jwt.verify(token, JWT_SECRET);
 
-      // Get user from database
-      const user = await prisma.user.findUnique({
+      // Get user from database (retry on transient Neon connection errors)
+      const user = await withRetry(() => prisma.user.findUnique({
         where: { id: decoded.id },
         include: {
           unit: true
         }
-      });
+      }));
 
       if (!user) {
         return res.status(401).json({
@@ -81,13 +82,13 @@ const protectAdmin = async (req, res, next) => {
       // Verify token
       const decoded = jwt.verify(token, JWT_SECRET);
 
-      // Get user from database
-      const user = await prisma.user.findUnique({
+      // Get user from database (retry on transient Neon connection errors)
+      const user = await withRetry(() => prisma.user.findUnique({
         where: { id: decoded.id },
         include: {
           unit: true
         }
-      });
+      }));
 
       if (!user) {
         return res.status(401).json({

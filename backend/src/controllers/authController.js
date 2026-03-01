@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma');
+const { withRetry } = require('../lib/prisma');
 const { hashPassword, comparePassword, sendTokenResponse, verifyRefreshToken, generateToken } = require('../utils/auth');
 const { isValidEmail } = require('../utils/helpers');
 
@@ -109,8 +110,16 @@ const login = async (req, res, next) => {
   try {
     const { username, password } = req.body;
 
+    // DEBUG: Log login attempt
+    console.log('🔑 Login attempt:', { 
+      username, 
+      passwordLength: password?.length || 0,
+      bodyKeys: Object.keys(req.body)
+    });
+
     // Validation
     if (!username || !password) {
+      console.log('❌ Missing credentials');
       return res.status(400).json({
         success: false,
         error: 'Please provide username and password'
@@ -118,7 +127,7 @@ const login = async (req, res, next) => {
     }
 
     // Check for user (can login with username, email, or phone)
-    const user = await prisma.user.findFirst({
+    const user = await withRetry(() => prisma.user.findFirst({
       where: {
         OR: [
           { username },
@@ -130,22 +139,37 @@ const login = async (req, res, next) => {
       include: {
         unit: true
       }
-    });
+    }));
 
     if (!user) {
+      console.log('❌ User not found for username:', username);
       return res.status(401).json({
         success: false,
-        error: 'Invalid credentials'
+        error: 'Thông tin tài khoản hoặc mật khẩu không đúng. Vui lòng thử lại'
+      });
+    }
+
+    console.log('✅ User found:', user.username, 'ID:', user.id, 'Role:', user.role);
+
+    // Mobile app: only MEMBER, LEADER and the main admin account can login
+    // Other ADMIN accounts must use the admin panel (/api/auth/admin/login)
+    if (user.role === 'ADMIN' && user.username !== 'admin') {
+      console.log('❌ Admin cannot login via mobile app');
+      return res.status(403).json({
+        success: false,
+        error: 'Tài khoản Admin không thể đăng nhập trên ứng dụng. Vui lòng sử dụng trang quản trị.'
       });
     }
 
     // Check if password matches
     const isMatch = await comparePassword(password, user.passwordHash);
 
+    console.log('🔐 Password match:', isMatch);
+
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        error: 'Invalid credentials'
+        error: 'Thông tin tài khoản hoặc mật khẩu không đúng. Vui lòng thử lại'
       });
     }
 
@@ -321,7 +345,7 @@ const adminLogin = async (req, res, next) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        error: 'Invalid credentials or insufficient permissions'
+        error: 'Thông tin tài khoản hoặc mật khẩu không đúng. Vui lòng thử lại'
       });
     }
 
@@ -331,7 +355,7 @@ const adminLogin = async (req, res, next) => {
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        error: 'Invalid credentials'
+        error: 'Thông tin tài khoản hoặc mật khẩu không đúng. Vui lòng thử lại'
       });
     }
 
@@ -366,13 +390,13 @@ const refreshToken = async (req, res, next) => {
       });
     }
 
-    // Get user from token
-    const user = await prisma.user.findUnique({
+    // Get user from token (retry on transient Neon connection errors)
+    const user = await withRetry(() => prisma.user.findUnique({
       where: { id: decoded.id },
       include: {
         unit: true
       }
-    });
+    }));
 
     if (!user || !user.isActive) {
       return res.status(401).json({

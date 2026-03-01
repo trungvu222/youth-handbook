@@ -44,11 +44,12 @@ import {
 
 interface MeScreenMobileProps {
   onLogout?: () => void
+  onOpenDocument?: (docId: string) => void
 }
 
 type SectionType = "profile" | "edit" | "rating" | "suggestions" | "notifications" | "surveys"
 
-export default function MeScreenMobile({ onLogout }: MeScreenMobileProps) {
+export default function MeScreenMobile({ onLogout, onOpenDocument }: MeScreenMobileProps) {
   const [activeSection, setActiveSection] = useState<SectionType>("profile")
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -489,7 +490,7 @@ export default function MeScreenMobile({ onLogout }: MeScreenMobileProps) {
   }
   if (activeSection === 'notifications') {
     const NotificationsScreen = require('./notifications-screen-mobile').default
-    return <NotificationsScreen onBack={() => setActiveSection('profile')} />
+    return <NotificationsScreen onBack={() => setActiveSection('profile')} onOpenDocument={onOpenDocument} />
   }
 
   // ===== HELPERS =====

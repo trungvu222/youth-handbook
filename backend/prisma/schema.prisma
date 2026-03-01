@@ -767,6 +767,9 @@ model ExamAttempt {
   score        Float?            // Điểm số (%)
   pointsEarned Int               @default(0) @map("points_earned") // Điểm thưởng nhận được
   isPassed     Boolean?          @map("is_passed")      // Đã đạt yêu cầu chưa
+  isGraded     Boolean           @default(false) @map("is_graded")  // Admin đã chấm điểm và công bố chưa
+  gradedAt     DateTime?         @map("graded_at")      // Thời gian chấm điểm
+  gradedBy     String?           @map("graded_by")      // Admin đã chấm
   createdAt    DateTime          @default(now()) @map("created_at")
 
   // Relations

@@ -32,7 +32,9 @@ import {
   Star,
   Calendar,
   RefreshCw,
-  AlertTriangle
+  AlertTriangle,
+  CheckCircle2,
+  Loader2
 } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 
@@ -103,6 +105,11 @@ export function ExamManagement() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [examToDelete, setExamToDelete] = useState<Exam | null>(null)
 
+  // Pending grading state
+  const [pendingGrading, setPendingGrading] = useState<any[]>([])
+  const [loadingPending, setLoadingPending] = useState(false)
+  const [gradingIds, setGradingIds] = useState<Set<string>>(new Set())
+
   // Form state
   const [formData, setFormData] = useState({
     title: '',
@@ -143,7 +150,40 @@ export function ExamManagement() {
   useEffect(() => {
     loadExams()
     loadStats()
+    loadPendingGrading()
   }, [])
+
+  const loadPendingGrading = async () => {
+    try {
+      setLoadingPending(true)
+      const response = await examApi.getPendingGrading()
+      if (response.success && response.data) {
+        setPendingGrading(Array.isArray(response.data) ? response.data : [])
+      }
+    } catch (error) {
+      console.error('Error loading pending grading:', error)
+    } finally {
+      setLoadingPending(false)
+    }
+  }
+
+  const handleGradeAttempt = async (attemptId: string) => {
+    setGradingIds(prev => new Set(prev).add(attemptId))
+    try {
+      const response = await examApi.gradeExamAttempt(attemptId)
+      if (response.success) {
+        toast({ title: 'Đã chấm điểm', description: response.message || 'Kết quả đã được gửi đến học viên' })
+        // Reload pending list
+        await loadPendingGrading()
+      } else {
+        toast({ title: 'Lỗi', description: response.error || 'Không thể chấm điểm', variant: 'destructive' })
+      }
+    } catch (error) {
+      toast({ title: 'Lỗi', description: 'Không thể chấm điểm', variant: 'destructive' })
+    } finally {
+      setGradingIds(prev => { const s = new Set(prev); s.delete(attemptId); return s })
+    }
+  }
 
   const loadExams = async () => {
     try {
@@ -689,13 +729,25 @@ export function ExamManagement() {
       </div>
 
       <Tabs defaultValue="exams" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 bg-white shadow-md rounded-xl p-1.5 h-auto">
+        <TabsList className="grid w-full grid-cols-3 bg-white shadow-md rounded-xl p-1.5 h-auto">
           <TabsTrigger 
             value="exams" 
             className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-purple-600 data-[state=active]:text-white py-3 font-semibold transition-all duration-300"
           >
             <Brain className="h-4 w-4 mr-2" />
             Danh sách kỳ thi
+          </TabsTrigger>
+          <TabsTrigger 
+            value="grading"
+            className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-amber-500 data-[state=active]:text-white py-3 font-semibold transition-all duration-300 relative"
+          >
+            <CheckCircle2 className="h-4 w-4 mr-2" />
+            Chấm điểm
+            {pendingGrading.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                {pendingGrading.length}
+              </span>
+            )}
           </TabsTrigger>
           <TabsTrigger 
             value="stats"
@@ -925,6 +977,101 @@ export function ExamManagement() {
               ))
             )}
           </div>
+        </TabsContent>
+
+        {/* ========== GRADING TAB ========== */}
+        <TabsContent value="grading" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-t-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-xl">
+                    <CheckCircle2 className="h-6 w-6" />
+                    Bài thi chờ chấm điểm
+                  </CardTitle>
+                  <CardDescription className="text-orange-50 mt-1">
+                    Chấm điểm và gửi kết quả đến học viên
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={loadPendingGrading}
+                  className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Làm mới
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              {loadingPending ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+                </div>
+              ) : pendingGrading.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="inline-flex p-4 bg-green-50 rounded-full mb-4">
+                    <CheckCircle2 className="h-12 w-12 text-green-500" />
+                  </div>
+                  <p className="text-gray-500 font-medium">Không có bài thi nào cần chấm điểm</p>
+                  <p className="text-gray-400 text-sm mt-1">Tất cả bài thi đã được xử lý</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {pendingGrading.map((item: any) => (
+                    <Card key={item.id} className="border border-orange-100 shadow-sm hover:shadow-md transition-shadow">
+                      <CardContent className="p-5">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div className="flex-1 space-y-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-semibold text-gray-900">{item.userName}</span>
+                              {item.unitName && (
+                                <Badge variant="outline" className="text-xs">{item.unitName}</Badge>
+                              )}
+                              <Badge className="text-xs bg-blue-100 text-blue-800 border-0">
+                                Lần {item.attemptNumber}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-gray-600 font-medium">{item.examTitle}</p>
+                            <div className="flex items-center gap-4 text-xs text-gray-500 flex-wrap">
+                              <span>
+                                Điểm tự động: <span className={`font-bold ${item.isPassed ? 'text-green-600' : 'text-red-600'}`}>
+                                  {item.score}% — {item.isPassed ? '✓ Đạt' : '✗ Chưa đạt'}
+                                </span>
+                              </span>
+                              {item.submittedAt && (
+                                <span>
+                                  Nộp lúc: {new Date(item.submittedAt).toLocaleString('vi-VN', {
+                                    day: '2-digit', month: '2-digit', year: 'numeric',
+                                    hour: '2-digit', minute: '2-digit'
+                                  })}
+                                </span>
+                              )}
+                              {item.timeSpent && (
+                                <span>Thời gian làm: {Math.round(item.timeSpent / 60)} phút</span>
+                              )}
+                            </div>
+                          </div>
+                          <Button
+                            onClick={() => handleGradeAttempt(item.id)}
+                            disabled={gradingIds.has(item.id)}
+                            className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-md shrink-0"
+                          >
+                            {gradingIds.has(item.id) ? (
+                              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Đang gửi...</>
+                            ) : (
+                              <><CheckCircle2 className="h-4 w-4 mr-2" />Chấm & Gửi kết quả</>
+                            )}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="stats" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">

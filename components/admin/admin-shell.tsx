@@ -17,6 +17,7 @@ import {
   Home,
   Trophy,
   BarChart3,
+  Newspaper,
 } from 'lucide-react';
 
 interface AdminShellProps {
@@ -28,12 +29,32 @@ export function AdminShell({ children }: AdminShellProps) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [pendingPostsCount, setPendingPostsCount] = useState(0);
 
   useEffect(() => {
     const user = localStorage.getItem('currentUser');
     if (user) {
       setCurrentUser(JSON.parse(user));
     }
+    // Fetch pending posts count for badge
+    const fetchPendingCount = async () => {
+      try {
+        const token = localStorage.getItem('accessToken');
+        if (!token) return;
+        const { BACKEND_URL } = await import('@/lib/config');
+        const res = await fetch(`${BACKEND_URL}/api/posts?status=PENDING&limit=1`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const total = data.pagination?.total ?? (data.data?.length ?? 0);
+          setPendingPostsCount(total);
+        }
+      } catch {}
+    };
+    fetchPendingCount();
+    const interval = setInterval(fetchPendingCount, 60000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleLogout = () => {
@@ -53,6 +74,7 @@ export function AdminShell({ children }: AdminShellProps) {
     { id: 'documents', label: 'Tài liệu đoàn', icon: FileText, path: '/admin/documents' },
     { id: 'exams', label: 'Kiểm tra tìm hiểu', icon: BookOpen, path: '/admin/exams' },
     { id: 'suggestions', label: 'Kiến nghị', icon: MessageSquare, path: '/admin/suggestions' },
+    { id: 'news', label: 'Bảng tin', icon: Newspaper, path: '/admin/news', badge: pendingPostsCount },
     { id: 'surveys', label: 'Khảo sát ý kiến', icon: ClipboardList, path: '/admin/surveys' },
     { id: 'reports', label: 'Báo cáo thống kê', icon: BarChart3, path: '/admin/reports' },
     { id: 'profile', label: 'Hồ sơ cá nhân', icon: Settings, path: '/admin/profile' },
@@ -111,8 +133,24 @@ export function AdminShell({ children }: AdminShellProps) {
                   isActive ? 'bg-red-100 border-r-4 border-red-600 text-red-700' : 'text-gray-700'
                 }`}
               >
-                <Icon className={`h-5 w-5 flex-shrink-0 ${isActive ? 'text-red-600' : 'text-gray-500'}`} />
-                {sidebarOpen && <span className="ml-3 font-medium">{item.label}</span>}
+                <div className="relative flex-shrink-0">
+                  <Icon className={`h-5 w-5 ${isActive ? 'text-red-600' : 'text-gray-500'}`} />
+                  {(item as any).badge > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 bg-orange-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-0.5">
+                      {(item as any).badge}
+                    </span>
+                  )}
+                </div>
+                {sidebarOpen && (
+                  <span className="ml-3 font-medium flex items-center gap-2">
+                    {item.label}
+                    {(item as any).badge > 0 && (
+                      <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-600">
+                        {(item as any).badge}
+                      </span>
+                    )}
+                  </span>
+                )}
               </button>
             );
           })}

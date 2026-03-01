@@ -9,7 +9,9 @@ const {
   updateExam,
   deleteExam,
   getExamStats,
-  getExamAttempts
+  getExamAttempts,
+  getPendingGrading,
+  gradeExamAttempt
 } = require('../controllers/examController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -20,6 +22,7 @@ router.use(protect);
 
 // Admin routes (must be before /:id routes to avoid conflicts)
 router.get('/admin/stats', authorize('ADMIN', 'LEADER'), getExamStats);
+router.get('/admin/pending-grading', authorize('ADMIN', 'LEADER'), getPendingGrading);
 
 // Public routes (for authenticated users)
 router.route('/')
@@ -37,6 +40,7 @@ router.get('/:id/attempts', authorize('ADMIN', 'LEADER'), getExamAttempts);
 
 // Exam attempt routes
 router.post('/attempts/:attemptId/submit', submitExamAttempt);
+router.post('/attempts/:attemptId/grade', authorize('ADMIN', 'LEADER'), gradeExamAttempt);
 
 module.exports = router;
 

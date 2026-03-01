@@ -21,7 +21,18 @@ export default function HomePage() {
 
     // Small delay to ensure everything is loaded
     const timer = setTimeout(checkAuth, 100)
-    return () => clearTimeout(timer)
+
+    // Listen for force logout event (triggered when 401 and token refresh fails)
+    const handleForceLogout = () => {
+      console.log('[App] Force logout triggered')
+      setIsAuth(false)
+    }
+    window.addEventListener('force_logout', handleForceLogout)
+
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('force_logout', handleForceLogout)
+    }
   }, [])
 
   const handleAuthSuccess = () => {

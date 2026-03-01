@@ -20,6 +20,13 @@ export function MainApp({ onLogout }: MainAppProps) {
   const [activeTab, setActiveTab] = useState<TabType>("home")
   const [showPoints, setShowPoints] = useState(false)
   const [showAdmin, setShowAdmin] = useState(false)
+  const [openDocumentId, setOpenDocumentId] = useState<string | undefined>()
+
+  // Called from notifications: switch to docs tab and auto-open the document
+  const handleOpenDocument = (docId: string) => {
+    setOpenDocumentId(docId)
+    setActiveTab('docs')
+  }
 
   // Inline styles for mobile compatibility
   const containerStyle: React.CSSProperties = {
@@ -85,9 +92,9 @@ export function MainApp({ onLogout }: MainAppProps) {
       case "study":
         return <EnhancedStudyScreen />
       case "docs":
-        return <DocumentsScreenMobile />
+        return <DocumentsScreenMobile initialDocumentId={openDocumentId} onDocumentOpened={() => setOpenDocumentId(undefined)} />
       case "me":
-        return <MeScreenMobile onLogout={onLogout} />
+        return <MeScreenMobile onLogout={onLogout} onOpenDocument={handleOpenDocument} />
       default:
         return <NewsScreenMobile onShowPoints={() => setShowPoints(true)} />
     }

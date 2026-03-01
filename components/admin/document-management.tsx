@@ -256,17 +256,24 @@ export function DocumentManagement() {
         return
       }
 
-      // Check file type
+      // Check file type - PDF, Word, Excel, PowerPoint
       const allowedTypes = [
         'application/pdf',
         'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-powerpoint',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
       ]
+      // Also allow by extension (some browsers report wrong mime)
+      const allowedExts = /\.(pdf|doc|docx|xls|xlsx|ppt|pptx)$/i
+      const extOk = allowedExts.test(file.name)
       
-      if (!allowedTypes.includes(file.type)) {
+      if (!allowedTypes.includes(file.type) && !extOk) {
         toast({
           title: 'Lỗi',
-          description: 'Chỉ hỗ trợ file PDF và Word',
+          description: 'Chỉ hỗ trợ file PDF, Word (.doc/.docx), Excel (.xls/.xlsx) và PowerPoint (.ppt/.pptx)',
           variant: 'destructive'
         })
         return
@@ -1286,11 +1293,19 @@ export function DocumentManagement() {
 
             {/* File Upload */}
             <div>
-              <Label htmlFor="file">File đính kèm (PDF, Word, Excel - tối đa 10MB)</Label>
+              <Label htmlFor="file">File đính kèm (PDF, Word, Excel, PowerPoint - tối đa 10MB)</Label>
+              {/* Show existing file if editing */}
+              {selectedDocument?.fileName && !formData.file && (
+                <div className="mb-2 flex items-center gap-2 text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded px-3 py-2">
+                  <span>📎</span>
+                  <span>File hiện tại: <strong>{selectedDocument.fileName}</strong></span>
+                  <span className="text-muted-foreground">(chọn file mới bên dưới để thay thế)</span>
+                </div>
+              )}
               <Input
                 id="file"
                 type="file"
-                accept=".pdf,.doc,.docx,.xls,.xlsx"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
                 onChange={handleFileSelect}
               />
               {formData.file && (

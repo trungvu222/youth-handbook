@@ -31,7 +31,8 @@ import {
   Zap,
   ChevronRight,
   TrendingDown,
-  UserX
+  UserX,
+  Newspaper
 } from 'lucide-react';
 
 // Import components quản lý đoàn viên
@@ -46,6 +47,7 @@ import SuggestionManagement from '@/components/admin/suggestion-management';
 import { SurveyManagement } from '@/components/admin/survey-management';
 import { ReportsManagement } from '@/components/admin/reports-management';
 import { AdminProfile } from '@/components/admin/admin-profile';
+import { PostModeration } from '@/components/admin/post-moderation';
 import { BACKEND_URL } from '@/lib/config';
 
 // Đảm bảo API_URL không có /api ở cuối
@@ -314,6 +316,7 @@ export default function AdminDashboard() {
     { id: 'documents', label: 'Tài liệu đoàn', icon: FileText, path: '/admin/documents' },
     { id: 'exams', label: 'Kiểm tra tìm hiểu', icon: BookOpen, path: '/admin/exams' },
     { id: 'suggestions', label: 'Kiến nghị', icon: MessageSquare, path: '/admin/suggestions' },
+    { id: 'news', label: 'Bảng tin', icon: Newspaper, path: '/admin/news' },
     { id: 'surveys', label: 'Khảo sát ý kiến', icon: ClipboardList, path: '/admin/surveys' },
     { id: 'reports', label: 'Báo cáo thống kê', icon: BarChart3, path: '/admin/reports' },
     { id: 'profile', label: 'Hồ sơ cá nhân', icon: Settings, path: '/admin/profile' },
@@ -788,6 +791,8 @@ export default function AdminDashboard() {
         return <ExamManagement />;
       case 'suggestions':
         return <SuggestionManagement />;
+      case 'news':
+        return <PostModeration />;
       case 'surveys':
         return <SurveyManagement />;
       case 'reports':
@@ -804,7 +809,7 @@ export default function AdminDashboard() {
       <div className="flex h-screen">
         {/* Sidebar */}
         <div className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-white shadow-xl transition-all duration-300 flex-shrink-0 flex flex-col relative overflow-hidden`}>
-          <div className="p-4">
+          <div className="px-4 pt-4 pb-5 border-b border-gray-200">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 rounded-full flex-shrink-0 overflow-hidden">
                 <img src="/placeholder-user.jpg" alt="Admin" className="w-full h-full object-cover" />
@@ -849,9 +854,9 @@ export default function AdminDashboard() {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col" style={{ background: "#f8fafc" }}>
           {/* Header */}
-          <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+          <header className="bg-white border-b border-gray-200 px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <button
@@ -884,8 +889,10 @@ export default function AdminDashboard() {
           </header>
 
           {/* Page Content */}
-          <main className="flex-1 overflow-auto p-6">
-            {renderContent()}
+          <main className="flex-1 overflow-auto p-6 flex flex-col" style={{ background: "#f8fafc", minHeight: 0 }}>
+            <div className="flex-1">
+              {renderContent()}
+            </div>
           </main>
         </div>
       </div>

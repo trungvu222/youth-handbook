@@ -174,8 +174,8 @@ const createPost = async (req, res, next) => {
       });
     }
 
-    // Members' posts start as PENDING, Admin/Leader posts can be APPROVED
-    const status = currentUser.role === 'MEMBER' ? 'PENDING' : 'APPROVED';
+    // Only ADMIN posts are auto-approved — all other roles require admin approval
+    const status = currentUser.role === 'ADMIN' ? 'APPROVED' : 'PENDING';
 
     const post = await prisma.post.create({
       data: {

@@ -20,13 +20,21 @@ const examRoutes = require('./routes/exams');
 const ratingRoutes = require('./routes/rating');
 const suggestionRoutes = require('./routes/suggestions');
 const notificationRoutes = require('./routes/notifications');
+const chatRoutes = require('./routes/chat');
 // const adminRoutes = require('./routes/admin');
 
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
 
+// Import SSE manager for real-time attendance
+const { addClient, removeClient } = require('./utils/attendanceEvents');
+const jwt = require('jsonwebtoken');
+
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Disable ETag so API routes always return 200 with fresh data (never 304)
+app.set('etag', false);
 
 // Security middleware
 app.use(helmet());
@@ -50,6 +58,51 @@ if (process.env.NODE_ENV !== 'production') {
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
+// SSE endpoint for real-time attendance updates (before regular routes)
+// Admin/Leader connects to receive instant check-in notifications
+app.get('/api/activities/attendance-stream', (req, res) => {
+  // Authenticate via query param token (EventSource can't set headers)
+  const token = req.query.token;
+  if (!token) {
+    return res.status(401).json({ error: 'Token required' });
+  }
+  
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-super-secret-jwt-key');
+    if (decoded.role !== 'ADMIN' && decoded.role !== 'LEADER') {
+      return res.status(403).json({ error: 'Admin/Leader only' });
+    }
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+
+  // Set SSE headers
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'Access-Control-Allow-Origin': '*',
+    'X-Accel-Buffering': 'no' // Disable nginx buffering
+  });
+
+  // Send initial connection event
+  res.write(`data: ${JSON.stringify({ type: 'connected', timestamp: new Date().toISOString() })}\n\n`);
+
+  // Keep alive every 30 seconds
+  const keepAlive = setInterval(() => {
+    res.write(`: keepalive\n\n`);
+  }, 30000);
+
+  // Register client
+  addClient(res);
+
+  // Clean up on disconnect
+  req.on('close', () => {
+    clearInterval(keepAlive);
+    removeClient(res);
+  });
+});
+
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -64,6 +117,7 @@ app.use('/api/exams', examRoutes);
 app.use('/api/rating', ratingRoutes);
 app.use('/api/suggestions', suggestionRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/chat', chatRoutes);
 
 // Inline admin routes
 app.get('/api/admin/test', (req, res) => {

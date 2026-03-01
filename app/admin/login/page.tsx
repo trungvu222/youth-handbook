@@ -46,11 +46,35 @@ export default function AdminLogin() {
     setMounted(true);
   }, []);
 
+  const autoResendOtp = async () => {
+    try {
+      const method = forgotEmail ? 'email' : 'phone';
+      const contact = method === 'email' ? forgotEmail : forgotPhone;
+      const requestBody: any = { method, contact };
+      if (method === 'phone') requestBody.identifier = forgotIdentifier;
+      const response = await fetch('http://localhost:3001/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+      const data = await response.json();
+      if (data.success) {
+        setResetToken(data.resetToken || '');
+        if (data.devOtp) setDevOtp(data.devOtp);
+        setOtpCode(['', '', '', '', '', '']);
+        setCountdown(60);
+        setForgotSuccess('Mã OTP mới đã được gửi');
+      }
+    } catch (err) { /* silent */ }
+  };
+
   // Countdown timer for resend OTP
   useEffect(() => {
     if (countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
       return () => clearTimeout(timer);
+    } else if (countdown === 0 && view === 'verify-otp' && (forgotEmail || forgotPhone)) {
+      autoResendOtp();
     }
   }, [countdown]);
 
@@ -623,10 +647,30 @@ export default function AdminLogin() {
             {devOtp && (
               <div className="relative group">
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-500/40 to-orange-500/40 rounded-xl blur opacity-60 animate-pulse" />
-                <div className="relative bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 text-center">
-                  <p className="text-amber-300/80 text-xs font-medium mb-1">⚠️ CHẾ ĐỘ PHÁT TRIỂN - Mã OTP của bạn:</p>
+                <div className="relative bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 text-center overflow-hidden">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <p className="text-amber-300/80 text-xs font-medium">Mã OTP</p>
+                    {countdown > 0 && (
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${countdown <= 10 ? 'bg-red-500/20 text-red-400 animate-pulse' : 'bg-amber-500/20 text-amber-300'}`}>
+                        ⏱ {countdown}s
+                      </span>
+                    )}
+                  </div>
                   <p className="text-3xl font-bold text-amber-300 tracking-[0.5em] font-mono">{devOtp}</p>
                   <p className="text-amber-400/50 text-xs mt-1">Nhập mã này vào ô bên dưới</p>
+                  {/* Progress bar */}
+                  <div className="mt-3 h-1 bg-amber-500/10 rounded-full overflow-hidden">
+                    <div
+                      className={countdown <= 10 ? 'h-full bg-red-500' : 'h-full bg-gradient-to-r from-amber-500 to-orange-500'}
+                      style={{
+                        width: '100%',
+                        transform: `scaleX(${Math.max(0, Math.min(1, countdown / 60))})`,
+                        transformOrigin: 'left center',
+                        transition: 'transform 1s linear',
+                        willChange: 'transform'
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -683,17 +727,12 @@ export default function AdminLogin() {
 
                   <div className="text-center">
                     {countdown > 0 ? (
-                      <p className="text-blue-200/40 text-sm">Gửi lại sau {countdown}s</p>
+                      <p className="text-blue-200/40 text-sm">Mã mới sẽ tự động gửi sau {countdown}s</p>
                     ) : (
-                      <button
-                        onClick={() => {
-                          setView(forgotEmail ? 'forgot-email' : 'forgot-phone');
-                          handleForgotSubmit();
-                        }}
-                        className="text-sm text-violet-300/70 hover:text-violet-300 transition-colors"
-                      >
-                        Gửi lại mã OTP
-                      </button>
+                      <p className="text-violet-300/70 text-sm flex items-center justify-center gap-2">
+                        <span className="inline-block w-3.5 h-3.5 border-2 border-violet-400/30 border-t-violet-400 rounded-full animate-spin" />
+                        Đang gửi mã OTP mới...
+                      </p>
                     )}
                   </div>
                 </CardContent>

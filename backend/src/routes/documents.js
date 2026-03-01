@@ -40,7 +40,7 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
   fileFilter: function (req, file, cb) {
     // Allowed extensions
-    const allowedExtensions = /\.(pdf|doc|docx|xls|xlsx)$/i;
+    const allowedExtensions = /\.(pdf|doc|docx|xls|xlsx|ppt|pptx)$/i;
     const extValid = allowedExtensions.test(file.originalname);
     
     // Allowed mimetypes
@@ -49,7 +49,9 @@ const upload = multer({
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     ];
     const mimeValid = allowedMimes.includes(file.mimetype);
     
@@ -58,7 +60,7 @@ const upload = multer({
     if (extValid || mimeValid) {
       return cb(null, true);
     }
-    cb(new Error('Chỉ hỗ trợ file PDF, Word và Excel'));
+    cb(new Error('Chỉ hỗ trợ file PDF, Word, Excel và PowerPoint'));
   }
 });
 

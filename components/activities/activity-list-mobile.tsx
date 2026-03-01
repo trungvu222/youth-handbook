@@ -50,6 +50,7 @@ export default function ActivityListMobile({ onActivitySelect }: ActivityListMob
   const [error, setError] = useState<string | null>(null)
   const [joinLoading, setJoinLoading] = useState<string | null>(null)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type })
@@ -263,6 +264,11 @@ export default function ActivityListMobile({ onActivitySelect }: ActivityListMob
     boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
   }
 
+  const ITEMS_PER_PAGE = 5
+  const totalPages = Math.ceil(activities.length / ITEMS_PER_PAGE)
+  const safeCurrentPage = Math.min(currentPage, Math.max(1, totalPages))
+  const paginatedActivities = activities.slice((safeCurrentPage - 1) * ITEMS_PER_PAGE, safeCurrentPage * ITEMS_PER_PAGE)
+
   if (loading) {
     return (
       <div style={loadingStyle}>
@@ -301,7 +307,7 @@ export default function ActivityListMobile({ onActivitySelect }: ActivityListMob
 
   return (
     <div style={containerStyle}>
-      {activities.map((activity) => {
+      {paginatedActivities.map((activity) => {
         const typeInfo = getTypeInfo(activity.type)
         const dateTime = formatDateTime(activity.startTime)
         const isRegistered = !!activity.userParticipation
@@ -386,6 +392,24 @@ export default function ActivityListMobile({ onActivitySelect }: ActivityListMob
           </div>
         )
       })}
+
+      {/* ===== PHÂN TRANG ===== */}
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '14px 0 4px' }}>
+          <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={safeCurrentPage <= 1}
+            style={{ padding: '8px 16px', borderRadius: 10, border: '1.5px solid #e2e8f0', backgroundColor: safeCurrentPage <= 1 ? '#f8fafc' : 'white', color: safeCurrentPage <= 1 ? '#cbd5e1' : '#1e293b', fontSize: 13, fontWeight: 600, cursor: safeCurrentPage <= 1 ? 'not-allowed' : 'pointer' }}>
+            ← Trước
+          </button>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#475569', minWidth: 90, textAlign: 'center' }}>
+            Trang {safeCurrentPage} / {totalPages}
+          </span>
+          <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={safeCurrentPage >= totalPages}
+            style={{ padding: '8px 16px', borderRadius: 10, border: '1.5px solid #e2e8f0', backgroundColor: safeCurrentPage >= totalPages ? '#f8fafc' : 'white', color: safeCurrentPage >= totalPages ? '#cbd5e1' : '#1e293b', fontSize: 13, fontWeight: 600, cursor: safeCurrentPage >= totalPages ? 'not-allowed' : 'pointer' }}>
+            Sau →
+          </button>
+        </div>
+      )}
+
       <style>{`@keyframes spin { to { transform: rotate(360deg); } } @keyframes toastSlideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } } @keyframes toastSlideOut { from { transform: translateY(0); opacity: 1; } to { transform: translateY(-20px); opacity: 0; } }`}</style>
 
       {/* Toast Notification */}
