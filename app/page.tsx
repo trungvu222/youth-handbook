@@ -79,16 +79,12 @@ export default function HomePage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #fef7f0 0%, #fff5eb 50%, #fef7f0 100%)' }} className="min-h-screen bg-background">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '16px' }} className="flex items-center justify-center min-h-screen p-4">
-        <div style={{ width: '100%', maxWidth: '448px' }} className="w-full max-w-md">
-          {showRegister ? (
-            <RegisterForm onSuccess={handleAuthSuccess} onSwitchToLogin={() => setShowRegister(false)} />
-          ) : (
-            <LoginForm onSuccess={handleAuthSuccess} onSwitchToRegister={() => setShowRegister(true)} />
-          )}
-        </div>
-      </div>
+    <div style={{ minHeight: '100vh', width: '100%' }}>
+      {showRegister ? (
+        <RegisterForm onSuccess={handleAuthSuccess} onSwitchToLogin={() => setShowRegister(false)} />
+      ) : (
+        <LoginForm onSuccess={handleAuthSuccess} onSwitchToRegister={() => setShowRegister(true)} />
+      )}
     </div>
   )
 }

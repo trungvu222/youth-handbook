@@ -303,12 +303,10 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
 
   if (!isReady) {
     return (
-      <div style={containerStyle}>
-        <div style={formContainerStyle}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ width: '48px', height: '48px', border: '3px solid #5b2eff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
-            <p style={{ color: '#6b7280' }}>Đang tải...</p>
-          </div>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(160deg, #991b1b 0%, #dc2626 55%, #f3f4f6 100%)' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: '48px', height: '48px', border: '3px solid rgba(255,255,255,0.5)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
+          <p style={{ color: '#fff', fontWeight: 500 }}>Đang tải...</p>
         </div>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
@@ -595,7 +593,7 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
                 <BookOpen style={{ width: 26, height: 26, color: '#fff' }} />
               </div>
               <h2 style={{ color: '#fff', fontSize: '20px', fontWeight: 700, margin: 0 }}>Hướng dẫn sử dụng</h2>
-              <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '13px', marginTop: '6px' }}>Sổ tay Đoàn viên Điện tử - Trung đoàn 196</p>
+              <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '13px', marginTop: '6px' }}>Sổ tay Đoàn viên Điện tử - Trung đoàn 196 Hải quân</p>
             </div>
           </div>
           <div style={{ padding: '20px' }}>
@@ -725,115 +723,147 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
   }
 
   return (
-    <div style={containerStyle} className="min-h-screen bg-dong-son-pattern flex flex-col">
-      <div style={formContainerStyle} className="flex-1 flex flex-col items-center justify-center px-6 py-8">
-        {/* Logo and Title */}
-        <div style={{ textAlign: 'center', marginBottom: '28px', width: '100%' }} className="text-center mb-8">
-          <div style={{ marginBottom: '20px' }} className="mb-6">
-            <img
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-45dBaXjOFmJL3PNpO7UAJpFLpiByiT.png"
-              alt="Youth Union Logo"
-              style={{ width: '88px', height: '88px', margin: '0 auto', objectFit: 'contain' }}
-              className="w-24 h-24 mx-auto"
-            />
-          </div>
-          <h1 style={{ ...titleStyle, fontSize: '18px', letterSpacing: '0.5px' }} className="text-xl font-bold text-primary-gradient mb-2">
-            SỔ TAY ĐOÀN VIÊN ĐIỆN TỬ
-          </h1>
-          <h2 style={{ ...titleStyle, fontSize: '16px', fontWeight: 600 }} className="text-lg font-semibold text-primary-gradient">
-            TRUNG ĐOÀN 196
-          </h2>
-        </div>
-
-        {/* Login Form */}
-        <form onSubmit={handleSubmit} style={{ width: '100%', maxWidth: '320px', boxSizing: 'border-box' }} className="w-full max-w-sm space-y-4">
-          {/* Error Message */}
-          {errorMsg && (
-            <div style={{
-              display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '12px 16px',
-              borderRadius: '12px', backgroundColor: 'rgba(239, 68, 68, 0.08)',
-              border: '1px solid rgba(239, 68, 68, 0.2)', animation: 'errorShake 0.4s ease',
-            }}>
-              <AlertCircle style={{ width: '18px', height: '18px', color: '#ef4444', flexShrink: 0, marginTop: '1px' }} />
-              <div style={{ fontSize: '13px', color: '#dc2626', lineHeight: '1.5' }}>
-                <span>{errorMsg}</span>
-                {failCount >= 3 && (
-                  <span style={{ display: 'block', marginTop: '4px', fontWeight: 600 }}>
-                    Vui lòng liên hệ quản trị viên của bạn
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Username Input */}
-          <div style={inputContainerStyle} className="relative">
-            <div style={iconStyle} className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10">
-              <User style={{ width: '20px', height: '20px' }} className="h-5 w-5 text-gray-500" />
-            </div>
-            <input type="text" name="username" placeholder="Email, SĐT hoặc tên đăng nhập" style={inputStyle} className="h-12 pl-12 pr-4 rounded-full border-2 border-gray-300 bg-white/90 backdrop-blur-sm w-full" required />
-          </div>
-
-          {/* Password Input */}
-          <div style={inputContainerStyle} className="relative">
-            <div style={iconStyle} className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10">
-              <Lock style={{ width: '20px', height: '20px' }} className="h-5 w-5 text-gray-500" />
-            </div>
-            <input type={showPassword ? "text" : "password"} name="password" placeholder="Mật khẩu" style={{ ...inputStyle, paddingRight: '52px' }} className="h-12 pl-12 pr-12 rounded-full border-2 border-gray-300 bg-white/90 backdrop-blur-sm w-full" required />
-            <button type="button" style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '8px' }} className="absolute right-3 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-transparent" onClick={() => setShowPassword(!showPassword)}>
-              {showPassword ? <EyeOff style={{ width: '18px', height: '18px', color: '#9ca3af' }} /> : <Eye style={{ width: '18px', height: '18px', color: '#9ca3af' }} />}
-            </button>
-          </div>
-
-          {/* Login Button */}
-          <button type="submit" style={{ ...buttonStyle, opacity: isLoading ? 0.9 : 1, background: isLoading ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' : 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)' }} disabled={isLoading}>
-            {isLoading ? (
-              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                <span style={{ width: '20px', height: '20px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#ffffff', borderRadius: '50%', display: 'inline-block', animation: 'spin 1s linear infinite' }} />
-                ĐANG XỬ LÝ...
-              </span>
-            ) : (
-              <span>ĐĂNG NHẬP</span>
-            )}
-          </button>
-          
-          <style>{`
-            @keyframes spin { to { transform: rotate(360deg); } }
-            @keyframes errorShake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(4px); } }
-            @keyframes mFadeIn { from { opacity: 0; } to { opacity: 1; } }
-            @keyframes mSlideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-            button[type="submit"]:active { transform: scale(0.98); }
-          `}</style>
-
-          {/* Forgot Password */}
-          <div style={{ textAlign: 'center', marginTop: '16px' }} className="text-center mt-4">
-            <button type="button" style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: '14px', cursor: 'pointer' }} onClick={() => setView('forgot-choose')}>
-              Quên mật khẩu ?
-            </button>
-          </div>
-        </form>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#f3f4f6', width: '100%', maxWidth: '100vw', overflow: 'hidden' }}>
+      {/* Red gradient header with logo and title */}
+      <div style={{
+        background: 'linear-gradient(160deg, #991b1b 0%, #dc2626 55%, #ef4444 100%)',
+        padding: '56px 24px 72px',
+        textAlign: 'center',
+      }}>
+        <img
+          src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-45dBaXjOFmJL3PNpO7UAJpFLpiByiT.png"
+          alt="Youth Union Logo"
+          style={{ width: '92px', height: '92px', margin: '0 auto 18px', objectFit: 'contain', display: 'block', filter: 'drop-shadow(0 4px 16px rgba(0,0,0,0.3))' }}
+        />
+        <h1 style={{ color: '#ffffff', fontSize: '19px', fontWeight: 800, letterSpacing: '0.5px', margin: '0 0 5px', textShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
+          SỔ TAY ĐOÀN VIÊN ĐIỆN TỬ
+        </h1>
+        <h2 style={{ color: 'rgba(255,255,255,0.92)', fontSize: '15px', fontWeight: 600, margin: 0, letterSpacing: '0.3px', textShadow: '0 1px 4px rgba(0,0,0,0.2)' }}>
+          TRUNG ĐOÀN 196 HẢI QUÂN
+        </h2>
       </div>
 
-      {/* Bottom Action Tiles */}
-      <div style={{ padding: '0 24px 28px', width: '100%', boxSizing: 'border-box' }} className="px-6 pb-8">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '16px', maxWidth: '320px', margin: '0 auto 16px' }} className="grid grid-cols-3 gap-4 mb-4">
-          <button onClick={() => setView('guide')} style={tileStyle} className="flex flex-col items-center p-3 bg-white/80 backdrop-blur-sm rounded-lg shadow-sm">
-            <BookOpen style={{ width: '22px', height: '22px', color: '#374151', marginBottom: '6px' }} className="h-6 w-6 text-gray-700 mb-1" />
-            <span style={{ fontSize: '11px', color: '#374151', textAlign: 'center', lineHeight: '1.3' }} className="text-xs text-gray-700 text-center leading-tight">Hướng dẫn<br />sử dụng</span>
+      {/* Card area overlapping the header */}
+      <div style={{ flex: 1, padding: '0 20px 24px', marginTop: '-28px' }}>
+        {/* Login card */}
+        <div style={{
+          background: '#ffffff',
+          borderRadius: '20px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+          padding: '28px 24px 24px',
+          marginBottom: '16px',
+        }}>
+          <h3 style={{ fontSize: '20px', fontWeight: 700, textAlign: 'center', color: '#1f2937', margin: '0 0 4px' }}>Đăng nhập</h3>
+          <p style={{ fontSize: '13px', color: '#9ca3af', textAlign: 'center', margin: '0 0 22px' }}>Nhập thông tin để truy cập tài khoản</p>
+
+          <form onSubmit={handleSubmit}>
+            {/* Error Message */}
+            {errorMsg && (
+              <div style={{
+                display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '12px 16px',
+                borderRadius: '12px', backgroundColor: 'rgba(239,68,68,0.08)',
+                border: '1px solid rgba(239,68,68,0.2)', animation: 'errorShake 0.4s ease', marginBottom: '16px',
+              }}>
+                <AlertCircle style={{ width: '18px', height: '18px', color: '#ef4444', flexShrink: 0, marginTop: '1px' }} />
+                <div style={{ fontSize: '13px', color: '#dc2626', lineHeight: 1.5 }}>
+                  <span>{errorMsg}</span>
+                  {failCount >= 3 && (
+                    <span style={{ display: 'block', marginTop: '4px', fontWeight: 600 }}>Vui lòng liên hệ quản trị viên của bạn</span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Username */}
+            <div style={{ position: 'relative', marginBottom: '14px' }}>
+              <User style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', width: 18, height: 18, color: '#9ca3af', zIndex: 10 }} />
+              <input
+                type="text" name="username"
+                placeholder="Email, SĐT hoặc tên đăng nhập"
+                style={{
+                  width: '100%', height: '52px', paddingLeft: '46px', paddingRight: '16px',
+                  borderRadius: '14px', border: '1.5px solid #e5e7eb',
+                  backgroundColor: '#f9fafb', fontSize: '15px', outline: 'none',
+                  boxSizing: 'border-box', color: '#1f2937',
+                }}
+                required
+              />
+            </div>
+
+            {/* Password */}
+            <div style={{ position: 'relative', marginBottom: '20px' }}>
+              <Lock style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', width: 18, height: 18, color: '#9ca3af', zIndex: 10 }} />
+              <input
+                type={showPassword ? 'text' : 'password'} name="password"
+                placeholder="Mật khẩu"
+                style={{
+                  width: '100%', height: '52px', paddingLeft: '46px', paddingRight: '52px',
+                  borderRadius: '14px', border: '1.5px solid #e5e7eb',
+                  backgroundColor: '#f9fafb', fontSize: '15px', outline: 'none',
+                  boxSizing: 'border-box', color: '#1f2937',
+                }}
+                required
+              />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '6px' }}>
+                {showPassword ? <EyeOff style={{ width: 18, height: 18, color: '#9ca3af' }} /> : <Eye style={{ width: 18, height: 18, color: '#9ca3af' }} />}
+              </button>
+            </div>
+
+            {/* Login Button */}
+            <button
+              type="submit"
+              style={{
+                width: '100%', height: '54px', borderRadius: '14px',
+                background: isLoading ? 'linear-gradient(135deg, #ef4444, #dc2626)' : 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
+                color: '#fff', fontWeight: 700, fontSize: '16px', border: 'none', cursor: 'pointer',
+                boxShadow: '0 6px 20px rgba(153,27,27,0.4)',
+                letterSpacing: '1.5px', transition: 'all 0.3s ease',
+              }}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                  <span style={{ width: '20px', height: '20px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 1s linear infinite' }} />
+                  ĐANG XỬ LÝ...
+                </span>
+              ) : 'ĐĂNG NHẬP'}
+            </button>
+
+            <style>{`
+              @keyframes spin { to { transform: rotate(360deg); } }
+              @keyframes errorShake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(4px); } }
+              @keyframes mFadeIn { from { opacity: 0; } to { opacity: 1; } }
+              @keyframes mSlideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+            `}</style>
+
+            {/* Forgot Password */}
+            <div style={{ textAlign: 'center', marginTop: '16px' }}>
+              <button type="button" style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: '14px', cursor: 'pointer' }} onClick={() => setView('forgot-choose')}>
+                Quên mật khẩu ?
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {/* Bottom Action Tiles */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '16px' }}>
+          <button onClick={() => setView('guide')} style={tileStyle}>
+            <BookOpen style={{ width: '22px', height: '22px', color: '#374151', marginBottom: '6px' }} />
+            <span style={{ fontSize: '11px', color: '#374151', textAlign: 'center', lineHeight: '1.3' }}>Hướng dẫn<br />sử dụng</span>
           </button>
-          <button onClick={() => setView('faq')} style={tileStyle} className="flex flex-col items-center p-3 bg-white/80 backdrop-blur-sm rounded-lg shadow-sm">
-            <HelpCircle style={{ width: '22px', height: '22px', color: '#374151', marginBottom: '6px' }} className="h-6 w-6 text-gray-700 mb-1" />
-            <span style={{ fontSize: '11px', color: '#374151', textAlign: 'center', lineHeight: '1.3' }} className="text-xs text-gray-700 text-center leading-tight">Câu hỏi<br />thường gặp</span>
+          <button onClick={() => setView('faq')} style={tileStyle}>
+            <HelpCircle style={{ width: '22px', height: '22px', color: '#374151', marginBottom: '6px' }} />
+            <span style={{ fontSize: '11px', color: '#374151', textAlign: 'center', lineHeight: '1.3' }}>Câu hỏi<br />thường gặp</span>
           </button>
-          <button onClick={() => setView('hotline')} style={tileStyle} className="flex flex-col items-center p-3 bg-white/80 backdrop-blur-sm rounded-lg shadow-sm">
-            <Phone style={{ width: '22px', height: '22px', color: '#374151', marginBottom: '6px' }} className="h-6 w-6 text-gray-700 mb-1" />
-            <span style={{ fontSize: '11px', color: '#374151', textAlign: 'center', lineHeight: '1.3' }} className="text-xs text-gray-700 text-center leading-tight">Hotline<br />hỗ trợ</span>
+          <button onClick={() => setView('hotline')} style={tileStyle}>
+            <Phone style={{ width: '22px', height: '22px', color: '#374151', marginBottom: '6px' }} />
+            <span style={{ fontSize: '11px', color: '#374151', textAlign: 'center', lineHeight: '1.3' }}>Hotline<br />hỗ trợ</span>
           </button>
         </div>
 
         {/* Version */}
-        <div style={{ textAlign: 'center' }} className="text-center">
-          <span style={{ fontSize: '12px', color: '#9ca3af' }} className="text-xs text-gray-500">Phiên bản 1.0.0</span>
+        <div style={{ textAlign: 'center' }}>
+          <span style={{ fontSize: '12px', color: '#9ca3af' }}>Phiên bản 1.0.0</span>
         </div>
       </div>
 
