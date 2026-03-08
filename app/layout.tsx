@@ -81,7 +81,7 @@ export default function RootLayout({
         {/* PWA cho iPhone/iOS - BẮT BUỘC để chạy như app */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Sổ Tay Đoàn" />
+        <meta name="apple-mobile-web-app-title" content="Sổ Tay Đoàn Viên" />
         {/* PWA cho Android */}
         <meta name="mobile-web-app-capable" content="yes" />
         {/* Tắt auto-detect số điện thoại trên iOS */}
