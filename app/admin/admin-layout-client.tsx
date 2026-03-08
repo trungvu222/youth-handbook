@@ -48,9 +48,8 @@ export function AdminLayoutClient({
 
         const user = JSON.parse(currentUser);
 
-        // Check if user is admin
-        if (user.role !== 'ADMIN') {
-          // Not admin, redirect to login
+        // Only ADMIN and LEADER can access admin panel
+        if (user.role !== 'ADMIN' && user.role !== 'LEADER') {
           localStorage.clear();
           document.cookie = 'accessToken=; path=/; max-age=0';
           router.push('/admin/login');
