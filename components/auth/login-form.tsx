@@ -233,43 +233,11 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
   }
 
   // ===== STYLES =====
-  const containerStyle: React.CSSProperties = {
-    minHeight: '100vh', display: 'flex', flexDirection: 'column',
-    background: 'linear-gradient(135deg, #fef7f0 0%, #fff5eb 50%, #fef7f0 100%)',
-    width: '100%', maxWidth: '100vw', overflow: 'hidden',
-  }
-  const formContainerStyle: React.CSSProperties = {
-    flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-    padding: '20px 24px', width: '100%', boxSizing: 'border-box',
-  }
-  const titleStyle: React.CSSProperties = {
-    background: 'linear-gradient(to right, #5b2eff, #0f62ff)',
-    WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-    fontWeight: 'bold', marginBottom: '8px', textAlign: 'center',
-  }
-  const inputContainerStyle: React.CSSProperties = {
-    position: 'relative', width: '100%', marginBottom: '16px', boxSizing: 'border-box',
-  }
-  const inputStyle: React.CSSProperties = {
-    width: '100%', height: '52px', paddingLeft: '48px', paddingRight: '16px',
-    borderRadius: '26px', border: '2px solid #e5e7eb', backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    fontSize: '16px', outline: 'none', boxSizing: 'border-box', boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-  }
-  const iconStyle: React.CSSProperties = {
-    position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', zIndex: 10,
-  }
-  const buttonStyle: React.CSSProperties = {
-    width: '100%', height: '56px', borderRadius: '28px',
-    background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)', color: 'white',
-    fontWeight: 700, fontSize: '17px', border: '3px solid #991b1b', cursor: 'pointer',
-    boxShadow: '0 8px 20px rgba(185, 28, 28, 0.5), inset 0 1px 0 rgba(255,255,255,0.2)',
-    marginTop: '20px', textTransform: 'uppercase', letterSpacing: '2px',
-    transition: 'all 0.3s ease', position: 'relative', overflow: 'hidden',
-  }
   const tileStyle: React.CSSProperties = {
     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-    padding: '16px 8px', backgroundColor: 'rgba(255, 255, 255, 0.9)', borderRadius: '12px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: 'none', cursor: 'pointer', minHeight: '80px',
+    padding: '16px 8px', backgroundColor: 'rgba(255,255,255,0.92)', borderRadius: '14px',
+    boxShadow: '0 2px 12px rgba(0,0,0,0.08)', border: '1px solid rgba(220,38,38,0.1)', cursor: 'pointer', minHeight: '80px',
+    transition: 'all 0.2s ease',
   }
 
   // ===== MODAL OVERLAY =====
@@ -303,10 +271,10 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
 
   if (!isReady) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(160deg, #991b1b 0%, #dc2626 55%, #f3f4f6 100%)' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(160deg, #7f1d1d 0%, #dc2626 60%, #fca5a5 100%)' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ width: '48px', height: '48px', border: '3px solid rgba(255,255,255,0.5)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
-          <p style={{ color: '#fff', fontWeight: 500 }}>Đang tải...</p>
+          <div style={{ width: '48px', height: '48px', border: '3px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
+          <p style={{ color: 'rgba(255,255,255,0.85)', fontWeight: 500 }}>Đang tải...</p>
         </div>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
@@ -723,141 +691,153 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#f3f4f6', width: '100%', maxWidth: '100vw', overflow: 'hidden' }}>
-      {/* Red gradient header with logo and title */}
-      <div style={{
-        background: 'linear-gradient(160deg, #991b1b 0%, #dc2626 55%, #ef4444 100%)',
-        padding: '56px 24px 72px',
-        textAlign: 'center',
-      }}>
-        <img
-          src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-45dBaXjOFmJL3PNpO7UAJpFLpiByiT.png"
-          alt="Youth Union Logo"
-          style={{ width: '92px', height: '92px', margin: '0 auto 18px', objectFit: 'contain', display: 'block', filter: 'drop-shadow(0 4px 16px rgba(0,0,0,0.3))' }}
-        />
-        <h1 style={{ color: '#ffffff', fontSize: '19px', fontWeight: 800, letterSpacing: '0.5px', margin: '0 0 5px', textShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#f3f4f6', width: '100%', maxWidth: '100vw', overflow: 'hidden', position: 'relative' }}>
+
+      {/* ===== Animated background orbs ===== */}
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: '-80px', right: '-60px', width: '260px', height: '260px', background: 'rgba(220,38,38,0.22)', borderRadius: '50%', filter: 'blur(60px)', animation: 'orbPulse 4s ease-in-out infinite' }} />
+        <div style={{ position: 'absolute', top: '100px', left: '-80px', width: '200px', height: '200px', background: 'rgba(153,27,27,0.15)', borderRadius: '50%', filter: 'blur(50px)', animation: 'orbPulse 5s ease-in-out infinite', animationDelay: '1s' }} />
+        <div style={{ position: 'absolute', top: '40px', left: '30%', width: '120px', height: '120px', background: 'rgba(239,68,68,0.12)', borderRadius: '50%', filter: 'blur(40px)', animation: 'orbPulse 6s ease-in-out infinite', animationDelay: '2s' }} />
+      </div>
+
+      {/* ===== Red gradient header ===== */}
+      <div style={{ position: 'relative', zIndex: 1, background: 'linear-gradient(160deg, #7f1d1d 0%, #dc2626 55%, #ef4444 100%)', padding: '52px 24px 76px', textAlign: 'center', animation: 'fadeDown 0.6s ease' }}>
+        {/* subtle grid overlay */}
+        <div style={{ position: 'absolute', inset: 0, opacity: 0.04, backgroundImage: 'linear-gradient(rgba(255,255,255,.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.15) 1px, transparent 1px)', backgroundSize: '40px 40px', borderRadius: 'inherit' }} />
+
+        {/* Logo with glow */}
+        <div style={{ position: 'relative', display: 'inline-block', marginBottom: '16px' }}>
+          <div style={{ position: 'absolute', inset: '-12px', background: 'rgba(255,255,255,0.12)', borderRadius: '50%', filter: 'blur(16px)', animation: 'orbPulse 3s ease-in-out infinite' }} />
+          <img
+            src="/Huy_Hieu_Doan.png"
+            alt="Youth Union Logo"
+            style={{ position: 'relative', width: '90px', height: '90px', objectFit: 'contain', filter: 'drop-shadow(0 4px 20px rgba(0,0,0,0.35)) drop-shadow(0 0 12px rgba(255,255,255,0.2))', display: 'block' }}
+          />
+        </div>
+        <h1 style={{ color: '#fff', fontSize: '19px', fontWeight: 800, letterSpacing: '0.6px', margin: '0 0 5px', textShadow: '0 2px 10px rgba(0,0,0,0.25)', position: 'relative' }}>
           SỔ TAY ĐOÀN VIÊN ĐIỆN TỬ
         </h1>
-        <h2 style={{ color: 'rgba(255,255,255,0.92)', fontSize: '15px', fontWeight: 600, margin: 0, letterSpacing: '0.3px', textShadow: '0 1px 4px rgba(0,0,0,0.2)' }}>
+        <h2 style={{ color: 'rgba(255,255,255,0.88)', fontSize: '14px', fontWeight: 600, margin: 0, letterSpacing: '0.8px', textShadow: '0 1px 6px rgba(0,0,0,0.2)', position: 'relative' }}>
           TRUNG ĐOÀN 196 HẢI QUÂN
         </h2>
       </div>
 
-      {/* Card area overlapping the header */}
-      <div style={{ flex: 1, padding: '0 20px 24px', marginTop: '-28px' }}>
-        {/* Login card */}
-        <div style={{
-          background: '#ffffff',
-          borderRadius: '20px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-          padding: '28px 24px 24px',
-          marginBottom: '16px',
-        }}>
-          <h3 style={{ fontSize: '20px', fontWeight: 700, textAlign: 'center', color: '#1f2937', margin: '0 0 4px' }}>Đăng nhập</h3>
-          <p style={{ fontSize: '13px', color: '#9ca3af', textAlign: 'center', margin: '0 0 22px' }}>Nhập thông tin để truy cập tài khoản</p>
+      {/* ===== Card area ===== */}
+      <div style={{ flex: 1, padding: '0 16px 24px', marginTop: '-32px', position: 'relative', zIndex: 2 }}>
 
-          <form onSubmit={handleSubmit}>
-            {/* Error Message */}
-            {errorMsg && (
-              <div style={{
-                display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '12px 16px',
-                borderRadius: '12px', backgroundColor: 'rgba(239,68,68,0.08)',
-                border: '1px solid rgba(239,68,68,0.2)', animation: 'errorShake 0.4s ease', marginBottom: '16px',
-              }}>
-                <AlertCircle style={{ width: '18px', height: '18px', color: '#ef4444', flexShrink: 0, marginTop: '1px' }} />
-                <div style={{ fontSize: '13px', color: '#dc2626', lineHeight: 1.5 }}>
-                  <span>{errorMsg}</span>
-                  {failCount >= 3 && (
-                    <span style={{ display: 'block', marginTop: '4px', fontWeight: 600 }}>Vui lòng liên hệ quản trị viên của bạn</span>
-                  )}
+        {/* Login card with glow border */}
+        <div style={{ position: 'relative', marginBottom: '14px', animation: 'slideUp 0.5s ease' }}>
+          {/* glow ring */}
+          <div style={{ position: 'absolute', inset: '-1.5px', background: 'linear-gradient(135deg, rgba(220,38,38,0.5), rgba(153,27,27,0.3), rgba(239,68,68,0.4))', borderRadius: '22px', filter: 'blur(4px)', opacity: 0.6 }} />
+          <div style={{ position: 'relative', background: '#fff', borderRadius: '20px', boxShadow: '0 12px 40px rgba(0,0,0,0.13)', padding: '28px 22px 22px', overflow: 'hidden' }}>
+            {/* top shine line */}
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'linear-gradient(90deg, transparent, rgba(220,38,38,0.5), transparent)' }} />
+
+            <h3 style={{ fontSize: '20px', fontWeight: 700, textAlign: 'center', color: '#1f2937', margin: '0 0 3px' }}>Đăng nhập</h3>
+            <p style={{ fontSize: '13px', color: '#9ca3af', textAlign: 'center', margin: '0 0 22px' }}>Nhập thông tin để truy cập tài khoản</p>
+
+            <form onSubmit={handleSubmit}>
+              {/* Error */}
+              {errorMsg && (
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '12px 16px', borderRadius: '12px', backgroundColor: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', animation: 'errorShake 0.4s ease', marginBottom: '16px' }}>
+                  <AlertCircle style={{ width: 18, height: 18, color: '#ef4444', flexShrink: 0, marginTop: 1 }} />
+                  <div style={{ fontSize: '13px', color: '#dc2626', lineHeight: 1.5 }}>
+                    {errorMsg}
+                    {failCount >= 3 && <span style={{ display: 'block', marginTop: '4px', fontWeight: 600 }}>Vui lòng liên hệ quản trị viên của bạn</span>}
+                  </div>
                 </div>
+              )}
+
+              {/* Username */}
+              <div style={{ position: 'relative', marginBottom: '13px' }}>
+                <User style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', width: 17, height: 17, color: '#d1d5db', zIndex: 10 }} />
+                <input
+                  type="text" name="username"
+                  placeholder="Email, SĐT hoặc tên đăng nhập"
+                  style={{ width: '100%', height: '50px', paddingLeft: '44px', paddingRight: '16px', borderRadius: '13px', border: '1.5px solid #e5e7eb', backgroundColor: '#f9fafb', fontSize: '15px', outline: 'none', boxSizing: 'border-box', color: '#1f2937', transition: 'border-color 0.2s, box-shadow 0.2s' }}
+                  onFocus={e => { e.currentTarget.style.borderColor = '#dc2626'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(220,38,38,0.1)' }}
+                  onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.boxShadow = 'none' }}
+                  required
+                />
               </div>
-            )}
 
-            {/* Username */}
-            <div style={{ position: 'relative', marginBottom: '14px' }}>
-              <User style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', width: 18, height: 18, color: '#9ca3af', zIndex: 10 }} />
-              <input
-                type="text" name="username"
-                placeholder="Email, SĐT hoặc tên đăng nhập"
-                style={{
-                  width: '100%', height: '52px', paddingLeft: '46px', paddingRight: '16px',
-                  borderRadius: '14px', border: '1.5px solid #e5e7eb',
-                  backgroundColor: '#f9fafb', fontSize: '15px', outline: 'none',
-                  boxSizing: 'border-box', color: '#1f2937',
-                }}
-                required
-              />
-            </div>
+              {/* Password */}
+              <div style={{ position: 'relative', marginBottom: '20px' }}>
+                <Lock style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', width: 17, height: 17, color: '#d1d5db', zIndex: 10 }} />
+                <input
+                  type={showPassword ? 'text' : 'password'} name="password"
+                  placeholder="Mật khẩu"
+                  style={{ width: '100%', height: '50px', paddingLeft: '44px', paddingRight: '50px', borderRadius: '13px', border: '1.5px solid #e5e7eb', backgroundColor: '#f9fafb', fontSize: '15px', outline: 'none', boxSizing: 'border-box', color: '#1f2937', transition: 'border-color 0.2s, box-shadow 0.2s' }}
+                  onFocus={e => { e.currentTarget.style.borderColor = '#dc2626'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(220,38,38,0.1)' }}
+                  onBlur={e => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.boxShadow = 'none' }}
+                  required
+                />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: 6 }}>
+                  {showPassword ? <EyeOff style={{ width: 17, height: 17, color: '#9ca3af' }} /> : <Eye style={{ width: 17, height: 17, color: '#9ca3af' }} />}
+                </button>
+              </div>
 
-            {/* Password */}
-            <div style={{ position: 'relative', marginBottom: '20px' }}>
-              <Lock style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', width: 18, height: 18, color: '#9ca3af', zIndex: 10 }} />
-              <input
-                type={showPassword ? 'text' : 'password'} name="password"
-                placeholder="Mật khẩu"
-                style={{
-                  width: '100%', height: '52px', paddingLeft: '46px', paddingRight: '52px',
-                  borderRadius: '14px', border: '1.5px solid #e5e7eb',
-                  backgroundColor: '#f9fafb', fontSize: '15px', outline: 'none',
-                  boxSizing: 'border-box', color: '#1f2937',
-                }}
-                required
-              />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: '6px' }}>
-                {showPassword ? <EyeOff style={{ width: 18, height: 18, color: '#9ca3af' }} /> : <Eye style={{ width: 18, height: 18, color: '#9ca3af' }} />}
+              {/* Login Button */}
+              <button
+                type="submit"
+                style={{ width: '100%', height: '52px', borderRadius: '13px', background: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)', color: '#fff', fontWeight: 700, fontSize: '16px', border: 'none', cursor: 'pointer', boxShadow: '0 6px 24px rgba(153,27,27,0.45)', letterSpacing: '1.5px', transition: 'all 0.25s ease', position: 'relative', overflow: 'hidden' }}
+                disabled={isLoading}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 10px 28px rgba(153,27,27,0.5)' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 6px 24px rgba(153,27,27,0.45)' }}
+              >
+                {/* shimmer overlay */}
+                <span style={{ position: 'absolute', inset: 0, background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.18) 50%, transparent 60%)', animation: 'shimmer 2.5s infinite', pointerEvents: 'none' }} />
+                {isLoading ? (
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                    <span style={{ width: 20, height: 20, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 1s linear infinite' }} />
+                    ĐANG XỬ LÝ...
+                  </span>
+                ) : 'ĐĂNG NHẬP'}
               </button>
-            </div>
 
-            {/* Login Button */}
-            <button
-              type="submit"
-              style={{
-                width: '100%', height: '54px', borderRadius: '14px',
-                background: isLoading ? 'linear-gradient(135deg, #ef4444, #dc2626)' : 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
-                color: '#fff', fontWeight: 700, fontSize: '16px', border: 'none', cursor: 'pointer',
-                boxShadow: '0 6px 20px rgba(153,27,27,0.4)',
-                letterSpacing: '1.5px', transition: 'all 0.3s ease',
-              }}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                  <span style={{ width: '20px', height: '20px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 1s linear infinite' }} />
-                  ĐANG XỬ LÝ...
-                </span>
-              ) : 'ĐĂNG NHẬP'}
-            </button>
+              <style>{`
+                @keyframes spin { to { transform: rotate(360deg); } }
+                @keyframes errorShake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(4px); } }
+                @keyframes mFadeIn { from { opacity: 0; } to { opacity: 1; } }
+                @keyframes mSlideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+                @keyframes slideUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+                @keyframes fadeDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+                @keyframes orbPulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.65; transform: scale(1.08); } }
+                @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(200%); } }
+              `}</style>
 
-            <style>{`
-              @keyframes spin { to { transform: rotate(360deg); } }
-              @keyframes errorShake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(4px); } }
-              @keyframes mFadeIn { from { opacity: 0; } to { opacity: 1; } }
-              @keyframes mSlideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-            `}</style>
-
-            {/* Forgot Password */}
-            <div style={{ textAlign: 'center', marginTop: '16px' }}>
-              <button type="button" style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: '14px', cursor: 'pointer' }} onClick={() => setView('forgot-choose')}>
-                Quên mật khẩu ?
-              </button>
-            </div>
-          </form>
+              {/* Forgot Password */}
+              <div style={{ textAlign: 'center', marginTop: '16px' }}>
+                <button type="button" style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: '14px', cursor: 'pointer', transition: 'color 0.2s' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = '#dc2626')}
+                  onMouseLeave={e => (e.currentTarget.style.color = '#9ca3af')}
+                  onClick={() => setView('forgot-choose')}>
+                  Quên mật khẩu ?
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
 
         {/* Bottom Action Tiles */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '16px' }}>
-          <button onClick={() => setView('guide')} style={tileStyle}>
-            <BookOpen style={{ width: '22px', height: '22px', color: '#374151', marginBottom: '6px' }} />
-            <span style={{ fontSize: '11px', color: '#374151', textAlign: 'center', lineHeight: '1.3' }}>Hướng dẫn<br />sử dụng</span>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '14px', animation: 'slideUp 0.6s ease 0.1s both' }}>
+          <button onClick={() => setView('guide')} style={tileStyle}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 6px 18px rgba(220,38,38,0.15)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 2px 12px rgba(0,0,0,0.08)' }}>
+            <BookOpen style={{ width: 22, height: 22, color: '#dc2626', marginBottom: 6 }} />
+            <span style={{ fontSize: '11px', color: '#374151', textAlign: 'center', lineHeight: 1.3 }}>Hướng dẫn<br />sử dụng</span>
           </button>
-          <button onClick={() => setView('faq')} style={tileStyle}>
-            <HelpCircle style={{ width: '22px', height: '22px', color: '#374151', marginBottom: '6px' }} />
-            <span style={{ fontSize: '11px', color: '#374151', textAlign: 'center', lineHeight: '1.3' }}>Câu hỏi<br />thường gặp</span>
+          <button onClick={() => setView('faq')} style={tileStyle}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 6px 18px rgba(220,38,38,0.15)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 2px 12px rgba(0,0,0,0.08)' }}>
+            <HelpCircle style={{ width: 22, height: 22, color: '#dc2626', marginBottom: 6 }} />
+            <span style={{ fontSize: '11px', color: '#374151', textAlign: 'center', lineHeight: 1.3 }}>Câu hỏi<br />thường gặp</span>
           </button>
-          <button onClick={() => setView('hotline')} style={tileStyle}>
-            <Phone style={{ width: '22px', height: '22px', color: '#374151', marginBottom: '6px' }} />
-            <span style={{ fontSize: '11px', color: '#374151', textAlign: 'center', lineHeight: '1.3' }}>Hotline<br />hỗ trợ</span>
+          <button onClick={() => setView('hotline')} style={tileStyle}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 6px 18px rgba(220,38,38,0.15)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 2px 12px rgba(0,0,0,0.08)' }}>
+            <Phone style={{ width: 22, height: 22, color: '#dc2626', marginBottom: 6 }} />
+            <span style={{ fontSize: '11px', color: '#374151', textAlign: 'center', lineHeight: 1.3 }}>Hotline<br />hỗ trợ</span>
           </button>
         </div>
 
