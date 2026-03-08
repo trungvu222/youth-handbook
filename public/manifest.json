@@ -1,13 +1,20 @@
 {
-  "name": "Youth Handbook",
-  "short_name": "YouthHB",
-  "description": "Youth Handbook Application for Vietnamese Youth",
+  "name": "Sổ Tay Đoàn Viên",
+  "short_name": "Sổ Tay Đoàn",
+  "description": "Ứng dụng Sổ Tay Đoàn Viên Điện Tử - Trung Đoàn 196",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#1976d2",
+  "theme_color": "#dc2626",
   "orientation": "portrait",
   "icons": [
+    {
+      "src": "/Huy_Hieu_Doan.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "/Huy_Hieu_Doan.png",
       "sizes": "192x192",

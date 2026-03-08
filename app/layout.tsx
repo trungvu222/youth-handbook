@@ -3,11 +3,12 @@ import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from '@/components/ui/toaster'
+import { PWARegister } from '@/components/pwa-register'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Youth Handbook',
-  description: 'Ứng dụng sổ tay thanh niên Việt Nam',
+  title: 'Sổ Tay Đoàn Viên',
+  description: 'Ứng dụng Sổ Tay Đoàn Viên Điện Tử - Trung Đoàn 196',
   generator: 'Youth Handbook App',
   manifest: '/manifest.json',
   viewport: {
@@ -15,11 +16,22 @@ export const metadata: Metadata = {
     initialScale: 1,
     maximumScale: 1,
     userScalable: false,
+    viewportFit: 'cover',
   },
-  themeColor: '#1976d2',
+  themeColor: '#dc2626',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Sổ Tay Đoàn',
+  },
+  formatDetection: {
+    telephone: false,
+  },
   icons: {
     icon: '/Huy_Hieu_Doan.png',
-    apple: '/Huy_Hieu_Doan.png',
+    apple: [
+      { url: '/Huy_Hieu_Doan.png', sizes: '180x180', type: 'image/png' },
+    ],
   },
 }
 
@@ -64,14 +76,23 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <head>
-        <meta name="theme-color" content="#1976d2" />
+        {/* Theme color cho browser chrome */}
+        <meta name="theme-color" content="#dc2626" />
+        {/* PWA cho iPhone/iOS - BẮT BUỘC để chạy như app */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Youth Handbook" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Sổ Tay Đoàn" />
+        {/* PWA cho Android */}
         <meta name="mobile-web-app-capable" content="yes" />
+        {/* Tắt auto-detect số điện thoại trên iOS */}
+        <meta name="format-detection" content="telephone=no" />
+        {/* Safe area cho iPhone có notch/Dynamic Island */}
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
         <meta httpEquiv="Content-Security-Policy" content="default-src * 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src * 'self' https://youth-handbook.onrender.com; img-src * 'self' data: blob: https:; style-src * 'self' 'unsafe-inline';" />
         <link rel="manifest" href="/manifest.json" />
+        {/* Apple touch icon - icon hiển thị khi Add to Home Screen */}
         <link rel="apple-touch-icon" href="/Huy_Hieu_Doan.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/Huy_Hieu_Doan.png" />
         {/* Critical CSS for mobile app */}
         <style dangerouslySetInnerHTML={{ __html: criticalCSS }} />
       </head>
@@ -80,6 +101,7 @@ export default function RootLayout({
         {children}
         <Toaster />
         <Analytics />
+        <PWARegister />
       </body>
     </html>
   )
