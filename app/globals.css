@@ -121,8 +121,29 @@
   * {
     @apply border-border outline-ring/50;
   }
+
+  /* ── PWA / Mobile: khoá overscroll bounce trên iOS & Android ── */
+  html {
+    height: 100%;
+    /* dvh = dynamic viewport height (tính đúng khi bàn phím ảo hiện) */
+    height: 100dvh;
+    overscroll-behavior: none;
+    overscroll-behavior-y: none;
+    /* Tắt pull-to-refresh trên Android Chrome */
+    touch-action: pan-x pan-y;
+  }
+
   body {
     @apply bg-background text-foreground;
+    height: 100%;
+    height: 100dvh;
+    overscroll-behavior: none;
+    overscroll-behavior-y: none;
+    /* Ngăn văn bản tự phóng to trên iOS */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    /* Loại bỏ tap highlight trên iOS */
+    -webkit-tap-highlight-color: transparent;
   }
   
   /* Đông Sơn pattern chỉ cho mobile app - không áp dụng cho admin */

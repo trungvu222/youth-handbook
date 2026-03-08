@@ -56,8 +56,28 @@ const capacitorDetectionScript = `
 // Critical CSS cho mobile app - CHỈ áp dụng cho .mobile-app class
 const criticalCSS = `
   * { box-sizing: border-box; }
-  html, body { width: 100%; height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-  
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    height: 100dvh;
+    margin: 0; padding: 0;
+    overscroll-behavior: none;
+    overscroll-behavior-y: none;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Khi chạy PWA standalone (đã cài về màn hình) - khoá cứng */
+  @media all and (display-mode: standalone) {
+    html, body {
+      position: fixed;
+      width: 100%;
+      overflow: hidden;
+    }
+  }
+
   /* Mobile app specific styles - only apply with .mobile-app class */
   body.mobile-app {
     background: linear-gradient(135deg, #fef7f0 0%, #fff5eb 50%, #fef7f0 100%);

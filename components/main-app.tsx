@@ -45,7 +45,7 @@ export function MainApp({ onLogout }: MainAppProps) {
     flex: 1,
     overflowY: 'auto',
     overflowX: 'hidden',
-    paddingBottom: '68px', // Space for bottom nav
+    paddingBottom: 'calc(68px + env(safe-area-inset-bottom, 0px))', // Space for bottom nav + notch
     WebkitOverflowScrolling: 'touch',
   }
 

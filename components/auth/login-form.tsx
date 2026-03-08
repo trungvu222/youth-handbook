@@ -273,7 +273,7 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
 
   if (!isReady) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(160deg, #7f1d1d 0%, #dc2626 60%, #fca5a5 100%)' }}>
+      <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(160deg, #7f1d1d 0%, #dc2626 60%, #fca5a5 100%)' }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ width: '48px', height: '48px', border: '3px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
           <p style={{ color: 'rgba(255,255,255,0.85)', fontWeight: 500 }}>Đang tải...</p>
@@ -693,7 +693,7 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(160deg, #7f1d1d 0%, #b91c1c 30%, #dc2626 60%, #f87171 85%, #fecaca 100%)', padding: '32px 16px 24px', position: 'relative', overflow: 'hidden', width: '100%' }}>
+    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(160deg, #7f1d1d 0%, #b91c1c 30%, #dc2626 60%, #f87171 85%, #fecaca 100%)', padding: '32px 16px 24px', position: 'relative', overflow: 'hidden', width: '100%' }}>
 
       {/* ===== Animated background orbs ===== */}
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
