@@ -16,11 +16,30 @@ const tabs = [
   { id: "me" as TabType, label: "Cá nhân", icon: User },
 ]
 
+// Per-tab accent colors
+const TAB_COLOR: Record<string, string> = {
+  home:       '#dc2626',
+  activities: '#16a34a',
+  docs:       '#2563eb',
+  study:      '#7c3aed',
+  me:         '#0891b2',
+}
+
+const TAB_BG: Record<string, string> = {
+  home:       '#fef2f2',
+  activities: '#f0fdf4',
+  docs:       '#eff6ff',
+  study:      '#f5f3ff',
+  me:         '#ecfeff',
+}
+
 export function BottomNavigation({ activeTab, onTabChange }: BottomNavigationProps) {
   const navStyle: React.CSSProperties = {
-    backgroundColor: '#ffffff',
+    backgroundColor: 'rgba(255,255,255,0.94)',
+    backdropFilter: 'blur(16px)',
+    WebkitBackdropFilter: 'blur(16px)',
     borderTop: '1px solid rgba(0,0,0,0.06)',
-    boxShadow: '0 -2px 16px rgba(0, 0, 0, 0.08)',
+    boxShadow: '0 -2px 20px rgba(0,0,0,0.08)',
     paddingBottom: 'env(safe-area-inset-bottom, 0)',
   }
 
@@ -28,55 +47,69 @@ export function BottomNavigation({ activeTab, onTabChange }: BottomNavigationPro
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-around',
-    padding: '6px 4px 8px 4px',
+    padding: '5px 2px 6px 2px',
     maxWidth: '500px',
     margin: '0 auto',
   }
 
-  const getTabStyle = (isActive: boolean): React.CSSProperties => ({
+  const getTabStyle = (tab: typeof tabs[0], isActive: boolean): React.CSSProperties => ({
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '6px 4px',
+    padding: '5px 4px 4px',
     minWidth: '52px',
     flex: 1,
-    color: isActive ? '#dc2626' : '#94a3b8',
-    background: 'transparent',
+    background: isActive ? TAB_BG[tab.id] : 'transparent',
     border: 'none',
-    borderRadius: '10px',
+    borderRadius: '14px',
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     position: 'relative',
+    boxShadow: isActive ? `0 2px 8px ${TAB_COLOR[tab.id]}22` : 'none',
   })
 
-  const getIconWrapStyle = (isActive: boolean): React.CSSProperties => ({
-    width: '36px',
-    height: '28px',
+  const getIndicatorStyle = (tab: typeof tabs[0], isActive: boolean): React.CSSProperties => ({
+    position: 'absolute',
+    top: 0,
+    left: '50%',
+    transform: 'translateX(-50%)',
+    width: isActive ? '24px' : '0',
+    height: '3px',
+    borderRadius: '0 0 3px 3px',
+    backgroundColor: TAB_COLOR[tab.id],
+    transition: 'width 0.25s ease',
+  })
+
+  const getIconWrapStyle = (tab: typeof tabs[0], isActive: boolean): React.CSSProperties => ({
+    width: '34px',
+    height: '26px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: '14px',
-    backgroundColor: isActive ? '#fef2f2' : 'transparent',
+    borderRadius: '10px',
     transition: 'all 0.2s ease',
     marginBottom: '2px',
   })
 
-  const getIconStyle = (isActive: boolean): React.CSSProperties => ({
-    width: '20px',
-    height: '20px',
-    color: isActive ? '#dc2626' : '#94a3b8',
-    strokeWidth: isActive ? 2.2 : 1.8,
+  const getIconStyle = (tab: typeof tabs[0], isActive: boolean): React.CSSProperties => ({
+    width: '21px',
+    height: '21px',
+    color: isActive ? TAB_COLOR[tab.id] : '#94a3b8',
+    strokeWidth: isActive ? 2.3 : 1.8,
+    transition: 'all 0.15s ease',
+    transform: isActive ? 'scale(1.1)' : 'scale(1)',
   })
 
-  const getLabelStyle = (isActive: boolean): React.CSSProperties => ({
+  const getLabelStyle = (tab: typeof tabs[0], isActive: boolean): React.CSSProperties => ({
     fontSize: '10px',
     fontWeight: isActive ? 700 : 500,
-    color: isActive ? '#dc2626' : '#94a3b8',
+    color: isActive ? TAB_COLOR[tab.id] : '#94a3b8',
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     letterSpacing: isActive ? '0.2px' : '0',
+    transition: 'color 0.2s ease',
   })
 
   return (
@@ -90,12 +123,15 @@ export function BottomNavigation({ activeTab, onTabChange }: BottomNavigationPro
             <button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
-              style={getTabStyle(isActive)}
+              style={getTabStyle(tab, isActive)}
             >
-              <div style={getIconWrapStyle(isActive)}>
-                <Icon style={getIconStyle(isActive)} />
+              {/* Top accent indicator */}
+              <div style={getIndicatorStyle(tab, isActive)} />
+
+              <div style={getIconWrapStyle(tab, isActive)}>
+                <Icon style={getIconStyle(tab, isActive)} />
               </div>
-              <span style={getLabelStyle(isActive)}>{tab.label}</span>
+              <span style={getLabelStyle(tab, isActive)}>{tab.label}</span>
             </button>
           )
         })}

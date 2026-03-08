@@ -204,7 +204,7 @@ export default function DocumentsScreenMobile({ initialDocumentId, onDocumentOpe
     const typeInfo = DOC_TYPES[selectedDoc.documentType] || DOC_TYPES.OTHER
     const statusInfo = STATUS_LABELS[selectedDoc.status] || STATUS_LABELS.PUBLISHED
     return (
-      <div style={{ backgroundColor: '#f0f4ff', minHeight: '100%', paddingBottom: '32px', animation: 'fadeIn 0.2s ease' }}>
+      <div style={{ backgroundColor: '#eff6ff', minHeight: '100%', paddingBottom: '32px', animation: 'fadeIn 0.2s ease' }}>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes slideDown{from{opacity:0;transform:translateX(-50%) translateY(-10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}} @keyframes fadeIn{from{opacity:0}to{opacity:1}}`}</style>
 
         {/* Toast */}
@@ -338,7 +338,7 @@ export default function DocumentsScreenMobile({ initialDocumentId, onDocumentOpe
 
   // ===== MAIN LIST VIEW =====
   return (
-    <div style={{ backgroundColor: '#f0f4ff', minHeight: '100%', paddingBottom: '32px' }}>
+    <div style={{ backgroundColor: '#eff6ff', minHeight: '100%', paddingBottom: '32px' }}>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes slideDown{from{opacity:0;transform:translateX(-50%) translateY(-10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}} @keyframes fadeIn{from{opacity:0}to{opacity:1}} @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}} input[placeholder]::placeholder{color:#94a3b8} input::placeholder{color:#94a3b8}`}</style>
 
       {/* Toast */}
@@ -349,7 +349,10 @@ export default function DocumentsScreenMobile({ initialDocumentId, onDocumentOpe
       )}
 
       {/* ── HEADER ── */}
-      <div style={{ background: 'linear-gradient(135deg, #1e40af 0%, #0284c7 55%, #0ea5e9 100%)', padding: '20px 16px 24px', color: 'white', position: 'sticky', top: 0, zIndex: 10 }}>
+      <div style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 45%, #3b82f6 100%)', padding: '20px 16px 24px', color: 'white', position: 'sticky', top: 0, zIndex: 10, overflow: 'hidden' }}>
+        {/* Decorative orbs */}
+        <div style={{ position: 'absolute', top: -20, right: -20, width: 110, height: 110, borderRadius: '50%', background: 'rgba(255,255,255,0.07)' }} />
+        <div style={{ position: 'absolute', bottom: -10, left: 20, width: 60, height: 60, borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
           <div>
             <h1 style={{ fontSize: '22px', fontWeight: 800, letterSpacing: '0.2px', margin: 0 }}>📂 Tài liệu</h1>

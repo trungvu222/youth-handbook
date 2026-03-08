@@ -389,7 +389,7 @@ export default function MeScreenMobile({ onLogout, onOpenDocument }: MeScreenMob
     }
     
     return (
-      <div style={{ backgroundColor: '#f0f2f5', minHeight: '100%', paddingBottom: '100px' }}>
+      <div style={{ backgroundColor: '#f5f3ff', minHeight: '100%', paddingBottom: '100px' }}>
         {renderBackButton('Chỉnh sửa hồ sơ')}
         {renderToast()}
 
@@ -533,7 +533,7 @@ export default function MeScreenMobile({ onLogout, onOpenDocument }: MeScreenMob
   // ===== MAIN PROFILE VIEW =====
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', backgroundColor: '#f0f2f5' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', backgroundColor: '#f5f3ff' }}>
         <div style={{ textAlign: 'center' }}>
           <Loader2 style={{ width: '32px', height: '32px', color: '#3b82f6', animation: 'spin 1s linear infinite', margin: '0 auto 12px' }} />
           <p style={{ color: '#64748b', fontSize: '14px' }}>Đang tải thông tin...</p>
@@ -543,13 +543,13 @@ export default function MeScreenMobile({ onLogout, onOpenDocument }: MeScreenMob
   }
 
   return (
-    <div style={{ backgroundColor: '#f0f2f5', minHeight: '100%', paddingBottom: '100px' }}>
+    <div style={{ backgroundColor: '#f5f3ff', minHeight: '100%', paddingBottom: '100px' }}>
       {renderToast()}
 
       {/* ===== PROFILE HERO ===== */}
       <div style={{ position: 'relative', overflow: 'hidden' }}>
         {/* Background gradient */}
-        <div style={{ background: 'linear-gradient(160deg, #1e3a5f 0%, #2563eb 50%, #3b82f6 100%)', padding: '32px 16px 60px', position: 'relative' }}>
+        <div style={{ background: 'linear-gradient(160deg, #1e1b4b 0%, #4338ca 55%, #6366f1 100%)', padding: '32px 16px 60px', position: 'relative' }}>
           {/* Decorative circles */}
           <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '120px', height: '120px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
           <div style={{ position: 'absolute', bottom: '-20px', left: '-20px', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
@@ -571,7 +571,7 @@ export default function MeScreenMobile({ onLogout, onOpenDocument }: MeScreenMob
                 )}
               </div>
               {/* Online indicator */}
-              <div style={{ position: 'absolute', bottom: '4px', right: '4px', width: '16px', height: '16px', borderRadius: '50%', backgroundColor: '#22c55e', border: '3px solid #2563eb', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
+              <div style={{ position: 'absolute', bottom: '4px', right: '4px', width: '16px', height: '16px', borderRadius: '50%', backgroundColor: '#22c55e', border: '3px solid #4338ca', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
             </div>
 
             {/* Name */}

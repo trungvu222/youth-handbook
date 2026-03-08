@@ -10,8 +10,16 @@ export default function EnhancedStudyScreen() {
 
   // Inline styles for mobile compatibility
   const containerStyle: React.CSSProperties = {
-    backgroundColor: '#f5f6fa',
+    backgroundColor: '#faf5ff',
     minHeight: '100%',
+  }
+
+  const headerStyle: React.CSSProperties = {
+    background: 'linear-gradient(135deg, #4c1d95 0%, #6d28d9 50%, #a855f7 100%)',
+    padding: '20px 16px 14px',
+    color: 'white',
+    position: 'relative',
+    overflow: 'hidden',
   }
 
   const tabsContainerStyle: React.CSSProperties = {
@@ -21,7 +29,7 @@ export default function EnhancedStudyScreen() {
     position: 'sticky',
     top: 0,
     zIndex: 10,
-    boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+    boxShadow: '0 1px 6px rgba(109,40,217,0.08)',
   }
 
   const getTabStyle = (isActive: boolean): React.CSSProperties => ({
@@ -31,10 +39,10 @@ export default function EnhancedStudyScreen() {
     justifyContent: 'center',
     gap: '8px',
     padding: '14px',
-    backgroundColor: isActive ? '#fef2f2' : 'transparent',
+    backgroundColor: isActive ? '#f5f3ff' : 'transparent',
     border: 'none',
-    borderBottom: isActive ? '3px solid #dc2626' : '3px solid transparent',
-    color: isActive ? '#dc2626' : '#94a3b8',
+    borderBottom: isActive ? '3px solid #7c3aed' : '3px solid transparent',
+    color: isActive ? '#7c3aed' : '#94a3b8',
     fontWeight: isActive ? 600 : 500,
     fontSize: '14px',
     cursor: 'pointer',
@@ -48,6 +56,17 @@ export default function EnhancedStudyScreen() {
 
   return (
     <div style={containerStyle}>
+      {/* Header banner */}
+      <div style={headerStyle}>
+        {/* Decorative orbs */}
+        <div style={{ position: 'absolute', top: -25, right: -25, width: 110, height: 110, borderRadius: '50%', background: 'rgba(255,255,255,0.07)' }} />
+        <div style={{ position: 'absolute', bottom: -10, left: 20, width: 60, height: 60, borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <div style={{ fontSize: '22px', fontWeight: 800, letterSpacing: '-0.3px' }}>📚 Học tập</div>
+          <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.75)', marginTop: '3px' }}>Trợ lý ảo AI & Kỳ thi</div>
+        </div>
+      </div>
+
       {/* Tabs */}
       <div style={tabsContainerStyle}>
         <button 

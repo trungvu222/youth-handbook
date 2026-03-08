@@ -49,14 +49,16 @@ export default function ActivitiesScreen() {
   // Inline styles for mobile
   const containerStyle: React.CSSProperties = {
     minHeight: '100%',
-    backgroundColor: '#f5f6fa',
+    backgroundColor: '#f0fdf4',
     paddingBottom: '100px',
   }
 
   const headerStyle: React.CSSProperties = {
-    background: 'linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #3b82f6 100%)',
+    background: 'linear-gradient(135deg, #14532d 0%, #15803d 45%, #22c55e 100%)',
     padding: '24px 16px 20px',
     color: '#ffffff',
+    position: 'relative',
+    overflow: 'hidden',
   }
 
   const headerTopStyle: React.CSSProperties = {
@@ -129,7 +131,7 @@ export default function ActivitiesScreen() {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    background: 'linear-gradient(135deg, #1e40af 0%, #2563eb 100%)',
+    background: 'linear-gradient(135deg, #14532d 0%, #16a34a 100%)',
   }
 
   const spinnerStyle: React.CSSProperties = {
@@ -164,6 +166,9 @@ export default function ActivitiesScreen() {
     <div style={containerStyle}>
       {/* Header */}
       <div style={headerStyle}>
+        {/* Decorative orbs */}
+        <div style={{ position: 'absolute', top: -20, right: -20, width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,0.07)' }} />
+        <div style={{ position: 'absolute', bottom: -10, left: -10, width: 70, height: 70, borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
         <div style={headerTopStyle}>
           <Calendar style={{ width: '24px', height: '24px' }} />
           <h1 style={titleStyle}>Sổ tay Đoàn viên</h1>
@@ -194,7 +199,7 @@ export default function ActivitiesScreen() {
       {/* Content */}
       <div style={contentStyle}>
         <div style={sectionTitleStyle}>
-          <Calendar style={{ width: '18px', height: '18px', color: '#3b82f6' }} />
+          <Calendar style={{ width: '18px', height: '18px', color: '#16a34a' }} />
           Hoạt động sắp tới
         </div>
         <ActivityListMobile onActivitySelect={handleActivitySelect} />
