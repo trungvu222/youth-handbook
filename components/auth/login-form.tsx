@@ -260,8 +260,10 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
     alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff',
   }
   const modalInputStyle: React.CSSProperties = {
-    ...inputStyle, borderRadius: '14px', height: '48px', paddingLeft: '44px',
-    border: '1.5px solid #e5e7eb', boxShadow: 'none',
+    width: '100%', height: '48px', padding: '0 16px', paddingLeft: '44px',
+    borderRadius: '14px', border: '1.5px solid #e5e7eb', boxShadow: 'none',
+    fontSize: '15px', outline: 'none', background: '#f9fafb', color: '#1f2937',
+    boxSizing: 'border-box',
   }
   const modalBtnStyle = (bg: string): React.CSSProperties => ({
     width: '100%', height: '48px', borderRadius: '14px', background: bg,
