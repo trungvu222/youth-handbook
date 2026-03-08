@@ -693,7 +693,7 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(160deg, #7f1d1d 0%, #991b1b 35%, #b91c1c 65%, #dc2626 100%)', padding: '32px 16px 24px', position: 'relative', overflow: 'hidden', width: '100%' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(160deg, #7f1d1d 0%, #b91c1c 30%, #dc2626 60%, #f87171 85%, #fecaca 100%)', padding: '32px 16px 24px', position: 'relative', overflow: 'hidden', width: '100%' }}>
 
       {/* ===== Animated background orbs ===== */}
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
@@ -712,8 +712,7 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
         {/* ===== Logo + Title ===== */}
         <div style={{ textAlign: 'center', animation: 'fadeDown 0.6s ease' }}>
           <div style={{ position: 'relative', display: 'inline-block', marginBottom: '18px' }}>
-            <div style={{ position: 'absolute', inset: '-18px', background: 'rgba(255,255,255,0.1)', borderRadius: '50%', filter: 'blur(24px)', animation: 'orbPulse 3s ease-in-out infinite' }} />
-            <div style={{ position: 'absolute', inset: '-6px', background: 'rgba(255,200,200,0.08)', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.15)' }} />
+            <div style={{ position: 'absolute', inset: '-18px', background: 'rgba(255,255,255,0.12)', borderRadius: '50%', filter: 'blur(24px)', animation: 'orbPulse 3s ease-in-out infinite' }} />
             <img
               src="/Huy_Hieu_Doan.png"
               alt="Youth Union Logo"
