@@ -349,7 +349,7 @@ export default function DocumentsScreenMobile({ initialDocumentId, onDocumentOpe
       )}
 
       {/* ── HEADER ── */}
-      <div style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 45%, #3b82f6 100%)', padding: '20px 16px 24px', color: 'white', position: 'sticky', top: 0, zIndex: 10, overflow: 'hidden' }}>
+      <div style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 45%, #3b82f6 100%)', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 20px)', paddingLeft: '16px', paddingRight: '16px', paddingBottom: '24px', color: 'white', position: 'sticky', top: 0, zIndex: 10, overflow: 'hidden' }}>
         {/* Decorative orbs */}
         <div style={{ position: 'absolute', top: -20, right: -20, width: 110, height: 110, borderRadius: '50%', background: 'rgba(255,255,255,0.07)' }} />
         <div style={{ position: 'absolute', bottom: -10, left: 20, width: 60, height: 60, borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />

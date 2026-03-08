@@ -263,7 +263,7 @@ export default function NewsScreenMobile({ onShowPoints }: NewsScreenMobileProps
       )}
 
       {/* ===== HEADER ===== */}
-      <div style={{ background: 'linear-gradient(155deg, #dc2626 0%, #b91c1c 45%, #7f1d1d 100%)', padding: '24px 16px 0', color: 'white', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ background: 'linear-gradient(155deg, #dc2626 0%, #b91c1c 45%, #7f1d1d 100%)', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 24px)', paddingLeft: '16px', paddingRight: '16px', paddingBottom: 0, color: 'white', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: -30, right: -30, width: 140, height: 140, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.08)' }} />
         <div style={{ position: 'absolute', top: -10, right: 30, width: 80, height: 80, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.06)' }} />
 

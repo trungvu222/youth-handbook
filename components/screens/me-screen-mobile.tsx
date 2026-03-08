@@ -549,7 +549,7 @@ export default function MeScreenMobile({ onLogout, onOpenDocument }: MeScreenMob
       {/* ===== PROFILE HERO ===== */}
       <div style={{ position: 'relative', overflow: 'hidden' }}>
         {/* Background gradient */}
-        <div style={{ background: 'linear-gradient(160deg, #1e1b4b 0%, #4338ca 55%, #6366f1 100%)', padding: '32px 16px 60px', position: 'relative' }}>
+        <div style={{ background: 'linear-gradient(160deg, #1e1b4b 0%, #4338ca 55%, #6366f1 100%)', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 32px)', paddingLeft: '16px', paddingRight: '16px', paddingBottom: '60px', position: 'relative' }}>
           {/* Decorative circles */}
           <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '120px', height: '120px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
           <div style={{ position: 'absolute', bottom: '-20px', left: '-20px', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />

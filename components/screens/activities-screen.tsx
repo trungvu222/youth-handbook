@@ -55,7 +55,10 @@ export default function ActivitiesScreen() {
 
   const headerStyle: React.CSSProperties = {
     background: 'linear-gradient(135deg, #14532d 0%, #15803d 45%, #22c55e 100%)',
-    padding: '24px 16px 20px',
+    paddingTop: 'calc(env(safe-area-inset-top, 0px) + 24px)',
+    paddingLeft: '16px',
+    paddingRight: '16px',
+    paddingBottom: '20px',
     color: '#ffffff',
     position: 'relative',
     overflow: 'hidden',

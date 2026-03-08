@@ -16,7 +16,10 @@ export default function EnhancedStudyScreen() {
 
   const headerStyle: React.CSSProperties = {
     background: 'linear-gradient(135deg, #4c1d95 0%, #6d28d9 50%, #a855f7 100%)',
-    padding: '20px 16px 14px',
+    paddingTop: 'calc(env(safe-area-inset-top, 0px) + 20px)',
+    paddingLeft: '16px',
+    paddingRight: '16px',
+    paddingBottom: '14px',
     color: 'white',
     position: 'relative',
     overflow: 'hidden',
