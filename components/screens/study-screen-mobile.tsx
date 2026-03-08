@@ -102,9 +102,15 @@ export default function StudyScreenMobile() {
       if (result.success && result.data?.message) {
         setMessages([...newMessages, { role: 'assistant', content: result.data.message }])
       } else {
+        console.error('[Chat] API error:', result.error)
+        const errorMsg = result.error?.includes('chưa được cấu hình')
+          ? 'Trợ lý ảo đang bảo trì. Vui lòng thử lại sau ít phút.'
+          : result.error?.includes('giới hạn sử dụng')
+          ? 'Trợ lý ảo tạm thời quá tải. Vui lòng thử lại sau vài phút.'
+          : 'Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau.'
         setMessages([...newMessages, { 
           role: 'assistant', 
-          content: 'Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại sau.' 
+          content: errorMsg
         }])
       }
     } catch (error) {
