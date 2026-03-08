@@ -31,10 +31,25 @@ export function AdminShell({ children }: AdminShellProps) {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [pendingPostsCount, setPendingPostsCount] = useState(0);
 
+  // Routes that LEADER is NOT allowed to access (ADMIN only)
+  const LEADER_FORBIDDEN_PATHS = [
+    '/admin/units',
+    '/admin/documents',
+    '/admin/exams',
+    '/admin/news',
+    '/admin/surveys',
+    '/admin/reports',
+  ];
+
   useEffect(() => {
     const user = localStorage.getItem('currentUser');
     if (user) {
-      setCurrentUser(JSON.parse(user));
+      const parsed = JSON.parse(user);
+      setCurrentUser(parsed);
+      // Redirect LEADER away from forbidden pages
+      if (parsed.role === 'LEADER' && LEADER_FORBIDDEN_PATHS.some(p => pathname.startsWith(p))) {
+        router.replace('/admin');
+      }
     }
     // Fetch pending posts count for badge
     const fetchPendingCount = async () => {
@@ -55,7 +70,7 @@ export function AdminShell({ children }: AdminShellProps) {
     fetchPendingCount();
     const interval = setInterval(fetchPendingCount, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [pathname]);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -63,22 +78,27 @@ export function AdminShell({ children }: AdminShellProps) {
     router.push('/admin/login');
   };
 
-  // Menu items
-  const menuItems = [
-    { id: 'dashboard', label: 'Tổng quan', icon: Home, path: '/admin' },
-    { id: 'members', label: 'Quản lý đoàn viên', icon: Users, path: '/admin/members' },
-    { id: 'units', label: 'Quản lý chi đoàn', icon: Flag, path: '/admin/units' },
-    { id: 'activities', label: 'Sinh hoạt đoàn', icon: Activity, path: '/admin/activities' },
-    { id: 'ratings', label: 'Xếp loại chất lượng đoàn', icon: Star, path: '/admin/ratings' },
-    { id: 'points', label: 'Điểm rèn luyện', icon: Trophy, path: '/admin/points' },
-    { id: 'documents', label: 'Tài liệu đoàn', icon: FileText, path: '/admin/documents' },
-    { id: 'exams', label: 'Kiểm tra tìm hiểu', icon: BookOpen, path: '/admin/exams' },
-    { id: 'suggestions', label: 'Kiến nghị', icon: MessageSquare, path: '/admin/suggestions' },
-    { id: 'news', label: 'Bảng tin', icon: Newspaper, path: '/admin/news', badge: pendingPostsCount },
-    { id: 'surveys', label: 'Khảo sát ý kiến', icon: ClipboardList, path: '/admin/surveys' },
-    { id: 'reports', label: 'Báo cáo thống kê', icon: BarChart3, path: '/admin/reports' },
-    { id: 'profile', label: 'Hồ sơ cá nhân', icon: Settings, path: '/admin/profile' },
+  // All menu items (ADMIN sees all)
+  const allMenuItems = [
+    { id: 'dashboard', label: 'Tổng quan', icon: Home, path: '/admin', roles: ['ADMIN', 'LEADER'] },
+    { id: 'members', label: 'Quản lý đoàn viên', icon: Users, path: '/admin/members', roles: ['ADMIN', 'LEADER'] },
+    { id: 'units', label: 'Quản lý chi đoàn', icon: Flag, path: '/admin/units', roles: ['ADMIN'] },
+    { id: 'activities', label: 'Sinh hoạt đoàn', icon: Activity, path: '/admin/activities', roles: ['ADMIN', 'LEADER'] },
+    { id: 'ratings', label: 'Xếp loại chất lượng đoàn', icon: Star, path: '/admin/ratings', roles: ['ADMIN', 'LEADER'] },
+    { id: 'points', label: 'Điểm rèn luyện', icon: Trophy, path: '/admin/points', roles: ['ADMIN', 'LEADER'] },
+    { id: 'documents', label: 'Tài liệu đoàn', icon: FileText, path: '/admin/documents', roles: ['ADMIN'] },
+    { id: 'exams', label: 'Kiểm tra tìm hiểu', icon: BookOpen, path: '/admin/exams', roles: ['ADMIN'] },
+    { id: 'suggestions', label: 'Kiến nghị', icon: MessageSquare, path: '/admin/suggestions', roles: ['ADMIN', 'LEADER'] },
+    { id: 'news', label: 'Bảng tin', icon: Newspaper, path: '/admin/news', badge: pendingPostsCount, roles: ['ADMIN'] },
+    { id: 'surveys', label: 'Khảo sát ý kiến', icon: ClipboardList, path: '/admin/surveys', roles: ['ADMIN'] },
+    { id: 'reports', label: 'Báo cáo thống kê', icon: BarChart3, path: '/admin/reports', roles: ['ADMIN'] },
+    { id: 'profile', label: 'Hồ sơ cá nhân', icon: Settings, path: '/admin/profile', roles: ['ADMIN', 'LEADER'] },
   ];
+
+  const userRole = currentUser?.role || 'ADMIN';
+  const menuItems = allMenuItems.filter(item => item.roles.includes(userRole));
+
+  const roleLabel = userRole === 'LEADER' ? 'Bí thư chi đoàn' : 'Quản trị viên';
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
@@ -114,7 +134,7 @@ export function AdminShell({ children }: AdminShellProps) {
             {sidebarOpen && (
               <div className="overflow-hidden">
                 <h2 className="font-bold text-gray-900 truncate text-sm">{currentUser?.fullName || 'Admin'}</h2>
-                <p className="text-xs text-gray-500 truncate">Quản trị viên</p>
+                <p className="text-xs text-gray-500 truncate">{roleLabel}</p>
               </div>
             )}
           </div>
@@ -181,7 +201,7 @@ export function AdminShell({ children }: AdminShellProps) {
                 <Menu className="h-5 w-5 text-gray-600" />
               </button>
               <h1 className="text-xl font-semibold text-gray-900">
-                {menuItems.find(item => item.path === pathname)?.label || 'Tổng quan'}
+                {allMenuItems.find(item => item.path === pathname)?.label || 'Tổng quan'}
               </h1>
             </div>
           </div>

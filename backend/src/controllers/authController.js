@@ -328,6 +328,7 @@ const adminLogin = async (req, res, next) => {
     }
 
     // Check for user (can login with username or email)
+    // ADMIN and LEADER can login to admin panel; MEMBER cannot
     const user = await prisma.user.findFirst({
       where: {
         OR: [
@@ -335,7 +336,7 @@ const adminLogin = async (req, res, next) => {
           { email: username }
         ],
         isActive: true,
-        role: 'ADMIN' // Only ADMIN role can login to admin panel
+        role: { in: ['ADMIN', 'LEADER'] }
       },
       include: {
         unit: true
@@ -345,7 +346,7 @@ const adminLogin = async (req, res, next) => {
     if (!user) {
       return res.status(401).json({
         success: false,
-        error: 'Thông tin tài khoản hoặc mật khẩu không đúng. Vui lòng thử lại'
+        error: 'Thông tin tài khoản hoặc mật khẩu không đúng, hoặc tài khoản không có quyền truy cập trang quản trị.'
       });
     }
 
