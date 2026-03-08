@@ -1304,11 +1304,22 @@ export function MemberManagement({ initialUnitFilter }: MemberManagementProps = 
                   <SelectItem value="ADMIN">Admin</SelectItem>
                 </SelectContent>
               </Select>
+              <div className="mt-1.5 text-xs rounded-lg px-3 py-2 border"
+                style={{
+                  background: formData.role === 'ADMIN' ? '#fef2f2' : formData.role === 'LEADER' ? '#fffbeb' : '#f0fdf4',
+                  borderColor: formData.role === 'ADMIN' ? '#fecaca' : formData.role === 'LEADER' ? '#fde68a' : '#bbf7d0',
+                  color: formData.role === 'ADMIN' ? '#991b1b' : formData.role === 'LEADER' ? '#92400e' : '#166534',
+                }}>
+                {formData.role === 'ADMIN' && <><b>⚠️ Quản trị viên toàn hệ thống:</b> Có thể xem và chỉnh sửa mọi dữ liệu, quản lý tất cả chi đoàn, phê duyệt bài viết, cấp điểm, thêm/xóa đoàn viên.</>}
+                {formData.role === 'LEADER' && <><b>📋 Bí thư chi đoàn:</b> Quản lý đoàn viên trong chi đoàn mình, tạo hoạt động, chấm điểm rèn luyện, duyệt đơn — chỉ trong phạm vi chi đoàn được phân công.</>}
+                {formData.role === 'MEMBER' && <><b>👤 Đoàn viên:</b> Xem thông tin, tham gia hoạt động, nộp kiến nghị — không có quyền quản trị.</>}
+                {!formData.role && <span className="text-gray-400">Chọn vai trò để xem mô tả quyền hạn.</span>}
+              </div>
             </div>
 
             {/* Thông tin Đoàn, Đảng */}
             <div className="col-span-2 mt-2">
-              <h3 className="font-semibold text-sm text-gray-700 mb-2">Thông tin Đoàn & Đảng</h3>
+              <h3 className="font-semibold text-sm text-gray-700 mb-2">Thông tin Đoàn &amp; Đảng</h3>
             </div>
             <div>
               <Label htmlFor="unit">Nơi sinh hoạt Đoàn (Chi đoàn)</Label>
@@ -1601,6 +1612,17 @@ export function MemberManagement({ initialUnitFilter }: MemberManagementProps = 
                   <SelectItem value="ADMIN">Admin</SelectItem>
                 </SelectContent>
               </Select>
+              <div className="mt-1.5 text-xs rounded-lg px-3 py-2 border"
+                style={{
+                  background: formData.role === 'ADMIN' ? '#fef2f2' : formData.role === 'LEADER' ? '#fffbeb' : '#f0fdf4',
+                  borderColor: formData.role === 'ADMIN' ? '#fecaca' : formData.role === 'LEADER' ? '#fde68a' : '#bbf7d0',
+                  color: formData.role === 'ADMIN' ? '#991b1b' : formData.role === 'LEADER' ? '#92400e' : '#166534',
+                }}>
+                {formData.role === 'ADMIN' && <><b>⚠️ Quản trị viên toàn hệ thống:</b> Có thể xem và chỉnh sửa mọi dữ liệu, quản lý tất cả chi đoàn, phê duyệt bài viết, cấp điểm, thêm/xóa đoàn viên.</>}
+                {formData.role === 'LEADER' && <><b>📋 Bí thư chi đoàn:</b> Quản lý đoàn viên trong chi đoàn mình, tạo hoạt động, chấm điểm rèn luyện, duyệt đơn — chỉ trong phạm vi chi đoàn được phân công.</>}
+                {formData.role === 'MEMBER' && <><b>👤 Đoàn viên:</b> Xem thông tin, tham gia hoạt động, nộp kiến nghị — không có quyền quản trị.</>}
+                {!formData.role && <span className="text-gray-400">Chọn vai trò để xem mô tả quyền hạn.</span>}
+              </div>
             </div>
 
             {/* Thông tin Đoàn & Đảng */}

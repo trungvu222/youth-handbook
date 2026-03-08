@@ -22,10 +22,14 @@ const getUnits = async (req, res, next) => {
             email: true
           }
         },
+        parentUnit: {
+          select: { id: true, name: true }
+        },
         _count: {
           select: {
             members: true,
-            activities: true
+            activities: true,
+            childUnits: true
           }
         }
       },
@@ -39,7 +43,8 @@ const getUnits = async (req, res, next) => {
       units: units.map(unit => ({
         ...unit,
         memberCount: unit._count.members,
-        activityCount: unit._count.activities
+        activityCount: unit._count.activities,
+        childUnitCount: unit._count.childUnits
       }))
     });
   } catch (error) {
@@ -76,10 +81,18 @@ const getUnit = async (req, res, next) => {
             isActive: true
           }
         },
+        parentUnit: {
+          select: { id: true, name: true }
+        },
+        childUnits: {
+          select: { id: true, name: true, isActive: true,
+            _count: { select: { members: true } } }
+        },
         _count: {
           select: {
             members: true,
-            activities: true
+            activities: true,
+            childUnits: true
           }
         }
       }
@@ -97,7 +110,8 @@ const getUnit = async (req, res, next) => {
       unit: {
         ...unit,
         memberCount: unit._count.members,
-        activityCount: unit._count.activities
+        activityCount: unit._count.activities,
+        childUnitCount: unit._count.childUnits
       }
     });
   } catch (error) {

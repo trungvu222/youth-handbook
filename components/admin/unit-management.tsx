@@ -27,6 +27,7 @@ interface Unit {
   leader?: Leader
   parentUnitId?: string
   parentUnit?: { id: string; name: string }
+  childUnitCount?: number
   isActive: boolean
   memberCount: number
   activityCount: number
@@ -607,7 +608,21 @@ export default function UnitManagement() {
                           <span className="font-medium">{unit.memberCount}</span>
                           <span className="text-gray-400">thành viên</span>
                         </div>
+                        {(unit.childUnitCount ?? 0) > 0 && (
+                          <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                            <Building2 className="h-4 w-4 text-purple-500" />
+                            <span className="font-medium">{unit.childUnitCount}</span>
+                            <span className="text-gray-400">chi đoàn con</span>
+                          </div>
+                        )}
                       </div>
+                      {unit.parentUnit && (
+                        <div className="flex items-center gap-1.5 mb-3 text-xs text-gray-500 bg-blue-50 rounded-lg px-3 py-1.5 border border-blue-100">
+                          <span>🏛️</span>
+                          <span>Thuộc:</span>
+                          <span className="font-semibold text-blue-700">{unit.parentUnit.name}</span>
+                        </div>
+                      )}
 
                       <div className="flex justify-end gap-1 pt-2 border-t border-gray-100">
                         <Button 
