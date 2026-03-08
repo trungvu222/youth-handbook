@@ -1,9 +1,10 @@
 import '../globals.css';
 import { AdminLayoutClient } from './admin-layout-client';
+import { PWARegisterAdmin } from '@/components/pwa-register-admin';
 
 export const metadata = {
-  title: 'Admin Dashboard - HỆ THỐNG QUẢN LÝ ĐOÀN VIÊN TRUNG ĐOÀN 196',
-  description: 'Trang quản trị hệ thống Đoàn thanh niên',
+  title: 'Sổ Tay Đoàn Viên - Quản Trị',
+  description: 'Trang quản trị hệ thống Sổ Tay Đoàn Viên - Trung Đoàn 196',
 };
 
 export default function AdminLayout({
@@ -16,6 +17,7 @@ export default function AdminLayout({
       <AdminLayoutClient>
         {children}
       </AdminLayoutClient>
+      <PWARegisterAdmin />
     </div>
   );
 }
