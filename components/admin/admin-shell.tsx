@@ -27,7 +27,8 @@ interface AdminShellProps {
 export function AdminShell({ children }: AdminShellProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [pendingPostsCount, setPendingPostsCount] = useState(0);
 
@@ -72,6 +73,18 @@ export function AdminShell({ children }: AdminShellProps) {
     return () => clearInterval(interval);
   }, [pathname]);
 
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      setSidebarOpen(!mobile); // open on desktop, closed on mobile
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const handleLogout = () => {
     localStorage.clear();
     document.cookie = 'accessToken=; path=/; max-age=0';
@@ -101,11 +114,20 @@ export function AdminShell({ children }: AdminShellProps) {
   const roleLabel = userRole === 'LEADER' ? 'Bí thư chi đoàn' : 'Quản trị viên';
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-screen bg-gray-50 overflow-hidden relative">
+      {/* Mobile backdrop overlay */}
+      {isMobile && sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
       {/* Sidebar */}
       <div
-        className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ease-in-out ${
-          sidebarOpen ? 'w-64' : 'w-20'
+        className={`bg-white flex flex-col transition-all duration-300 ease-in-out ${
+          isMobile
+            ? `fixed inset-y-0 left-0 z-50 w-72 shadow-xl transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`
+            : `border-r border-gray-200 ${sidebarOpen ? 'w-64' : 'w-20'}`
         }`}
       >
         {/* Logo */}
@@ -148,7 +170,7 @@ export function AdminShell({ children }: AdminShellProps) {
             return (
               <button
                 key={item.id}
-                onClick={() => router.push(item.path)}
+                onClick={() => { router.push(item.path); if (isMobile) setSidebarOpen(false); }}
                 className={`w-full flex items-center px-4 py-3 text-left hover:bg-red-50 transition-colors ${
                   isActive ? 'bg-red-100 border-r-4 border-red-600 text-red-700' : 'text-gray-700'
                 }`}

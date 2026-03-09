@@ -108,7 +108,8 @@ export default function AdminDashboard() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -158,6 +159,18 @@ export default function AdminDashboard() {
       setCurrentTime(new Date());
     }, 1000);
     return () => clearInterval(timer);
+  }, []);
+
+  // Mobile detection – run once on mount
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      setSidebarOpen(!mobile); // open on desktop, closed on mobile
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   // Fetch real stats from API
@@ -806,9 +819,20 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-red-50">
-      <div className="flex h-screen">
+      <div className="flex h-screen relative">
+        {/* Mobile backdrop overlay */}
+        {isMobile && sidebarOpen && (
+          <div
+            className="fixed inset-0 z-40 bg-black/50"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
         {/* Sidebar */}
-        <div className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-white shadow-xl transition-all duration-300 flex-shrink-0 flex flex-col relative overflow-hidden`}>
+        <div className={`bg-white shadow-xl flex flex-col overflow-hidden transition-all duration-300 ${
+          isMobile
+            ? `fixed inset-y-0 left-0 z-50 w-72 transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`
+            : `flex-shrink-0 ${sidebarOpen ? 'w-64' : 'w-20'}`
+        }`}>
           <div className="px-4 pt-4 pb-5 border-b border-gray-200">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 rounded-full flex-shrink-0 overflow-hidden">
@@ -829,7 +853,7 @@ export default function AdminDashboard() {
               return (
                 <button
                   key={item.id}
-                  onClick={() => changeTab(item.id)}
+                  onClick={() => { changeTab(item.id); if (isMobile) setSidebarOpen(false); }}
                   className={`w-full flex items-center px-4 py-3 text-left hover:bg-red-50 transition-colors ${
                     activeTab === item.id ? 'bg-red-100 border-r-4 border-red-600 text-red-700' : 'text-gray-700'
                   }`}
@@ -870,16 +894,16 @@ export default function AdminDashboard() {
                 </h1>
               </div>
               
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2 md:space-x-4">
                 <div 
-                  className="text-right cursor-pointer hover:opacity-80"
+                  className="hidden md:block text-right cursor-pointer hover:opacity-80"
                   onClick={() => changeTab('profile')}
                 >
                   <p className="font-medium text-gray-900">{currentUser?.fullName}</p>
                   <p className="text-sm text-gray-500">Ban chấp hành Đoàn Cơ sở</p>
                 </div>
                 <div 
-                  className="w-10 h-10 rounded-full overflow-hidden cursor-pointer hover:ring-2 hover:ring-red-300 transition-all"
+                  className="w-9 h-9 md:w-10 md:h-10 rounded-full overflow-hidden cursor-pointer hover:ring-2 hover:ring-red-300 transition-all"
                   onClick={() => changeTab('profile')}
                 >
                   <img src="/placeholder-user.jpg" alt="Admin" className="w-full h-full object-cover" />
