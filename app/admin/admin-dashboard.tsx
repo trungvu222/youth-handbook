@@ -343,38 +343,36 @@ export default function AdminDashboard() {
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32"></div>
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-24 -translate-x-24"></div>
         
-        <div className="relative flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm relative">
-                {/* Youth Union Star Logo */}
-                <svg className="h-8 w-8" viewBox="0 0 100 100" fill="currentColor">
-                  <polygon points="50,5 61,35 95,35 68,57 79,90 50,70 21,90 32,57 5,35 39,35" fill="currentColor"/>
-                </svg>
-              </div>
-              <div>
-                <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">HỆ THỐNG QUẢN LÝ ĐOÀN VIÊN TRUNG ĐOÀN 196</h1>
-                <p className="text-red-100 text-sm lg:text-base">
-                  Chào mừng, <span className="font-semibold text-white">{currentUser?.fullName}</span> - Ban chấp hành Đoàn Cơ sở
-                </p>
-              </div>
+        <div className="relative flex flex-col gap-3">
+          {/* Top row: icon + title */}
+          <div className="flex items-center gap-3">
+            <div className="p-2 md:p-3 bg-white/20 rounded-xl backdrop-blur-sm flex-shrink-0">
+              <svg className="h-6 w-6 md:h-8 md:w-8" viewBox="0 0 100 100" fill="currentColor">
+                <polygon points="50,5 61,35 95,35 68,57 79,90 50,70 21,90 32,57 5,35 39,35" fill="currentColor"/>
+              </svg>
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-base md:text-2xl lg:text-3xl font-bold tracking-tight leading-tight">HỆ THỐNG QUẢN LÝ ĐOÀN VIÊN</h1>
+              <p className="text-red-100 text-xs md:text-sm truncate">
+                Chào mừng, <span className="font-semibold text-white">{currentUser?.fullName}</span>
+              </p>
             </div>
           </div>
-          
-          <div className="flex items-center gap-4">
+          {/* Bottom row: refresh + clock */}
+          <div className="flex items-center gap-2">
             <button 
               onClick={() => fetchDashboardStats()}
-              className="group bg-white/20 hover:bg-white/30 px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all duration-300 hover:scale-105 backdrop-blur-sm border border-white/20"
+              className="group bg-white/20 hover:bg-white/30 px-3 py-2 rounded-xl flex items-center gap-2 transition-all duration-300 backdrop-blur-sm border border-white/20 flex-shrink-0"
               disabled={loadingStats}
             >
               <RefreshCw className={`h-4 w-4 transition-transform ${loadingStats ? 'animate-spin' : 'group-hover:rotate-180'}`} />
-              <span className="font-medium">{loadingStats ? 'Đang tải...' : 'Làm mới'}</span>
+              <span className="font-medium text-sm">{loadingStats ? 'Đang tải...' : 'Làm mới'}</span>
             </button>
-            <div className="text-right bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/20">
-              <div className="text-2xl font-bold tabular-nums">
+            <div className="flex-1 text-right bg-white/10 backdrop-blur-sm rounded-xl px-3 py-2 border border-white/20 min-w-0">
+              <div className="text-lg md:text-2xl font-bold tabular-nums">
                 {currentTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
               </div>
-              <div className="text-red-100 text-sm">{currentTime.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
+              <div className="text-red-100 text-xs">{currentTime.toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
             </div>
           </div>
         </div>
@@ -394,51 +392,51 @@ export default function AdminDashboard() {
       )}
 
       {/* Stats Cards - Modern design */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-6">
         {/* Tổng số đoàn viên */}
-        <div className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl p-6 overflow-hidden transition-all duration-500 hover:-translate-y-1">
+        <div className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl p-4 overflow-hidden transition-all duration-500">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
           <div className="relative">
             <div className="flex items-start justify-between">
-              <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg group-hover:bg-white/20 transition-all duration-500">
-                <Users className="h-6 w-6 text-white" />
+              <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg group-hover:bg-white/20 transition-all duration-500">
+                <Users className="h-5 w-5 text-white" />
               </div>
-              <div className="flex items-center gap-1 px-2 py-1 bg-green-100 rounded-full group-hover:bg-white/20 transition-colors">
+              <div className="flex items-center gap-1 px-2 py-0.5 bg-green-100 rounded-full group-hover:bg-white/20 transition-colors">
                 <TrendingUp className="h-3 w-3 text-green-600 group-hover:text-white" />
                 <span className="text-xs font-semibold text-green-600 group-hover:text-white">+{stats.overview.newMembersThisMonth}</span>
               </div>
             </div>
-            <div className="mt-4 group-hover:text-white transition-colors">
-              <p className="text-sm text-gray-500 group-hover:text-blue-100">Tổng số đoàn viên</p>
-              <p className="text-3xl font-bold mt-1">{stats.overview.totalMembers}</p>
+            <div className="mt-3 group-hover:text-white transition-colors">
+              <p className="text-xs text-gray-500 group-hover:text-blue-100">Tổng đoàn viên</p>
+              <p className="text-2xl font-bold mt-0.5">{stats.overview.totalMembers}</p>
             </div>
-            <div className="mt-3 h-1.5 bg-gray-100 rounded-full overflow-hidden group-hover:bg-white/20">
-              <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full group-hover:bg-white transition-all duration-500" style={{ width: '100%' }}></div>
+            <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden group-hover:bg-white/20">
+              <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full" style={{ width: '100%' }}></div>
             </div>
           </div>
         </div>
 
         {/* Đoàn viên hoạt động */}
-        <div className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl p-6 overflow-hidden transition-all duration-500 hover:-translate-y-1">
+        <div className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl p-4 overflow-hidden transition-all duration-500">
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-green-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
           <div className="relative">
             <div className="flex items-start justify-between">
-              <div className="p-3 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl shadow-lg group-hover:bg-white/20 transition-all duration-500">
-                <UserCheck className="h-6 w-6 text-white" />
+              <div className="p-2 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl shadow-lg group-hover:bg-white/20 transition-all duration-500">
+                <UserCheck className="h-5 w-5 text-white" />
               </div>
-              <div className="flex items-center gap-1 px-2 py-1 bg-emerald-100 rounded-full group-hover:bg-white/20 transition-colors">
+              <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-100 rounded-full group-hover:bg-white/20 transition-colors">
                 <span className="text-xs font-semibold text-emerald-600 group-hover:text-white">
                   {stats.overview.totalMembers > 0 ? ((stats.overview.activeMembers / stats.overview.totalMembers) * 100).toFixed(0) : 0}%
                 </span>
               </div>
             </div>
-            <div className="mt-4 group-hover:text-white transition-colors">
-              <p className="text-sm text-gray-500 group-hover:text-green-100">Đang hoạt động</p>
-              <p className="text-3xl font-bold mt-1">{stats.overview.activeMembers}</p>
+            <div className="mt-3 group-hover:text-white transition-colors">
+              <p className="text-xs text-gray-500 group-hover:text-green-100">Đang hoạt động</p>
+              <p className="text-2xl font-bold mt-0.5">{stats.overview.activeMembers}</p>
             </div>
-            <div className="mt-3 h-1.5 bg-gray-100 rounded-full overflow-hidden group-hover:bg-white/20">
+            <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden group-hover:bg-white/20">
               <div 
-                className="h-full bg-gradient-to-r from-emerald-500 to-green-600 rounded-full group-hover:bg-white transition-all duration-500" 
+                className="h-full bg-gradient-to-r from-emerald-500 to-green-600 rounded-full" 
                 style={{ width: `${stats.overview.totalMembers > 0 ? (stats.overview.activeMembers / stats.overview.totalMembers) * 100 : 0}%` }}
               ></div>
             </div>
@@ -446,25 +444,24 @@ export default function AdminDashboard() {
         </div>
 
         {/* Tổng hoạt động */}
-        <div className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl p-6 overflow-hidden transition-all duration-500 hover:-translate-y-1">
+        <div className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl p-4 overflow-hidden transition-all duration-500">
           <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-violet-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
           <div className="relative">
             <div className="flex items-start justify-between">
-              <div className="p-3 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl shadow-lg group-hover:bg-white/20 transition-all duration-500">
-                <Activity className="h-6 w-6 text-white" />
+              <div className="p-2 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl shadow-lg group-hover:bg-white/20 transition-all duration-500">
+                <Activity className="h-5 w-5 text-white" />
               </div>
-              <div className="flex items-center gap-1 px-2 py-1 bg-purple-100 rounded-full group-hover:bg-white/20 transition-colors">
-                <Sparkles className="h-3 w-3 text-purple-600 group-hover:text-white" />
-                <span className="text-xs font-semibold text-purple-600 group-hover:text-white">{stats.overview.upcomingActivities} sắp tới</span>
+              <div className="flex items-center gap-1 px-2 py-0.5 bg-purple-100 rounded-full group-hover:bg-white/20 transition-colors">
+                <span className="text-xs font-semibold text-purple-600 group-hover:text-white">{stats.overview.upcomingActivities} sắp</span>
               </div>
             </div>
-            <div className="mt-4 group-hover:text-white transition-colors">
-              <p className="text-sm text-gray-500 group-hover:text-purple-100">Tổng hoạt động</p>
-              <p className="text-3xl font-bold mt-1">{stats.overview.totalActivities}</p>
+            <div className="mt-3 group-hover:text-white transition-colors">
+              <p className="text-xs text-gray-500 group-hover:text-purple-100">Tổng hoạt động</p>
+              <p className="text-2xl font-bold mt-0.5">{stats.overview.totalActivities}</p>
             </div>
-            <div className="mt-3 h-1.5 bg-gray-100 rounded-full overflow-hidden group-hover:bg-white/20">
+            <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden group-hover:bg-white/20">
               <div 
-                className="h-full bg-gradient-to-r from-purple-500 to-violet-600 rounded-full group-hover:bg-white transition-all duration-500" 
+                className="h-full bg-gradient-to-r from-purple-500 to-violet-600 rounded-full" 
                 style={{ width: `${stats.overview.totalActivities > 0 ? (stats.overview.completedActivities / stats.overview.totalActivities) * 100 : 0}%` }}
               ></div>
             </div>
@@ -472,33 +469,32 @@ export default function AdminDashboard() {
         </div>
 
         {/* Tổng điểm rèn luyện */}
-        <div className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl p-6 overflow-hidden transition-all duration-500 hover:-translate-y-1">
+        <div className="group relative bg-white rounded-2xl shadow-lg hover:shadow-2xl p-4 overflow-hidden transition-all duration-500">
           <div className="absolute inset-0 bg-gradient-to-br from-amber-500 to-orange-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
           <div className="relative">
             <div className="flex items-start justify-between">
-              <div className="p-3 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl shadow-lg group-hover:bg-white/20 transition-all duration-500">
-                <Trophy className="h-6 w-6 text-white" />
+              <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl shadow-lg group-hover:bg-white/20 transition-all duration-500">
+                <Trophy className="h-5 w-5 text-white" />
               </div>
-              <div className="flex items-center gap-1 px-2 py-1 bg-amber-100 rounded-full group-hover:bg-white/20 transition-colors">
-                <Zap className="h-3 w-3 text-amber-600 group-hover:text-white" />
+              <div className="flex items-center gap-1 px-2 py-0.5 bg-amber-100 rounded-full group-hover:bg-white/20 transition-colors">
                 <span className="text-xs font-semibold text-amber-600 group-hover:text-white">
-                  TB: {stats.overview.totalMembers > 0 ? Math.round(stats.overview.totalPoints / stats.overview.totalMembers) : 0}
+                  TB:{stats.overview.totalMembers > 0 ? Math.round(stats.overview.totalPoints / stats.overview.totalMembers) : 0}
                 </span>
               </div>
             </div>
-            <div className="mt-4 group-hover:text-white transition-colors">
-              <p className="text-sm text-gray-500 group-hover:text-amber-100">Tổng điểm rèn luyện</p>
-              <p className="text-3xl font-bold mt-1">{stats.overview.totalPoints.toLocaleString()}</p>
+            <div className="mt-3 group-hover:text-white transition-colors">
+              <p className="text-xs text-gray-500 group-hover:text-amber-100">Tổng điểm RL</p>
+              <p className="text-2xl font-bold mt-0.5">{stats.overview.totalPoints.toLocaleString()}</p>
             </div>
-            <div className="mt-3 h-1.5 bg-gray-100 rounded-full overflow-hidden group-hover:bg-white/20">
-              <div className="h-full bg-gradient-to-r from-amber-500 to-orange-600 rounded-full group-hover:bg-white transition-all duration-500" style={{ width: '75%' }}></div>
+            <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden group-hover:bg-white/20">
+              <div className="h-full bg-gradient-to-r from-amber-500 to-orange-600 rounded-full" style={{ width: '75%' }}></div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Charts and Statistics Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Xếp loại chất lượng đoàn - Circular Progress */}
         <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-300">
           <div className="flex items-center justify-between mb-6">
@@ -652,132 +648,104 @@ export default function AdminDashboard() {
       </div>
 
       {/* Hoạt động gần đây */}
-      <div className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-300">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
+      <div className="bg-white rounded-2xl shadow-lg p-4 md:p-6 hover:shadow-xl transition-shadow duration-300">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
             <div className="p-2 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl">
               <Activity className="h-5 w-5 text-white" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900">Hoạt động sinh hoạt gần đây</h3>
+            <h3 className="text-base font-bold text-gray-900">Hoạt động sinh hoạt gần đây</h3>
           </div>
           <button 
             onClick={() => changeTab('activities')}
-            className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 hover:gap-2 transition-all"
+            className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 flex-shrink-0"
           >
             Xem tất cả <ChevronRight className="h-4 w-4" />
           </button>
         </div>
         
         {stats.recentActivities.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            <Activity className="h-16 w-16 mx-auto mb-3 opacity-30" />
+          <div className="text-center py-8 text-gray-500">
+            <Activity className="h-12 w-12 mx-auto mb-3 opacity-30" />
             <p className="font-medium">Chưa có hoạt động nào</p>
-            <p className="text-sm">Tạo hoạt động mới tại mục "Sinh hoạt đoàn"</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm">Tên hoạt động</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm">Loại</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm">Ngày</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm">Tham gia</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.recentActivities.map((activity, index) => (
-                  <tr 
-                    key={activity.id} 
-                    className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-cyan-50/50 transition-all duration-200 cursor-pointer"
-                    style={{ animationDelay: `${index * 100}ms` }}
-                  >
-                    <td className="py-4 px-4">
-                      <p className="font-medium text-gray-900">{activity.title}</p>
-                    </td>
-                    <td className="py-4 px-4">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
-                        activity.type === 'MEETING' ? 'bg-blue-100 text-blue-700' :
-                        activity.type === 'VOLUNTEER' ? 'bg-green-100 text-green-700' :
-                        activity.type === 'TRAINING' ? 'bg-purple-100 text-purple-700' :
-                        'bg-amber-100 text-amber-700'
-                      }`}>
-                        {activity.type === 'MEETING' ? '📋 Sinh hoạt' :
-                         activity.type === 'VOLUNTEER' ? '🤝 Tình nguyện' :
-                         activity.type === 'TRAINING' ? '📚 Đào tạo' : '🎯 Khác'}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4 text-gray-600">
-                      {new Date(activity.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-2">
-                        <div className="flex -space-x-2">
-                          {[...Array(Math.min(3, activity.participants))].map((_, i) => (
-                            <div key={i} className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 border-2 border-white flex items-center justify-center">
-                              <span className="text-white text-xs">👤</span>
-                            </div>
-                          ))}
-                        </div>
-                        <span className="font-semibold text-blue-600">{activity.participants}</span>
-                        <span className="text-gray-400 text-sm">/{stats.overview.totalMembers}</span>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-2">
+            {stats.recentActivities.map((activity, index) => (
+              <div
+                key={activity.id}
+                className="flex flex-col gap-1 p-3 rounded-xl bg-gray-50 hover:bg-blue-50 transition-colors cursor-pointer"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-medium text-gray-900 text-sm leading-tight">{activity.title}</p>
+                  <span className={`flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
+                    activity.type === 'MEETING' ? 'bg-blue-100 text-blue-700' :
+                    activity.type === 'VOLUNTEER' ? 'bg-green-100 text-green-700' :
+                    activity.type === 'TRAINING' ? 'bg-purple-100 text-purple-700' :
+                    'bg-amber-100 text-amber-700'
+                  }`}>
+                    {activity.type === 'MEETING' ? 'Sinh hoạt' :
+                     activity.type === 'VOLUNTEER' ? 'Tình nguyện' :
+                     activity.type === 'TRAINING' ? 'Đào tạo' : 'Khác'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 text-xs text-gray-500">
+                  <span>📅 {new Date(activity.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                  <span>👥 {activity.participants}/{stats.overview.totalMembers} tham gia</span>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <button 
           onClick={() => changeTab('members')}
-          className="group p-4 bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-transparent hover:border-blue-200"
+          className="group p-3 bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-transparent hover:border-blue-200"
         >
           <div className="flex flex-col items-center gap-2">
-            <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl group-hover:scale-110 transition-transform">
-              <Users className="h-6 w-6 text-white" />
+            <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl group-hover:scale-110 transition-transform">
+              <Users className="h-5 w-5 text-white" />
             </div>
-            <span className="font-medium text-gray-700 group-hover:text-blue-600 transition-colors">Quản lý đoàn viên</span>
+            <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600 transition-colors text-center">Quản lý đoàn viên</span>
           </div>
         </button>
         
         <button 
           onClick={() => changeTab('activities')}
-          className="group p-4 bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-transparent hover:border-purple-200"
+          className="group p-3 bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-transparent hover:border-purple-200"
         >
           <div className="flex flex-col items-center gap-2">
-            <div className="p-3 bg-gradient-to-br from-purple-500 to-violet-500 rounded-xl group-hover:scale-110 transition-transform">
-              <Activity className="h-6 w-6 text-white" />
+            <div className="p-2 bg-gradient-to-br from-purple-500 to-violet-500 rounded-xl group-hover:scale-110 transition-transform">
+              <Activity className="h-5 w-5 text-white" />
             </div>
-            <span className="font-medium text-gray-700 group-hover:text-purple-600 transition-colors">Sinh hoạt đoàn</span>
+            <span className="text-sm font-medium text-gray-700 group-hover:text-purple-600 transition-colors">Sinh hoạt đoàn</span>
           </div>
         </button>
         
         <button 
           onClick={() => changeTab('ratings')}
-          className="group p-4 bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-transparent hover:border-amber-200"
+          className="group p-3 bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-transparent hover:border-amber-200"
         >
           <div className="flex flex-col items-center gap-2">
-            <div className="p-3 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl group-hover:scale-110 transition-transform">
-              <Star className="h-6 w-6 text-white" />
+            <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl group-hover:scale-110 transition-transform">
+              <Star className="h-5 w-5 text-white" />
             </div>
-            <span className="font-medium text-gray-700 group-hover:text-amber-600 transition-colors">Xếp loại</span>
+            <span className="text-sm font-medium text-gray-700 group-hover:text-amber-600 transition-colors">Xếp loại</span>
           </div>
         </button>
         
         <button 
           onClick={() => changeTab('reports')}
-          className="group p-4 bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-transparent hover:border-green-200"
+          className="group p-3 bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-transparent hover:border-green-200"
         >
           <div className="flex flex-col items-center gap-2">
-            <div className="p-3 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl group-hover:scale-110 transition-transform">
-              <BarChart3 className="h-6 w-6 text-white" />
+            <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl group-hover:scale-110 transition-transform">
+              <BarChart3 className="h-5 w-5 text-white" />
             </div>
-            <span className="font-medium text-gray-700 group-hover:text-green-600 transition-colors">Báo cáo</span>
+            <span className="text-sm font-medium text-gray-700 group-hover:text-green-600 transition-colors">Báo cáo</span>
           </div>
         </button>
       </div>
@@ -913,7 +881,7 @@ export default function AdminDashboard() {
           </header>
 
           {/* Page Content */}
-          <main className="flex-1 overflow-auto p-6 flex flex-col" style={{ background: "#f8fafc", minHeight: 0 }}>
+          <main className="flex-1 overflow-auto p-3 md:p-6 flex flex-col" style={{ background: "#f8fafc", minHeight: 0 }}>
             <div className="flex-1">
               {renderContent()}
             </div>
