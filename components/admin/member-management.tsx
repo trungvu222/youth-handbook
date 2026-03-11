@@ -363,6 +363,38 @@ export function MemberManagement({ initialUnitFilter }: MemberManagementProps = 
       })
 
       if (res.ok) {
+        // Sync unit leader when youthPosition changes to/from Bí thư
+        const syncToken = localStorage.getItem("accessToken")
+        const syncHeaders = {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${syncToken}`
+        }
+        const unitId = formData.unitId
+        if (unitId) {
+          if (formData.youthPosition === "Bí thư") {
+            // Set this member as unit leader
+            await fetch(`${API_URL}/api/units/${unitId}`, {
+              method: "PUT",
+              headers: syncHeaders,
+              body: JSON.stringify({ leaderId: selectedMember.id })
+            })
+          } else if (selectedMember.youthPosition === "Bí thư" && formData.youthPosition !== "Bí thư") {
+            // This member was Bí thư but is no longer – clear unit leader if they were the leader
+            const unitRes = await fetch(`${API_URL}/api/units/${unitId}`, {
+              headers: { "Authorization": `Bearer ${syncToken}` }
+            })
+            if (unitRes.ok) {
+              const unitData = await unitRes.json()
+              if (unitData.unit?.leaderId === selectedMember.id) {
+                await fetch(`${API_URL}/api/units/${unitId}`, {
+                  method: "PUT",
+                  headers: syncHeaders,
+                  body: JSON.stringify({ leaderId: null })
+                })
+              }
+            }
+          }
+        }
         toast({
           title: "Thành công",
           description: "Đã cập nhật thông tin thành viên.",

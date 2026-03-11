@@ -63,6 +63,9 @@ export default function UnitManagement() {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
   
+  // Edit dialog leaders (only members of the selected unit)
+  const [editDialogLeaders, setEditDialogLeaders] = useState<Leader[]>([])
+
   // Dialogs
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
@@ -248,6 +251,30 @@ export default function UnitManagement() {
       })
 
       if (res.ok) {
+        // Sync youthPosition for leaders
+        const newLeaderId = formData.leaderId || null
+        const oldLeaderId = selectedUnit.leaderId || null
+        if (newLeaderId !== oldLeaderId) {
+          const syncToken = localStorage.getItem("accessToken")
+          const syncHeaders = {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${syncToken}`
+          }
+          if (newLeaderId) {
+            await fetch(`${API_URL}/api/users/${newLeaderId}`, {
+              method: "PUT",
+              headers: syncHeaders,
+              body: JSON.stringify({ youthPosition: "Bí thư" })
+            })
+          }
+          if (oldLeaderId && oldLeaderId !== newLeaderId) {
+            await fetch(`${API_URL}/api/users/${oldLeaderId}`, {
+              method: "PUT",
+              headers: syncHeaders,
+              body: JSON.stringify({ youthPosition: "Đoàn viên" })
+            })
+          }
+        }
         toast({
           title: "Thành công",
           description: "Đã cập nhật chi đoàn."
@@ -368,7 +395,7 @@ export default function UnitManagement() {
     setSelectedUnit(null)
   }
 
-  const openEditDialog = (unit: Unit) => {
+  const openEditDialog = async (unit: Unit) => {
     setSelectedUnit(unit)
     setFormData({
       name: unit.name,
@@ -376,6 +403,30 @@ export default function UnitManagement() {
       parentUnitId: unit.parentUnitId || "",
       isActive: unit.isActive
     })
+
+    // Fetch unit detail to get members for leader dropdown
+    try {
+      const token = localStorage.getItem("accessToken")
+      const res = await fetch(`${API_URL}/api/units/${unit.id}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const unitDetail: Unit = data.unit
+        setSelectedUnit(unitDetail)
+        const members = (unitDetail.members || []).map((m) => ({
+          id: m.id,
+          fullName: m.fullName,
+          email: m.email,
+        }))
+        setEditDialogLeaders(members)
+      } else {
+        setEditDialogLeaders(availableLeaders)
+      }
+    } catch {
+      setEditDialogLeaders(availableLeaders)
+    }
+
     setShowEditDialog(true)
   }
 
@@ -525,7 +576,7 @@ export default function UnitManagement() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Tìm kiếm theo tên chi đoàn, chi đoàn trưởng..."
+                placeholder="Tìm kiếm theo tên chi đoàn, bí thư chi đoàn..."
                 className="pl-10 h-11 border-gray-200 focus:border-blue-400 focus:ring-blue-400"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -586,7 +637,7 @@ export default function UnitManagement() {
                           <div className="flex items-center gap-1.5 mt-1">
                             <UserCheck className="h-3.5 w-3.5 text-gray-400" />
                             <p className="text-sm text-muted-foreground truncate">
-                              {unit.leader?.fullName || "Chưa có chi đoàn trưởng"}
+                              {unit.leader?.fullName || "Chưa có bí thư chi đoàn"}
                             </p>
                           </div>
                         </div>
@@ -744,10 +795,10 @@ export default function UnitManagement() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="leader" className="text-sm font-medium">Chi đoàn trưởng</Label>
+              <Label htmlFor="leader" className="text-sm font-medium">Bí thư chi đoàn</Label>
               <Select value={formData.leaderId} onValueChange={(v) => setFormData({...formData, leaderId: v})}>
                 <SelectTrigger className="h-11">
-                  <SelectValue placeholder="Chọn chi đoàn trưởng" />
+                  <SelectValue placeholder="Chọn bí thư chi đoàn" />
                 </SelectTrigger>
                 <SelectContent className="max-h-[300px]">
                   {availableLeaders.length === 0 ? (
@@ -771,7 +822,7 @@ export default function UnitManagement() {
                   )}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">Có {availableLeaders.length} người có thể được chọn làm chi đoàn trưởng</p>
+              <p className="text-xs text-muted-foreground">Có {availableLeaders.length} người có thể được chọn làm bí thư chi đoàn</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="parentUnit" className="text-sm font-medium">Chi đoàn cấp trên</Label>
@@ -826,31 +877,26 @@ export default function UnitManagement() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-leader" className="text-sm font-medium">Chi đoàn trưởng</Label>
+              <Label htmlFor="edit-leader" className="text-sm font-medium">Bí thư chi đoàn</Label>
               <Select value={formData.leaderId || "none"} onValueChange={(v) => setFormData({...formData, leaderId: v === "none" ? "" : v})}>
                 <SelectTrigger className="h-11">
-                  <SelectValue placeholder="Chọn chi đoàn trưởng" />
+                  <SelectValue placeholder="Chọn bí thư chi đoàn" />
                 </SelectTrigger>
                 <SelectContent className="max-h-[300px]">
                   <SelectItem value="none">
                     <span className="text-muted-foreground">Không có</span>
                   </SelectItem>
-                  {availableLeaders.map(leader => (
+                  {editDialogLeaders.map(leader => (
                     <SelectItem key={leader.id} value={leader.id}>
                       <div className="flex items-center gap-2">
                         <span>{leader.fullName}</span>
                         <span className="text-xs text-muted-foreground">({leader.email})</span>
-                        {leader.role && (
-                          <Badge variant="outline" className="text-xs ml-1">
-                            {leader.role === 'ADMIN' ? 'Admin' : leader.role === 'LEADER' ? 'Leader' : 'Thành viên'}
-                          </Badge>
-                        )}
                       </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">Có {availableLeaders.length} người có thể được chọn làm chi đoàn trưởng</p>
+              <p className="text-xs text-muted-foreground">Có {editDialogLeaders.length} thành viên trong chi đoàn</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-parentUnit" className="text-sm font-medium">Chi đoàn cấp trên</Label>
@@ -929,7 +975,7 @@ export default function UnitManagement() {
                 <div className="p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-2 text-muted-foreground mb-1">
                     <UserCheck className="h-4 w-4" />
-                    <span className="text-xs font-medium uppercase">Chi đoàn trưởng</span>
+                    <span className="text-xs font-medium uppercase">Bí thư chi đoàn</span>
                   </div>
                   <p className="font-semibold text-gray-900">{selectedUnit.leader?.fullName || "Chưa phân công"}</p>
                   {selectedUnit.leader?.email && (
