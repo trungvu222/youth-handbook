@@ -216,6 +216,7 @@ const createActivity = async (req, res, next) => {
       hostUnit,
       managerId,
       materials,
+      delegates,
       attendeeIds,
       sendNotification,
       notifyAll,
@@ -258,7 +259,8 @@ const createActivity = async (req, res, next) => {
         // New fields
         hostUnit: hostUnit || null,
         managerId: managerId || null,
-        materials: materials || null
+        materials: materials || null,
+        delegates: delegates || null
       },
       include: {
         organizer: {
@@ -1162,7 +1164,7 @@ const updateActivity = async (req, res, next) => {
     const { id } = req.params;
     const { 
       title, description, type, startTime, endTime, location, 
-      pointsReward, status, conclusion, hostUnit, managerId, materials, attachments 
+      pointsReward, status, conclusion, hostUnit, managerId, materials, attachments, delegates 
     } = req.body;
 
     const activity = await prisma.activity.findUnique({
@@ -1192,6 +1194,7 @@ const updateActivity = async (req, res, next) => {
     // managerId: empty string means unset, null means unset, only set if valid ID
     if (managerId !== undefined) updateData.managerId = managerId || null;
     if (materials !== undefined) updateData.materials = materials;
+    if (delegates !== undefined) updateData.delegates = delegates;
     if (attachments !== undefined) updateData.attachments = attachments; // JSON array of files
     if (req.body.lateThresholdMinutes !== undefined) {
       updateData.lateThresholdMinutes = parseInt(req.body.lateThresholdMinutes) || 15;

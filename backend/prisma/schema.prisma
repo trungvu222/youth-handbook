@@ -149,6 +149,7 @@ model Activity {
   conclusion       String?   @db.Text   // Kết luận cuộc họp
   hostUnit         String?   @map("host_unit") // Đơn vị chủ trì
   attachments      Json?     // Tệp đính kèm (JSON array of file paths)
+  delegates        String?   @db.Text @map("delegates") // Đại biểu tham dự (free-text)
   
   // Extended fields for Youth Union activities  
   maxParticipants    Int?      @map("max_participants")

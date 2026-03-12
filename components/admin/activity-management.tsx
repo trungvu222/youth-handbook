@@ -50,6 +50,7 @@ interface Activity {
   hostUnit?: string
   manager?: { id: string; fullName: string }
   materials?: string
+  delegates?: string
   attachments?: string[]
 }
 
@@ -143,6 +144,7 @@ export default function ActivityManagement() {
     lateThresholdMinutes: 15,  // Ngưỡng tính trễ (phút)
     hostUnit: "",          // Đơn vị chủ trì
     managerId: "",         // Phụ trách
+    delegates: "",         // Đại biểu tham dự
     materials: "",         // Vật chất
   })
 
@@ -535,6 +537,7 @@ export default function ActivityManagement() {
       lateThresholdMinutes: 15,
       hostUnit: "",
       managerId: "",
+      delegates: "",
       materials: ""
     })
     setSelectedFiles([])
@@ -557,6 +560,7 @@ export default function ActivityManagement() {
       pointsReward: activity.pointsReward,
       hostUnit: activity.hostUnit || "",
       managerId: activity.manager?.id || "",
+      delegates: activity.delegates || "",
       materials: activity.materials || ""
     })
     setIsEditMode(false)
@@ -581,6 +585,7 @@ export default function ActivityManagement() {
         pointsReward: selectedActivity.pointsReward,
         hostUnit: selectedActivity.hostUnit || "",
         managerId: selectedActivity.manager?.id || "",
+        delegates: selectedActivity.delegates || "",
         materials: selectedActivity.materials || ""
       })
     }
@@ -691,7 +696,8 @@ export default function ActivityManagement() {
         location: activity.location || "",
         pointsReward: activity.pointsReward,
         hostUnit: activity.hostUnit || "",
-        materials: activity.materials || ""
+        materials: activity.materials || "",
+        delegates: activity.delegates || ""
       }
       const res = await fetch(`${API_URL}/api/activities`, {
         method: "POST",
@@ -1217,31 +1223,12 @@ export default function ActivityManagement() {
             {/* Đại biểu tham dự */}
             <div>
               <Label>Đại biểu tham dự</Label>
-              <div className="border rounded-lg p-3 max-h-40 overflow-y-auto">
-                {users.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">Đang tải danh sách...</p>
-                ) : (
-                  <div className="space-y-2">
-                    {users.map(user => (
-                      <div key={user.id} className="flex items-center space-x-2">
-                        <Checkbox 
-                          id={`attendee-${user.id}`}
-                          checked={selectedAttendees.includes(user.id)}
-                          onCheckedChange={() => toggleAttendee(user.id)}
-                        />
-                        <label htmlFor={`attendee-${user.id}`} className="text-sm cursor-pointer">
-                          {user.fullName}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-              {selectedAttendees.length > 0 && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Đã chọn: {selectedAttendees.length} người
-                </p>
-              )}
+              <Textarea
+                value={formData.delegates}
+                onChange={e => setFormData({...formData, delegates: e.target.value})}
+                placeholder="VD: Nguyễn Văn A, Trần Thị B, ..."
+                rows={3}
+              />
             </div>
             
             {/* Địa điểm */}
@@ -1562,6 +1549,21 @@ export default function ActivityManagement() {
                   />
                 ) : (
                   <p>{selectedActivity.materials || "Chưa xác định"}</p>
+                )}
+              </div>
+
+              {/* Đại biểu tham dự */}
+              <div>
+                <Label className="text-muted-foreground">Đại biểu tham dự</Label>
+                {isEditMode ? (
+                  <Textarea 
+                    value={editFormData.delegates} 
+                    onChange={e => setEditFormData({...editFormData, delegates: e.target.value})}
+                    placeholder="VD: Nguyễn Văn A, Trần Thị B, ..."
+                    rows={3}
+                  />
+                ) : (
+                  <p>{selectedActivity.delegates || "Chưa xác định"}</p>
                 )}
               </div>
 
