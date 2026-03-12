@@ -22,6 +22,7 @@ interface NotificationsScreenMobileProps {
 export default function NotificationsScreenMobile({ onBack, onOpenDocument }: NotificationsScreenMobileProps) {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
 
   useEffect(() => {
     loadNotifications()
@@ -60,6 +61,7 @@ export default function NotificationsScreenMobile({ onBack, onOpenDocument }: No
       case 'SURVEY': return '📋'
       case 'DOCUMENT': return '📄'
       case 'ANNOUNCEMENT': return '📢'
+      case 'CHECKIN_CODE': return '🎯'
       default: return '🔔'
     }
   }
@@ -128,16 +130,20 @@ export default function NotificationsScreenMobile({ onBack, onOpenDocument }: No
                   width: '100%',
                   textAlign: 'left',
                   padding: 16,
-                  background: notification.isRead ? '#fff' : '#eff6ff',
+                  background: notification.type === 'CHECKIN_CODE'
+                    ? (notification.isRead ? '#f0fdf4' : '#dcfce7')
+                    : (notification.isRead ? '#fff' : '#eff6ff'),
                   borderRadius: 14,
-                  border: notification.isRead ? '1px solid #f1f5f9' : '1px solid #93c5fd',
+                  border: notification.type === 'CHECKIN_CODE'
+                    ? (notification.isRead ? '1px solid #bbf7d0' : '1px solid #86efac')
+                    : (notification.isRead ? '1px solid #f1f5f9' : '1px solid #93c5fd'),
                   cursor: 'pointer',
                   position: 'relative',
                   boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                 }}
               >
                 {!notification.isRead && (
-                  <div style={{ position: 'absolute', top: 16, right: 16, width: 8, height: 8, borderRadius: '50%', background: '#2563eb' }} />
+                  <div style={{ position: 'absolute', top: 16, right: 16, width: 8, height: 8, borderRadius: '50%', background: notification.type === 'CHECKIN_CODE' ? '#16a34a' : '#2563eb' }} />
                 )}
                 <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                   <span style={{ fontSize: 24 }}>{getTypeIcon(notification.type)}</span>
@@ -145,9 +151,40 @@ export default function NotificationsScreenMobile({ onBack, onOpenDocument }: No
                     <h3 style={{ fontSize: 14, fontWeight: 600, color: '#0f172a', marginBottom: 4 }}>
                       {notification.title}
                     </h3>
-                    <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.5 }}>
-                      {notification.message}
-                    </p>
+
+                    {notification.type === 'CHECKIN_CODE' && notification.relatedId ? (
+                      <div>
+                        <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.5, marginBottom: 10 }}>
+                          Mã điểm danh của bạn:
+                        </p>
+                        <div style={{ background: '#fff', border: '2px dashed #16a34a', borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>
+                          <span style={{ fontSize: 22, fontWeight: 800, letterSpacing: 3, color: '#15803d', fontFamily: 'monospace' }}>
+                            {notification.relatedId}
+                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              navigator.clipboard.writeText(notification.relatedId!).then(() => {
+                                setCopiedId(notification.id)
+                                setTimeout(() => setCopiedId(null), 2000)
+                              })
+                              if (!notification.isRead) handleMarkRead(notification.id)
+                            }}
+                            style={{ background: copiedId === notification.id ? '#16a34a' : '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 600, color: copiedId === notification.id ? '#fff' : '#16a34a', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                          >
+                            {copiedId === notification.id ? '✓ Đã sao chép!' : '📋 Sao chép'}
+                          </button>
+                        </div>
+                        <p style={{ fontSize: 12, color: '#6b7280' }}>
+                          Sao chép mã rồi vào <strong>Sinh hoạt → Điểm danh ngay</strong> → chọn Nhập mã
+                        </p>
+                      </div>
+                    ) : (
+                      <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.5 }}>
+                        {notification.message}
+                      </p>
+                    )}
+
                     <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 6 }}>
                       {timeAgo(notification.createdAt)}
                     </p>

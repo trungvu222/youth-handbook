@@ -16,6 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Calendar, Plus, Users, Edit, Trash2, Eye, RefreshCw, MapPin, Clock, AlertTriangle, MoreVertical, ClipboardList, FileText, CheckCircle2, XCircle, Clock3, FileCheck, Upload, X, Send, Bell, Copy, Ban, PlayCircle, ChevronLeft, ChevronRight, Award, Megaphone, QrCode, Hash } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { BACKEND_URL } from "@/lib/config"
+import { notificationApi } from "@/lib/api"
 
 const RAW_API_URL = BACKEND_URL;
 const API_URL = RAW_API_URL.replace(/\/api\/?$/, '')
@@ -121,6 +122,7 @@ export default function ActivityManagement() {
   const [checkinSendMode, setCheckinSendMode] = useState<'all' | 'select'>('all')
   const [checkinSelectedUsers, setCheckinSelectedUsers] = useState<string[]>([])
   const [copiedCode, setCopiedCode] = useState(false)
+  const [sendingCheckinCode, setSendingCheckinCode] = useState(false)
   const [attendanceFlash, setAttendanceFlash] = useState(false) // Visual flash when new check-in detected
   const [lastCheckedInCount, setLastCheckedInCount] = useState<number>(0) // Track previous count to detect changes
   const [attendanceAutoRefresh, setAttendanceAutoRefresh] = useState(true) // Toggle auto-refresh
@@ -2043,28 +2045,52 @@ export default function ActivityManagement() {
             </Button>
             <Button 
               className="bg-emerald-600 hover:bg-emerald-700 text-white"
-              onClick={() => {
-                const targetCount = checkinSendMode === 'all' 
-                  ? activityStats?.participants.length || 0
-                  : checkinSelectedUsers.length
-                const targetLabel = checkinSendMode === 'all' 
-                  ? 'tất cả đoàn viên đã đăng ký' 
-                  : `${targetCount} thành viên được chọn`
-                
+              disabled={sendingCheckinCode}
+              onClick={async () => {
+                if (!selectedActivity) return
+
                 if (checkinSendMode === 'select' && checkinSelectedUsers.length === 0) {
                   toast({ title: "Chưa chọn thành viên", description: "Vui lòng chọn ít nhất một thành viên", variant: "destructive" })
                   return
                 }
-                
-                toast({ 
-                  title: "✅ Đã gửi mã điểm danh",
-                  description: `Mã điểm danh đã được gửi cho ${targetLabel} (${targetCount} người)`,
-                })
-                setShowCheckinCodeDialog(false)
+
+                const code = (selectedActivity.qrCode || selectedActivity.id).substring(0, 8).toUpperCase()
+                const recipients: 'all' | string[] = checkinSendMode === 'all' ? 'all' : checkinSelectedUsers
+                const targetCount = checkinSendMode === 'all'
+                  ? activityStats?.participants.length || 0
+                  : checkinSelectedUsers.length
+
+                setSendingCheckinCode(true)
+                try {
+                  const result = await notificationApi.sendNotification({
+                    title: `🎯 Mã điểm danh: ${selectedActivity.title}`,
+                    message: `Mã điểm danh cho hoạt động "${selectedActivity.title}" là:\n\n${code}\n\nSao chép mã rồi mở phần Điểm danh trong ứng dụng để nhập.`,
+                    type: 'CHECKIN_CODE',
+                    relatedId: code,
+                    recipients,
+                  })
+
+                  if (result.success) {
+                    toast({
+                      title: "✅ Đã gửi mã điểm danh",
+                      description: `Mã điểm danh đã được gửi cho ${targetCount} đoàn viên qua mục Thông báo`,
+                    })
+                    setShowCheckinCodeDialog(false)
+                  } else {
+                    toast({ title: "Lỗi gửi mã", description: result.error || 'Không thể gửi thông báo', variant: "destructive" })
+                  }
+                } catch {
+                  toast({ title: "Lỗi kết nối", description: 'Không thể gửi thông báo. Vui lòng thử lại.', variant: "destructive" })
+                } finally {
+                  setSendingCheckinCode(false)
+                }
               }}
             >
-              <Send className="h-4 w-4 mr-1.5" />
-              Gửi mã
+              {sendingCheckinCode ? (
+                <><RefreshCw className="h-4 w-4 mr-1.5 animate-spin" /> Đang gửi...</>
+              ) : (
+                <><Send className="h-4 w-4 mr-1.5" /> Gửi mã</>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
