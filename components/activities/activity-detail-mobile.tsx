@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { 
   Calendar, 
   MapPin, 
@@ -34,6 +34,8 @@ export default function ActivityDetailMobile({ activityId, onBack }: ActivityDet
   const [absentReason, setAbsentReason] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [location, setLocation] = useState<{latitude?: number, longitude?: number}>({})
+  const [scanMode, setScanMode] = useState<'camera' | 'manual'>('camera')
+  const qrScannerRef = useRef<any>(null)
 
   const loadActivity = async () => {
     setLoading(true)
@@ -74,6 +76,71 @@ export default function ActivityDetailMobile({ activityId, onBack }: ActivityDet
       )
     }
   }, [activity])
+
+  // QR Scanner lifecycle
+  useEffect(() => {
+    if (!showCheckInModal || scanMode !== 'camera') {
+      if (qrScannerRef.current) {
+        qrScannerRef.current.stop().catch(() => {})
+        qrScannerRef.current = null
+      }
+      return
+    }
+
+    let cancelled = false
+    const startScanner = async () => {
+      try {
+        const { Html5Qrcode } = await import('html5-qrcode')
+        if (cancelled) return
+        const scanner = new Html5Qrcode('qr-reader-modal')
+        qrScannerRef.current = scanner
+        await scanner.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          async (decodedText: string) => {
+            try { await scanner.stop() } catch {}
+            qrScannerRef.current = null
+            setScanMode('manual')
+            setQrCode(decodedText)
+            setSubmitting(true)
+            try {
+              const result = await activityApi.checkInActivity(activityId, {
+                qrCode: decodedText.trim(),
+                ...location
+              })
+              if (result.success) {
+                alert(`Điểm danh thành công! Bạn được +${result.data?.pointsEarned || 5} điểm.`)
+                setShowCheckInModal(false)
+                setQrCode('')
+                setScanMode('camera')
+                await loadActivity()
+              } else {
+                alert(result.error || 'Có lỗi xảy ra khi điểm danh')
+              }
+            } catch {
+              alert('Có lỗi xảy ra khi điểm danh')
+            } finally {
+              setSubmitting(false)
+            }
+          },
+          () => {}
+        )
+      } catch (err) {
+        console.error('QR Scanner error:', err)
+        if (!cancelled) setScanMode('manual')
+      }
+    }
+
+    const timer = setTimeout(startScanner, 300)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+      if (qrScannerRef.current) {
+        qrScannerRef.current.stop().catch(() => {})
+        qrScannerRef.current = null
+      }
+    }
+  }, [showCheckInModal, scanMode, activityId])
 
   // Handle check-in
   const handleCheckIn = async () => {
@@ -560,7 +627,7 @@ export default function ActivityDetailMobile({ activityId, onBack }: ActivityDet
                   backgroundColor: canCheckIn() ? '#10b981' : '#d1d5db',
                   color: canCheckIn() ? '#ffffff' : '#6b7280',
                 }}
-                onClick={() => canCheckIn() && setShowCheckInModal(true)}
+                onClick={() => { if (canCheckIn()) { setScanMode('camera'); setShowCheckInModal(true) } }}
                 disabled={!canCheckIn()}
               >
                 <QrCode style={{ width: '20px', height: '20px' }} />
@@ -710,26 +777,71 @@ export default function ActivityDetailMobile({ activityId, onBack }: ActivityDet
               </button>
             </div>
             <div style={{ padding: '16px' }}>
-              <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '16px' }}>
-                Nhập mã QR hoặc quét mã để điểm danh
-              </p>
-              <input
-                type="text"
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  borderRadius: '8px',
-                  border: '1px solid #d1d5db',
-                  fontSize: '15px',
-                  marginBottom: '16px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
-                placeholder="Nhập mã QR..."
-                value={qrCode}
-                onChange={(e) => setQrCode(e.target.value)}
-                autoFocus
-              />
+              {/* Mode toggle */}
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                <button
+                  style={{
+                    flex: 1, padding: '10px', borderRadius: '8px', border: 'none',
+                    cursor: 'pointer', fontWeight: 600, fontSize: '14px',
+                    backgroundColor: scanMode === 'camera' ? '#10b981' : '#f3f4f6',
+                    color: scanMode === 'camera' ? '#ffffff' : '#374151',
+                  }}
+                  onClick={() => setScanMode('camera')}
+                >
+                  📷 Quét QR
+                </button>
+                <button
+                  style={{
+                    flex: 1, padding: '10px', borderRadius: '8px', border: 'none',
+                    cursor: 'pointer', fontWeight: 600, fontSize: '14px',
+                    backgroundColor: scanMode === 'manual' ? '#10b981' : '#f3f4f6',
+                    color: scanMode === 'manual' ? '#ffffff' : '#374151',
+                  }}
+                  onClick={() => setScanMode('manual')}
+                >
+                  ⌨️ Nhập mã
+                </button>
+              </div>
+
+              {/* Camera scanner */}
+              {scanMode === 'camera' && (
+                <div>
+                  <div
+                    id="qr-reader-modal"
+                    style={{ width: '100%', borderRadius: '8px', overflow: 'hidden', marginBottom: '8px' }}
+                  />
+                  <p style={{ color: '#6b7280', fontSize: '13px', textAlign: 'center', marginBottom: '16px' }}>
+                    Hướng camera vào mã QR để điểm danh tự động
+                  </p>
+                </div>
+              )}
+
+              {/* Manual input */}
+              {scanMode === 'manual' && (
+                <div>
+                  <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '12px' }}>
+                    Nhập mã QR để điểm danh
+                  </p>
+                  <input
+                    type="text"
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      border: '1px solid #d1d5db',
+                      fontSize: '15px',
+                      marginBottom: '16px',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                    }}
+                    placeholder="Nhập mã QR..."
+                    value={qrCode}
+                    onChange={(e) => setQrCode(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+              )}
+
               {activity?.requiresLocation && (
                 <p style={{ color: '#6b7280', fontSize: '12px', marginBottom: '16px' }}>
                   📍 Vị trí địa lý sẽ được ghi nhận
@@ -752,24 +864,26 @@ export default function ActivityDetailMobile({ activityId, onBack }: ActivityDet
                 >
                   Hủy
                 </button>
-                <button
-                  style={{
-                    flex: 1,
-                    padding: '14px 20px',
-                    borderRadius: '12px',
-                    fontSize: '15px',
-                    fontWeight: 600,
-                    border: 'none',
-                    cursor: 'pointer',
-                    backgroundColor: '#10b981',
-                    color: '#ffffff',
-                    opacity: submitting ? 0.7 : 1,
-                  }}
-                  onClick={handleCheckIn}
-                  disabled={submitting}
-                >
-                  {submitting ? 'Đang xử lý...' : 'Xác nhận'}
-                </button>
+                {scanMode === 'manual' && (
+                  <button
+                    style={{
+                      flex: 1,
+                      padding: '14px 20px',
+                      borderRadius: '12px',
+                      fontSize: '15px',
+                      fontWeight: 600,
+                      border: 'none',
+                      cursor: 'pointer',
+                      backgroundColor: '#10b981',
+                      color: '#ffffff',
+                      opacity: submitting ? 0.7 : 1,
+                    }}
+                    onClick={handleCheckIn}
+                    disabled={submitting}
+                  >
+                    {submitting ? 'Đang xử lý...' : 'Xác nhận'}
+                  </button>
+                )}
               </div>
             </div>
           </div>
