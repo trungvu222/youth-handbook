@@ -79,6 +79,19 @@ interface ActivityStats {
   nonParticipants: any[]
 }
 
+// Convert UTC ISO string from API → local datetime-local input value
+const toLocalDatetimeInput = (utcStr: string): string => {
+  const d = new Date(utcStr)
+  const offset = d.getTimezoneOffset() * 60000
+  return new Date(d.getTime() - offset).toISOString().slice(0, 16)
+}
+
+// Convert datetime-local input value (local time, no tz) → UTC ISO string for API
+const toUTCISOString = (localStr: string): string => {
+  if (!localStr) return ""
+  return new Date(localStr).toISOString()
+}
+
 export default function ActivityManagement() {
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -456,9 +469,11 @@ export default function ActivityManagement() {
     try {
       const token = localStorage.getItem("accessToken")
       
-      // Build the activity data
+      // Build the activity data (convert local datetime strings to UTC ISO for API)
       const activityData = {
         ...formData,
+        startTime: toUTCISOString(formData.startTime),
+        endTime: toUTCISOString(formData.endTime),
         attendeeIds: selectedAttendees,
         sendNotification,
         notifyAll,
@@ -536,8 +551,8 @@ export default function ActivityManagement() {
       title: activity.title,
       description: activity.description || "",
       type: activity.type,
-      startTime: activity.startTime ? new Date(activity.startTime).toISOString().slice(0, 16) : "",
-      endTime: activity.endTime ? new Date(activity.endTime).toISOString().slice(0, 16) : "",
+      startTime: activity.startTime ? toLocalDatetimeInput(activity.startTime) : "",
+      endTime: activity.endTime ? toLocalDatetimeInput(activity.endTime) : "",
       location: activity.location || "",
       pointsReward: activity.pointsReward,
       hostUnit: activity.hostUnit || "",
@@ -560,8 +575,8 @@ export default function ActivityManagement() {
         title: selectedActivity.title,
         description: selectedActivity.description || "",
         type: selectedActivity.type,
-        startTime: selectedActivity.startTime ? new Date(selectedActivity.startTime).toISOString().slice(0, 16) : "",
-        endTime: selectedActivity.endTime ? new Date(selectedActivity.endTime).toISOString().slice(0, 16) : "",
+        startTime: selectedActivity.startTime ? toLocalDatetimeInput(selectedActivity.startTime) : "",
+        endTime: selectedActivity.endTime ? toLocalDatetimeInput(selectedActivity.endTime) : "",
         location: selectedActivity.location || "",
         pointsReward: selectedActivity.pointsReward,
         hostUnit: selectedActivity.hostUnit || "",
@@ -584,7 +599,11 @@ export default function ActivityManagement() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}` 
         },
-        body: JSON.stringify(editFormData)
+        body: JSON.stringify({
+          ...editFormData,
+          startTime: toUTCISOString(editFormData.startTime),
+          endTime: toUTCISOString(editFormData.endTime),
+        })
       })
       
       if (res.ok) {
