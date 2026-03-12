@@ -3,14 +3,18 @@
 
 // Check if we're in browser and on localhost
 const isBrowser = typeof window !== 'undefined';
-const isLocalhost = isBrowser && (
+
+// Detect Capacitor mobile app (always use production backend)
+const isCapacitor = isBrowser && !!(window as any).Capacitor;
+
+const isLocalhost = !isCapacitor && isBrowser && (
   window.location.hostname === 'localhost' ||
   window.location.hostname === '127.0.0.1' ||
   window.location.hostname === ''
 );
 
-// Auto-detect environment
-const isDevelopment = process.env.NODE_ENV === 'development' || isLocalhost;
+// Auto-detect environment — Capacitor always gets production
+const isDevelopment = !isCapacitor && (process.env.NODE_ENV === 'development' || isLocalhost);
 
 // API URL configuration
 export const API_CONFIG = {
