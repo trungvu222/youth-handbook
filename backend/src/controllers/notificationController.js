@@ -19,12 +19,9 @@ const sendNotification = async (req, res, next) => {
     let targetUserIds = [];
     
     if (recipients === 'all') {
-      // Get all active users
+      // Get all active users (including ADMIN so they can receive their own broadcasts)
       const users = await prisma.user.findMany({
-        where: { 
-          isActive: true,
-          role: { in: ['MEMBER', 'LEADER'] } // Don't send to ADMINs
-        },
+        where: { isActive: true },
         select: { id: true }
       });
       targetUserIds = users.map(u => u.id);

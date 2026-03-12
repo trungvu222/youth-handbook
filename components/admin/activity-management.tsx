@@ -2071,9 +2071,10 @@ export default function ActivityManagement() {
                   })
 
                   if (result.success) {
+                    const sentCount = result.data?.sent ?? targetCount
                     toast({
                       title: "✅ Đã gửi mã điểm danh",
-                      description: `Mã điểm danh đã được gửi cho ${targetCount} đoàn viên qua mục Thông báo`,
+                      description: `Đã gửi cho ${sentCount} đoàn viên qua mục Thông báo`,
                     })
                     setShowCheckinCodeDialog(false)
                   } else {
