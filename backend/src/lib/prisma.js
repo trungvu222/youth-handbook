@@ -29,9 +29,12 @@ const reconnect = async () => {
   isReconnecting = true;
   console.warn('⚠️ Prisma keep-alive ping failed, reconnecting...');
   try {
-    // Do NOT call $disconnect() first — that sets engine to "not yet connected"
-    // and causes every in-flight request to fail. Just call $connect() directly;
-    // Prisma handles the internal state correctly.
+    // Must $disconnect() first to flush ALL broken connections from the pool.
+    // When Neon resets connections (error 10054 / scale-to-zero), the pool still
+    // tracks stale connections as "available". New queries then wait the full
+    // pool_timeout (20s) for a slot that never frees up. $disconnect() clears
+    // the broken pool state so $connect() can build fresh connections.
+    await prisma.$disconnect().catch(() => {});
     await prisma.$connect();
     console.log('✅ Prisma reconnected successfully');
   } catch (reconnectErr) {
@@ -44,6 +47,7 @@ const reconnect = async () => {
 const startKeepAlive = () => {
   if (keepAliveTimer) return;
   keepAliveTimer = setInterval(async () => {
+    if (isReconnecting) return; // skip ping while reconnect is in progress
     try {
       await prisma.$queryRaw`SELECT 1`;
     } catch (e) {
@@ -84,8 +88,10 @@ const isConnectionError = (err) => {
     msg.includes('Connection reset') ||
     msg.includes('ECONNRESET') ||
     msg.includes('connect_timeout') ||
+    msg.includes('connection pool') ||     // catches "Timed out fetching a new connection from the connection pool"
     err?.code === 'P1001' ||
-    err?.code === 'P1002'
+    err?.code === 'P1002' ||
+    err?.code === 'P2024'                  // Prisma pool timeout error code
   );
 };
 
