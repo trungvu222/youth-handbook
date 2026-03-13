@@ -89,6 +89,21 @@ const getActivities = async (req, res, next) => {
       prisma.activity.count({ where: whereClause })
     ]);
 
+    // Auto-expire: update ACTIVE activities whose endTime has passed → COMPLETED
+    const now = new Date();
+    const expiredIds = activities
+      .filter(a => a.status === 'ACTIVE' && a.endTime && new Date(a.endTime) < now)
+      .map(a => a.id);
+    if (expiredIds.length > 0) {
+      await prisma.activity.updateMany({
+        where: { id: { in: expiredIds } },
+        data: { status: 'COMPLETED' }
+      });
+      activities.forEach(a => {
+        if (expiredIds.includes(a.id)) a.status = 'COMPLETED';
+      });
+    }
+
     // Add userParticipation field for current user (so mobile knows if user is registered)
     const activitiesWithUserParticipation = activities.map(activity => {
       const userParticipation = activity.participants.find(p => p.userId === currentUser.id) || null;
@@ -482,6 +497,14 @@ const checkInActivity = async (req, res, next) => {
       return res.status(400).json({
         success: false,
         error: 'Check-in period has ended'
+      });
+    }
+
+    // Block check-in if activity endTime has passed
+    if (activity.endTime && now > activity.endTime) {
+      return res.status(400).json({
+        success: false,
+        error: 'Hoạt động đã kết thúc, không thể điểm danh'
       });
     }
 

@@ -219,8 +219,11 @@ export default function ActivityDetailMobile({ activityId, onBack }: ActivityDet
   const canCheckIn = () => {
     if (!activity?.userParticipation) return false
     if (activity.userParticipation.status !== 'REGISTERED') return false
-    
+    if (activity.status === 'COMPLETED' || activity.status === 'CANCELLED') return false
+
     const now = new Date()
+    if (activity.endTime && now > new Date(activity.endTime)) return false
+
     const checkInStart = new Date(activity.checkInStartTime || activity.startTime)
     const checkInEnd = activity.checkInEndTime ? new Date(activity.checkInEndTime) : null
     
@@ -631,7 +634,12 @@ export default function ActivityDetailMobile({ activityId, onBack }: ActivityDet
                 disabled={!canCheckIn()}
               >
                 <QrCode style={{ width: '20px', height: '20px' }} />
-                {canCheckIn() ? 'Điểm danh ngay' : 'Chưa đến giờ điểm danh'}
+                {canCheckIn() ? 'Điểm danh ngay' : (
+                  (activity.status === 'COMPLETED' || activity.status === 'CANCELLED' ||
+                   (activity.endTime && new Date() > new Date(activity.endTime)))
+                    ? 'Hoạt động đã kết thúc'
+                    : 'Chưa đến giờ điểm danh'
+                )}
               </button>
 
               {/* Report Absent Button */}
