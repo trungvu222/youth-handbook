@@ -351,8 +351,8 @@ export default function AdminDashboard() {
           <div className="flex items-center gap-3">
             <div className="p-2 md:p-3 bg-white/20 rounded-xl backdrop-blur-sm flex-shrink-0">
               <img
-                src="/logo-admin.png"
-                alt="Logo"
+                src="/Logo-Web.png"
+                alt="Logo Đoàn"
                 className="h-6 w-6 md:h-8 md:w-8 object-contain"
               />
             </div>
