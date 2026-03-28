@@ -304,6 +304,8 @@ const borrowBook = async (req, res, next) => {
       });
     }
 
+    const borrowedAt = new Date();
+
     // Create borrowing record
     const borrowing = await prisma.bookBorrowing.create({
       data: {
