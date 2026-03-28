@@ -86,12 +86,15 @@ export function SurveyManagement() {
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [surveyToDelete, setSurveyToDelete] = useState<Survey | null>(null)
+  const [showQuestionsDialog, setShowQuestionsDialog] = useState(false)
+  const [selectedSurveyForView, setSelectedSurveyForView] = useState<Survey | null>(null)
   const { toast } = useToast()
-  
+
   // Statistics state
   const [expandedSurveys, setExpandedSurveys] = useState<Set<string>>(new Set())
   const [surveyResponsesData, setSurveyResponsesData] = useState<{[key: string]: any[]}>({})
   const [loadingResponses, setLoadingResponses] = useState<{[key: string]: boolean}>({})
+  const [viewQuestionsData, setViewQuestionsData] = useState<SurveyQuestion[]>([])
 
   // Form state
   const [formData, setFormData] = useState({
@@ -126,7 +129,37 @@ export function SurveyManagement() {
       const response = await surveyApi.getSurveys()
 
       if (response.success && response.data) {
-        setSurveys(response.data)
+        const surveys = response.data
+        const now = new Date()
+
+        // Check and auto-close expired surveys
+        const expiredSurveys = surveys.filter(survey =>
+          survey.status === 'ACTIVE' &&
+          survey.endDate &&
+          new Date(survey.endDate) < now
+        )
+
+        // Auto-close expired surveys
+        if (expiredSurveys.length > 0) {
+          for (const survey of expiredSurveys) {
+            try {
+              await surveyApi.updateSurvey(survey.id, { status: 'CLOSED' })
+              survey.status = 'CLOSED' // Update local state
+            } catch (error) {
+              console.error(`Failed to auto-close survey ${survey.id}:`, error)
+            }
+          }
+
+          if (expiredSurveys.length > 0) {
+            toast({
+              title: 'Thông báo',
+              description: `Đã tự động đóng ${expiredSurveys.length} khảo sát hết hạn`,
+              duration: 4000
+            })
+          }
+        }
+
+        setSurveys(surveys)
       } else {
         toast({
           title: 'Lỗi',
@@ -209,6 +242,22 @@ export function SurveyManagement() {
       return
     }
 
+    // Validate multiple choice questions have options
+    for (let i = 0; i < formData.questions.length; i++) {
+      const q = formData.questions[i]
+      if (q.questionType === 'MULTIPLE_CHOICE') {
+        const validOptions = q.options?.filter(opt => opt.trim()).length || 0
+        if (validOptions < 2) {
+          toast({
+            title: 'Lỗi',
+            description: `Câu ${i + 1}: Câu hỏi trắc nghiệm phải có ít nhất 2 lựa chọn`,
+            variant: 'destructive'
+          })
+          return
+        }
+      }
+    }
+
     try {
       const surveyData = {
         title: formData.title,
@@ -220,13 +269,15 @@ export function SurveyManagement() {
         questions: formData.questions.map(q => ({
           questionText: q.questionText,
           questionType: q.questionType,
-          options: q.options || [],
+          options: q.questionType === 'MULTIPLE_CHOICE'
+            ? q.options?.filter(opt => opt.trim()) || []
+            : [],
           isRequired: q.isRequired
         }))
       }
 
       const response = await surveyApi.createSurvey(surveyData)
-      
+
       if (response.success && response.data) {
         toast({
           title: 'Thành công',
@@ -306,9 +357,37 @@ export function SurveyManagement() {
       return
     }
 
+    // Validate multiple choice questions have options
+    for (let i = 0; i < formData.questions.length; i++) {
+      const q = formData.questions[i]
+      if (q.questionType === 'MULTIPLE_CHOICE') {
+        const validOptions = q.options?.filter(opt => opt.trim()).length || 0
+        if (validOptions < 2) {
+          toast({
+            title: 'Lỗi',
+            description: `Câu ${i + 1}: Câu hỏi trắc nghiệm phải có ít nhất 2 lựa chọn`,
+            variant: 'destructive'
+          })
+          return
+        }
+      }
+    }
+
     try {
-      const response = await surveyApi.updateSurvey(selectedSurvey.id, formData)
-      
+      const updatePayload = {
+        ...formData,
+        questions: formData.questions.map(q => ({
+          questionText: q.questionText,
+          questionType: q.questionType,
+          options: q.questionType === 'MULTIPLE_CHOICE'
+            ? q.options?.filter(opt => opt.trim()) || []
+            : [],
+          isRequired: q.isRequired
+        }))
+      }
+
+      const response = await surveyApi.updateSurvey(selectedSurvey.id, updatePayload)
+
       if (response.success) {
         toast({
           title: 'Thành công',
@@ -412,24 +491,110 @@ export function SurveyManagement() {
   const updateQuestion = (index: number, field: keyof SurveyQuestion, value: any) => {
     setFormData(prev => ({
       ...prev,
-      questions: prev.questions.map((q, i) => 
-        i === index ? { ...q, [field]: value } : q
-      )
+      questions: prev.questions.map((q, i) => {
+        if (i === index) {
+          const updated = { ...q, [field]: value }
+          // Initialize options array when switching to MULTIPLE_CHOICE
+          if (field === 'questionType' && value === 'MULTIPLE_CHOICE' && !updated.options?.length) {
+            updated.options = ['', '', '', '']
+          }
+          // Clear options when switching away from MULTIPLE_CHOICE
+          if (field === 'questionType' && value !== 'MULTIPLE_CHOICE') {
+            updated.options = []
+          }
+          return updated
+        }
+        return q
+      })
     }))
   }
 
-  const openEditDialog = (survey: Survey) => {
+  const updateQuestionOption = (questionIndex: number, optionIndex: number, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      questions: prev.questions.map((q, i) => {
+        if (i === questionIndex) {
+          const newOptions = [...(q.options || [])]
+          newOptions[optionIndex] = value
+          return { ...q, options: newOptions }
+        }
+        return q
+      })
+    }))
+  }
+
+  const openEditDialog = async (survey: Survey) => {
     setSelectedSurvey(survey)
-    setFormData({
-      title: survey.title,
-      description: survey.description || '',
-      status: survey.status,
-      startDate: survey.startDate ? new Date(survey.startDate).toISOString().split('T')[0] : '',
-      endDate: survey.endDate ? new Date(survey.endDate).toISOString().split('T')[0] : '',
-      pointsReward: survey.pointsReward || 10,
-      questions: [] // Load from API if needed
-    })
+
+    // Load full survey details with questions from API
+    try {
+      const response = await surveyApi.getSurvey(survey.id)
+      const surveyData = response.success && response.data ? response.data : survey
+
+      setFormData({
+        title: surveyData.title,
+        description: surveyData.description || '',
+        status: surveyData.status,
+        startDate: surveyData.startDate ? new Date(surveyData.startDate).toISOString().split('T')[0] : '',
+        endDate: surveyData.endDate ? new Date(surveyData.endDate).toISOString().split('T')[0] : '',
+        pointsReward: surveyData.pointsReward || 10,
+        questions: surveyData.questions || []
+      })
+    } catch (error) {
+      console.error('Error loading survey details:', error)
+      // Fallback to basic data if API fails
+      setFormData({
+        title: survey.title,
+        description: survey.description || '',
+        status: survey.status,
+        startDate: survey.startDate ? new Date(survey.startDate).toISOString().split('T')[0] : '',
+        endDate: survey.endDate ? new Date(survey.endDate).toISOString().split('T')[0] : '',
+        pointsReward: survey.pointsReward || 10,
+        questions: []
+      })
+    }
+
     setShowEditDialog(true)
+  }
+
+  const viewSurveyQuestions = async (survey: Survey) => {
+    setSelectedSurveyForView(survey)
+    try {
+      const response = await surveyApi.getSurvey(survey.id)
+      if (response.success && response.data && response.data.questions) {
+        setViewQuestionsData(response.data.questions)
+      } else {
+        setViewQuestionsData([])
+      }
+      setShowQuestionsDialog(true)
+    } catch (error) {
+      console.error('Error loading survey questions:', error)
+      toast({
+        title: 'Lỗi',
+        description: 'Không thể tải câu hỏi khảo sát',
+        variant: 'destructive'
+      })
+    }
+  }
+
+  const viewSurveyResponses = async (surveyId: string) => {
+    // Expand the survey in stats tab
+    const newExpanded = new Set(expandedSurveys)
+    if (!newExpanded.has(surveyId)) {
+      newExpanded.add(surveyId)
+      setExpandedSurveys(newExpanded)
+
+      // Load responses if not already loaded
+      if (!surveyResponsesData[surveyId]) {
+        await loadSurveyResponses(surveyId)
+      }
+    }
+
+    // Switch to stats tab
+    const statsTab = document.querySelector('[value="stats"]') as HTMLElement
+    if (statsTab) {
+      statsTab.click()
+    }
   }
 
   const filteredSurveys = surveys.filter(survey => {
@@ -780,20 +945,34 @@ export function SurveyManagement() {
                 <CardContent className="pt-0">
                   {/* Stats Grid */}
                   <div className="grid grid-cols-3 gap-3 p-3 bg-gray-50/80 rounded-lg mb-4">
-                    <div className="text-center">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        viewSurveyResponses(survey.id)
+                      }}
+                      className="text-center hover:bg-blue-50 rounded-lg transition-colors p-2 cursor-pointer"
+                      title="Xem phản hồi"
+                    >
                       <div className="flex items-center justify-center w-8 h-8 mx-auto mb-1 rounded-full bg-blue-100">
                         <MessageSquare className="h-4 w-4 text-blue-600" />
                       </div>
                       <p className="text-lg font-bold text-gray-900">{survey._count?.responses || 0}</p>
                       <p className="text-xs text-muted-foreground">Phản hồi</p>
-                    </div>
-                    <div className="text-center">
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        viewSurveyQuestions(survey)
+                      }}
+                      className="text-center hover:bg-purple-50 rounded-lg transition-colors p-2 cursor-pointer"
+                      title="Xem câu hỏi"
+                    >
                       <div className="flex items-center justify-center w-8 h-8 mx-auto mb-1 rounded-full bg-purple-100">
                         <ListChecks className="h-4 w-4 text-purple-600" />
                       </div>
                       <p className="text-lg font-bold text-gray-900">{survey._count?.questions || 0}</p>
                       <p className="text-xs text-muted-foreground">Câu hỏi</p>
-                    </div>
+                    </button>
                     <div className="text-center">
                       <div className="flex items-center justify-center w-8 h-8 mx-auto mb-1 rounded-full bg-orange-100">
                         <Calendar className="h-4 w-4 text-orange-600" />
@@ -1316,7 +1495,7 @@ export function SurveyManagement() {
                         placeholder="Nhập nội dung câu hỏi (VD: Bạn muốn hoạt động nào trong tháng 8?)"
                         className="mb-2"
                       />
-                      <div className="flex gap-2 items-center">
+                      <div className="flex gap-2 items-center mb-3">
                         <Select
                           value={question.questionType}
                           onValueChange={(value) => updateQuestion(index, 'questionType', value)}
@@ -1341,6 +1520,26 @@ export function SurveyManagement() {
                           Bắt buộc
                         </Label>
                       </div>
+
+                      {/* Options for Multiple Choice */}
+                      {question.questionType === 'MULTIPLE_CHOICE' && (
+                        <div className="space-y-2 mt-3 p-3 bg-white border rounded-lg">
+                          <Label className="text-sm font-semibold text-gray-700">Các lựa chọn:</Label>
+                          {[0, 1, 2, 3].map((optionIndex) => (
+                            <div key={optionIndex} className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-gray-600 w-8">
+                                {String.fromCharCode(65 + optionIndex)}.
+                              </span>
+                              <Input
+                                value={question.options?.[optionIndex] || ''}
+                                onChange={(e) => updateQuestionOption(index, optionIndex, e.target.value)}
+                                placeholder={`Nhập lựa chọn ${String.fromCharCode(65 + optionIndex)}`}
+                                className="flex-1"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1414,6 +1613,84 @@ export function SurveyManagement() {
             <Button variant="destructive" onClick={handleDelete}>
               <Trash2 className="h-4 w-4 mr-2" />
               Xóa khảo sát
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Questions Dialog */}
+      <Dialog open={showQuestionsDialog} onOpenChange={setShowQuestionsDialog}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl flex items-center gap-2">
+              <ListChecks className="h-5 w-5 text-purple-600" />
+              Danh sách câu hỏi khảo sát
+            </DialogTitle>
+            <DialogDescription>
+              Khảo sát: <strong>{selectedSurveyForView?.title}</strong>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {viewQuestionsData.length === 0 ? (
+              <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed">
+                <ClipboardList className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                <p className="text-gray-500 font-medium">Khảo sát này chưa có câu hỏi</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {viewQuestionsData.map((question, index) => (
+                  <div
+                    key={index}
+                    className="border-2 rounded-lg p-4 bg-gradient-to-br from-white to-gray-50 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 text-purple-700 font-bold text-sm shrink-0">
+                        {index + 1}
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-900 mb-2">
+                          {question.questionText}
+                          {question.isRequired && (
+                            <span className="text-red-500 ml-1">*</span>
+                          )}
+                        </p>
+                        <div className="flex flex-wrap gap-2 items-center">
+                          <Badge variant="outline" className="text-xs">
+                            {question.questionType === 'TEXT' && 'Văn bản tự do'}
+                            {question.questionType === 'MULTIPLE_CHOICE' && 'Trắc nghiệm'}
+                            {question.questionType === 'RATING' && 'Đánh giá (1-5)'}
+                            {question.questionType === 'YES_NO' && 'Có/Không'}
+                          </Badge>
+                          {question.isRequired && (
+                            <Badge variant="secondary" className="text-xs bg-red-50 text-red-700">
+                              Bắt buộc
+                            </Badge>
+                          )}
+                        </div>
+                        {question.options && question.options.length > 0 && (
+                          <div className="mt-3 pl-4 border-l-2 border-purple-200">
+                            <p className="text-xs font-semibold text-gray-600 mb-1">Các lựa chọn:</p>
+                            <ul className="space-y-1">
+                              {question.options.map((option, optIndex) => (
+                                <li key={optIndex} className="text-sm text-gray-700">
+                                  • {option}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowQuestionsDialog(false)}>
+              Đóng
             </Button>
           </DialogFooter>
         </DialogContent>

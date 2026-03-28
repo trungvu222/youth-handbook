@@ -100,6 +100,9 @@ model User {
   // Notification Relations
   notifications            Notification[]          @relation("UserNotifications")
 
+  // Library System Relations (Module 3.9 - Phòng HCM)
+  bookBorrowings           BookBorrowing[]
+
   @@map("users")
 }
 
@@ -938,6 +941,40 @@ model Notification {
   @@index([userId])
   @@index([createdAt])
   @@map("notifications")
+}
+
+// =====================================
+// MODULE 3.9: LIBRARY MANAGEMENT (Phòng HCM)
+// =====================================
+
+model Book {
+  id          String   @id @default(cuid())
+  title       String   // Tên sách
+  author      String?  // Tác giả
+  publisher   String?  // Nhà xuất bản
+  qrCode      String   @unique @map("qr_code") // Mã QR unique
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  borrowings  BookBorrowing[]
+
+  @@map("books")
+}
+
+model BookBorrowing {
+  id          String    @id @default(cuid())
+  bookId      String    @map("book_id")
+  userId      String    @map("user_id")
+  borrowedAt  DateTime  @default(now()) @map("borrowed_at") // Thời gian mượn (auto)
+  returnedAt  DateTime? @map("returned_at") // Thời gian trả (user nhập)
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  book Book @relation(fields: [bookId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("book_borrowings")
 }
 
 // System Configuration Models

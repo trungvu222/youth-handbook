@@ -39,8 +39,8 @@ interface Exam {
   maxAttempts: number;
   pointsReward: number;
   status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
-  startDate?: string;
-  endDate?: string;
+  startTime?: string;
+  endTime?: string;
   isRandomOrder: boolean;
   allowReview: boolean;
   createdAt: string;
@@ -130,24 +130,32 @@ export default function ExamsScreen() {
   }
 
   const handleStartExam = async (exam: Exam) => {
-    // Check if exam is available
-    const now = new Date()
-    if (exam.startDate && new Date(exam.startDate) > now) {
-      toast({
-        title: 'Chưa thể tham gia',
-        description: 'Kỳ thi chưa bắt đầu',
-        variant: 'destructive'
-      })
-      return
+    // Check if exam is available using date string comparison (ignore time)
+    const now = new Date();
+    const nowISODate = now.toISOString().split('T')[0]; // Get YYYY-MM-DD only
+
+    if (exam.startTime) {
+      const startISODate = exam.startTime.split('T')[0];
+      if (startISODate > nowISODate) {
+        toast({
+          title: 'Chưa thể tham gia',
+          description: 'Kỳ thi chưa bắt đầu',
+          variant: 'destructive'
+        })
+        return
+      }
     }
 
-    if (exam.endDate && new Date(exam.endDate) < now) {
-      toast({
-        title: 'Không thể tham gia',
-        description: 'Kỳ thi đã kết thúc',
-        variant: 'destructive'
-      })
-      return
+    if (exam.endTime) {
+      const endISODate = exam.endTime.split('T')[0];
+      if (endISODate < nowISODate) {
+        toast({
+          title: 'Không thể tham gia',
+          description: 'Kỳ thi đã kết thúc',
+          variant: 'destructive'
+        })
+        return
+      }
     }
 
     // Check attempts limit
@@ -340,11 +348,11 @@ export default function ExamsScreen() {
                           Điểm đạt: {exam.passingScore}%
                         </span>
                         <span>Tối đa: {exam.maxAttempts} lần</span>
-                        {exam.startDate && (
-                          <span>Bắt đầu: {formatDate(exam.startDate)}</span>
+                        {exam.startTime && (
+                          <span>Bắt đầu: {formatDate(exam.startTime)}</span>
                         )}
-                        {exam.endDate && (
-                          <span>Kết thúc: {formatDate(exam.endDate)}</span>
+                        {exam.endTime && (
+                          <span>Kết thúc: {formatDate(exam.endTime)}</span>
                         )}
                       </div>
 

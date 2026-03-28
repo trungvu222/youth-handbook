@@ -714,7 +714,7 @@ export function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormProps) {
           <div style={{ position: 'relative', display: 'inline-block', marginBottom: '18px' }}>
             <div style={{ position: 'absolute', inset: '-18px', background: 'rgba(255,255,255,0.12)', borderRadius: '50%', filter: 'blur(24px)', animation: 'orbPulse 3s ease-in-out infinite' }} />
             <img
-              src="/Huy_Hieu_Doan.png"
+              src="/Logo-App-Login.png"
               alt="Youth Union Logo"
               style={{ position: 'relative', width: '108px', height: '108px', objectFit: 'contain', filter: 'drop-shadow(0 6px 28px rgba(0,0,0,0.45)) drop-shadow(0 0 18px rgba(255,255,255,0.25))', display: 'block' }}
             />

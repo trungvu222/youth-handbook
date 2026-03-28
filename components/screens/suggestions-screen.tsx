@@ -2,15 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { suggestionApi } from '../../lib/api'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
-import { Button } from '../ui/button'
-import { Badge } from '../ui/badge'
-import { Input } from '../ui/input'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 import { SuggestionForm } from '../suggestions/suggestion-form'
 import { SuggestionDetail } from '../suggestions/suggestion-detail'
-import { 
+import {
   Plus,
   Search,
   MessageSquare,
@@ -21,73 +15,156 @@ import {
   Lightbulb,
   FileText,
   Eye,
-  Filter
+  Filter,
+  RefreshCw,
+  TrendingUp,
+  Send,
+  ChevronRight
 } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 
 interface Suggestion {
-  id: string;
-  title: string;
-  content: string;
-  category: 'IMPROVEMENT' | 'COMPLAINT' | 'IDEA' | 'QUESTION' | 'OTHER';
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-  status: 'SUBMITTED' | 'UNDER_REVIEW' | 'IN_PROGRESS' | 'RESOLVED' | 'REJECTED';
-  isAnonymous: boolean;
-  userId?: string;
-  fileUrls?: string[];
-  tags?: string;
-  submittedAt: string;
-  resolvedAt?: string;
+  id: string
+  title: string
+  content: string
+  category: 'IMPROVEMENT' | 'COMPLAINT' | 'IDEA' | 'QUESTION' | 'OTHER'
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
+  status: 'SUBMITTED' | 'UNDER_REVIEW' | 'IN_PROGRESS' | 'RESOLVED' | 'REJECTED'
+  isAnonymous: boolean
+  userId?: string
+  fileUrls?: string[]
+  tags?: string
+  submittedAt: string
+  resolvedAt?: string
   user?: {
-    id: string;
-    fullName: string;
-    unitName?: string;
-  };
-  responses?: any[];
-  viewCount: number;
+    id: string
+    fullName: string
+    unitName?: string
+  }
+  responses?: any[]
+  viewCount: number
+}
+
+const CATEGORY_CFG: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
+  IMPROVEMENT: { label: 'Cải tiến',  color: '#2563eb', bg: '#dbeafe', icon: <AlertTriangle style={{ width: 12, height: 12 }} /> },
+  COMPLAINT:   { label: 'Phản ánh', color: '#dc2626', bg: '#fee2e2', icon: <XCircle style={{ width: 12, height: 12 }} /> },
+  IDEA:        { label: 'Ý tưởng',  color: '#059669', bg: '#dcfce7', icon: <Lightbulb style={{ width: 12, height: 12 }} /> },
+  QUESTION:    { label: 'Thắc mắc', color: '#d97706', bg: '#fef3c7', icon: <MessageSquare style={{ width: 12, height: 12 }} /> },
+  OTHER:       { label: 'Khác',     color: '#64748b', bg: '#f1f5f9', icon: <FileText style={{ width: 12, height: 12 }} /> },
+}
+
+const STATUS_CFG: Record<string, { label: string; color: string; bg: string; dotColor: string }> = {
+  SUBMITTED:    { label: 'Đã gửi',      color: '#64748b', bg: '#f1f5f9', dotColor: '#94a3b8' },
+  UNDER_REVIEW: { label: 'Đang xét',    color: '#d97706', bg: '#fef3c7', dotColor: '#f59e0b' },
+  IN_PROGRESS:  { label: 'Đang xử lý',  color: '#2563eb', bg: '#dbeafe', dotColor: '#3b82f6' },
+  RESOLVED:     { label: 'Đã giải quyết', color: '#059669', bg: '#dcfce7', dotColor: '#10b981' },
+  REJECTED:     { label: 'Từ chối',     color: '#dc2626', bg: '#fee2e2', dotColor: '#ef4444' },
+}
+
+const PRIORITY_CFG: Record<string, { label: string; color: string; bg: string }> = {
+  URGENT: { label: 'Khẩn cấp',  color: '#dc2626', bg: '#fee2e2' },
+  HIGH:   { label: 'Cao',       color: '#f59e0b', bg: '#fef3c7' },
+  MEDIUM: { label: 'Trung bình', color: '#3b82f6', bg: '#dbeafe' },
+  LOW:    { label: 'Thấp',      color: '#64748b', bg: '#f1f5f9' },
+}
+
+function LoadingSpinner() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 0', gap: 12 }}>
+      <div style={{
+        width: 36, height: 36, borderRadius: '50%',
+        border: '3px solid rgba(67,56,202,0.15)', borderTopColor: '#4338ca',
+        animation: 'spin 0.8s linear infinite'
+      }} />
+      <p style={{ color: '#94a3b8', fontSize: 14 }}>Đang tải...</p>
+    </div>
+  )
+}
+
+function EmptyState({ icon, title, description, actionLabel, onAction }: {
+  icon: React.ReactNode
+  title: string
+  description: string
+  actionLabel?: string
+  onAction?: () => void
+}) {
+  return (
+    <div style={{
+      background: '#fff', borderRadius: 20, padding: '36px 24px', textAlign: 'center',
+      boxShadow: '0 2px 12px rgba(0,0,0,0.05)', animation: 'fadeIn 0.4s ease'
+    }}>
+      <div style={{
+        width: 80, height: 80, borderRadius: '50%',
+        background: 'linear-gradient(135deg, #ede9fe, #ddd6fe)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        margin: '0 auto 16px'
+      }}>
+        {icon}
+      </div>
+      <p style={{ color: '#1e293b', fontWeight: 700, fontSize: 16, marginBottom: 8 }}>{title}</p>
+      <p style={{ color: '#94a3b8', fontSize: 14, lineHeight: 1.6, marginBottom: actionLabel ? 20 : 0 }}>{description}</p>
+      {actionLabel && onAction && (
+        <button
+          onClick={onAction}
+          style={{
+            padding: '10px 20px', borderRadius: 14, border: 'none',
+            background: 'linear-gradient(135deg, #4338ca, #6366f1)',
+            color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            boxShadow: '0 4px 14px rgba(67,56,202,0.35)'
+          }}
+        >
+          <Plus style={{ width: 16, height: 16 }} />
+          {actionLabel}
+        </button>
+      )}
+    </div>
+  )
 }
 
 export default function SuggestionsScreen() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [mySuggestions, setMySuggestions] = useState<Suggestion[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('all')
+  const [refreshing, setRefreshing] = useState(false)
+  const [activeTab, setActiveTab] = useState<'all' | 'my'>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
-  const [priorityFilter, setPriorityFilter] = useState('all')
   const [selectedSuggestion, setSelectedSuggestion] = useState<Suggestion | null>(null)
   const [showCreateForm, setShowCreateForm] = useState(false)
 
-  useEffect(() => {
-    loadData()
-  }, [activeTab, searchTerm, categoryFilter, statusFilter, priorityFilter])
+  useEffect(() => { loadData() }, [])
 
-  const loadData = async () => {
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (!loading && !refreshing) loadData()
+    }, 300)
+    return () => clearTimeout(timeoutId)
+  }, [activeTab, searchTerm, categoryFilter, statusFilter])
+
+  const loadData = async (isRefresh = false) => {
     try {
-      setLoading(true)
-      
+      if (isRefresh) setRefreshing(true)
+      else setLoading(true)
+
       if (activeTab === 'my') {
-        // Load my suggestions
         const response = await suggestionApi.getMySuggestions()
         if (response.success && response.data) {
           setMySuggestions(response.data)
         }
       } else {
-        // Load all suggestions with filters
         const params: any = {}
         if (searchTerm) params.search = searchTerm
         if (categoryFilter !== 'all') params.category = categoryFilter
         if (statusFilter !== 'all') params.status = statusFilter
-        if (priorityFilter !== 'all') params.priority = priorityFilter
-        params.limit = 20
+        params.limit = 50
 
         const response = await suggestionApi.getSuggestions(params)
         if (response.success && response.data) {
           setSuggestions(response.data.data || response.data)
         }
       }
-
     } catch (error) {
       console.error('Error loading suggestions:', error)
       toast({
@@ -97,12 +174,13 @@ export default function SuggestionsScreen() {
       })
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
   }
 
   const handleSuggestionCreated = () => {
     setShowCreateForm(false)
-    loadData()
+    loadData(true)
     toast({
       title: 'Thành công',
       description: 'Đã gửi kiến nghị thành công'
@@ -113,103 +191,20 @@ export default function SuggestionsScreen() {
     setSelectedSuggestion(suggestion)
   }
 
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'IMPROVEMENT': return 'bg-blue-100 text-blue-800'
-      case 'COMPLAINT': return 'bg-red-100 text-red-800'
-      case 'IDEA': return 'bg-green-100 text-green-800'
-      case 'QUESTION': return 'bg-yellow-100 text-yellow-800'
-      case 'OTHER': return 'bg-gray-100 text-gray-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'IMPROVEMENT': return <AlertTriangle className="h-3 w-3" />
-      case 'COMPLAINT': return <XCircle className="h-3 w-3" />
-      case 'IDEA': return <Lightbulb className="h-3 w-3" />
-      case 'QUESTION': return <MessageSquare className="h-3 w-3" />
-      case 'OTHER': return <FileText className="h-3 w-3" />
-      default: return <FileText className="h-3 w-3" />
-    }
-  }
-
-  const getCategoryLabel = (category: string) => {
-    switch (category) {
-      case 'IMPROVEMENT': return 'Cải tiến'
-      case 'COMPLAINT': return 'Phản ánh'
-      case 'IDEA': return 'Ý tưởng'
-      case 'QUESTION': return 'Thắc mắc'
-      case 'OTHER': return 'Khác'
-      default: return category
-    }
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'SUBMITTED': return 'bg-gray-100 text-gray-800'
-      case 'UNDER_REVIEW': return 'bg-yellow-100 text-yellow-800'
-      case 'IN_PROGRESS': return 'bg-blue-100 text-blue-800'
-      case 'RESOLVED': return 'bg-green-100 text-green-800'
-      case 'REJECTED': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'SUBMITTED': return <Clock className="h-3 w-3" />
-      case 'UNDER_REVIEW': return <Eye className="h-3 w-3" />
-      case 'IN_PROGRESS': return <AlertTriangle className="h-3 w-3" />
-      case 'RESOLVED': return <CheckCircle className="h-3 w-3" />
-      case 'REJECTED': return <XCircle className="h-3 w-3" />
-      default: return <Clock className="h-3 w-3" />
-    }
-  }
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'SUBMITTED': return 'Đã gửi'
-      case 'UNDER_REVIEW': return 'Đang xem xét'
-      case 'IN_PROGRESS': return 'Đang xử lý'
-      case 'RESOLVED': return 'Đã giải quyết'
-      case 'REJECTED': return 'Bị từ chối'
-      default: return status
-    }
-  }
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'URGENT': return 'bg-red-100 text-red-800 border-red-200'
-      case 'HIGH': return 'bg-orange-100 text-orange-800 border-orange-200'
-      case 'MEDIUM': return 'bg-yellow-100 text-yellow-800 border-yellow-200'
-      case 'LOW': return 'bg-gray-100 text-gray-800 border-gray-200'
-      default: return 'bg-gray-100 text-gray-800 border-gray-200'
-    }
-  }
-
-  const getPriorityLabel = (priority: string) => {
-    switch (priority) {
-      case 'URGENT': return 'Khẩn cấp'
-      case 'HIGH': return 'Cao'
-      case 'MEDIUM': return 'Trung bình'
-      case 'LOW': return 'Thấp'
-      default: return priority
-    }
-  }
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('vi-VN', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+      day: '2-digit',
+      month: '2-digit',
       hour: '2-digit',
       minute: '2-digit'
     })
   }
 
   const currentSuggestions = activeTab === 'my' ? mySuggestions : suggestions
+  const TABS = [
+    { id: 'all' as const, label: 'Tất cả', icon: MessageSquare, badge: suggestions.length },
+    { id: 'my' as const, label: 'Của tôi', icon: FileText, badge: mySuggestions.length },
+  ]
 
   if (showCreateForm) {
     return (
@@ -225,312 +220,387 @@ export default function SuggestionsScreen() {
       <SuggestionDetail
         suggestion={selectedSuggestion}
         onBack={() => setSelectedSuggestion(null)}
-        onUpdate={loadData}
+        onUpdate={() => loadData(true)}
       />
     )
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Kiến nghị cá nhân</h1>
-          <p className="text-muted-foreground">
-            Gửi góp ý, kiến nghị và theo dõi phản hồi
-          </p>
+    <div style={{ minHeight: '100%', backgroundColor: '#f5f3ff', paddingBottom: 100 }}>
+      <style>{`
+        @keyframes fadeInUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes fadeIn   { from { opacity:0; } to { opacity:1; } }
+        @keyframes spin     { to   { transform:rotate(360deg); } }
+        .suggestion-card  { transition: box-shadow 0.2s ease, transform 0.15s ease; }
+        .suggestion-card:active { transform: scale(0.985); }
+        .tab-btn      { transition: all 0.2s ease; }
+        .filter-chip  { transition: all 0.18s ease; }
+      `}</style>
+
+      {/* ── GRADIENT HEADER ── */}
+      <div style={{
+        background: 'linear-gradient(160deg, #1e1b4b 0%, #4338ca 55%, #6366f1 100%)',
+        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 20px)',
+        paddingBottom: 56,
+        paddingLeft: 20, paddingRight: 20,
+        position: 'relative', overflow: 'hidden'
+      }}>
+        {/* Decorative orbs */}
+        <div style={{ position:'absolute', top:-50, right:-50, width:200, height:200, borderRadius:'50%', background:'rgba(255,255,255,0.05)', zIndex:0 }} />
+        <div style={{ position:'absolute', bottom:0,  left:-60, width:220, height:220, borderRadius:'50%', background:'rgba(255,255,255,0.04)', zIndex:0 }} />
+        <div style={{ position:'absolute', top:30,  left:'50%', width:120, height:120, borderRadius:'50%', background:'rgba(255,255,255,0.03)', zIndex:0, transform:'translateX(-50%)' }} />
+
+        {/* Title row */}
+        <div style={{ position:'relative', zIndex:1, display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: 20 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+            <div style={{
+              width:46, height:46, borderRadius:15,
+              background:'rgba(255,255,255,0.15)', backdropFilter:'blur(10px)',
+              display:'flex', alignItems:'center', justifyContent:'center',
+              border:'1px solid rgba(255,255,255,0.2)'
+            }}>
+              <MessageSquare style={{ width:22, height:22, color:'#fbbf24' }} />
+            </div>
+            <div>
+              <div style={{ color:'rgba(255,255,255,0.65)', fontSize:11, fontWeight:500, marginBottom:2 }}>ĐOÀN TNCS HỒ CHÍ MINH</div>
+              <div style={{ color:'#fff', fontSize:18, fontWeight:800, lineHeight:1.2 }}>Kiến nghị cá nhân</div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => loadData(true)}
+              style={{
+                width:38, height:38, borderRadius:12, border:'none',
+                background:'rgba(255,255,255,0.15)', backdropFilter:'blur(8px)',
+                cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
+              }}
+            >
+              <RefreshCw style={{ width:16, height:16, color:'#fff', animation: refreshing ? 'spin 0.8s linear infinite' : 'none' }} />
+            </button>
+            <button
+              onClick={() => setShowCreateForm(true)}
+              style={{
+                height:38, borderRadius:12, border:'none', padding: '0 16px',
+                background:'rgba(255,255,255,0.95)', backdropFilter:'blur(8px)',
+                cursor:'pointer', display:'flex', alignItems:'center', gap: 6,
+                fontWeight: 700, fontSize: 14, color: '#4338ca'
+              }}
+            >
+              <Plus style={{ width:16, height:16 }} />
+              Gửi góp ý
+            </button>
+          </div>
         </div>
 
-        <Button onClick={() => setShowCreateForm(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Gửi kiến nghị
-        </Button>
+        {/* Glassmorphism stats strip */}
+        <div style={{
+          position:'relative', zIndex:1,
+          background:'rgba(255,255,255,0.1)', backdropFilter:'blur(10px)',
+          border:'1px solid rgba(255,255,255,0.15)', borderRadius:18,
+          padding:'14px 8px', display:'flex', justifyContent:'space-around', alignItems:'center'
+        }}>
+          {[
+            { label:'Tất cả',    value: loading ? '—' : suggestions.length,        color:'#fff' },
+            { label:'Của tôi',   value: loading ? '—' : mySuggestions.length,      color:'#86efac' },
+            { label:'Đã xử lý',  value: loading ? '—' : suggestions.filter(s => s.status === 'RESOLVED').length, color:'#fbbf24' },
+          ].map((s, i) => (
+            <div key={i} style={{ display:'flex', alignItems:'center' }}>
+              {i > 0 && <div style={{ width:1, height:36, background:'rgba(255,255,255,0.15)', marginRight: 0 }} />}
+              <div style={{ textAlign:'center', flex:1 }}>
+                <div style={{ color: s.color, fontSize:22, fontWeight:800, lineHeight:1 }}>{s.value}</div>
+                <div style={{ color:'rgba(255,255,255,0.65)', fontSize:11, marginTop:4 }}>{s.label}</div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="all" className="flex items-center gap-2">
-            <MessageSquare className="h-4 w-4" />
-            Tất cả kiến nghị ({suggestions.length})
-          </TabsTrigger>
-          <TabsTrigger value="my" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Kiến nghị của tôi ({mySuggestions.length})
-          </TabsTrigger>
-        </TabsList>
+      {/* ── TAB BAR (floating) ── */}
+      <div style={{
+        margin: '-18px 16px 0', position:'relative', zIndex:10,
+        background:'#fff', borderRadius:18,
+        boxShadow:'0 4px 24px rgba(67,56,202,0.13)',
+        padding:6, display:'flex', gap:4
+      }}>
+        {TABS.map(tab => {
+          const Icon = tab.icon
+          const isActive = activeTab === tab.id
+          return (
+            <button
+              key={tab.id}
+              className="tab-btn"
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                flex:1, display:'flex', alignItems:'center', justifyContent:'center',
+                gap:5, padding:'10px 4px', borderRadius:13, border:'none', cursor:'pointer',
+                fontSize:12, fontWeight: isActive ? 700 : 500,
+                background: isActive ? 'linear-gradient(135deg, #4338ca, #6366f1)' : 'transparent',
+                color: isActive ? '#fff' : '#94a3b8',
+                boxShadow: isActive ? '0 3px 10px rgba(67,56,202,0.3)' : 'none'
+              }}
+            >
+              <Icon style={{ width:14, height:14 }} />
+              {tab.label}
+              {tab.badge > 0 && (
+                <span style={{
+                  background: isActive ? 'rgba(255,255,255,0.25)' : '#e2e8f0',
+                  color: isActive ? '#fff' : '#475569',
+                  borderRadius:10, padding:'1px 6px', fontSize:10, fontWeight:700
+                }}>
+                  {tab.badge}
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
+      {/* ── SEARCH & FILTERS ── */}
+      <div style={{ padding: '20px 16px 0' }}>
+        <div style={{ marginBottom: 14 }}>
+          <div style={{
+            background: '#fff', borderRadius: 14, padding: '10px 14px',
+            display: 'flex', alignItems: 'center', gap: 10,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+          }}>
+            <Search style={{ width: 18, height: 18, color: '#94a3b8' }} />
+            <input
+              type="text"
               placeholder="Tìm kiếm kiến nghị..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              style={{
+                flex: 1, border: 'none', outline: 'none',
+                fontSize: 14, color: '#1e293b'
+              }}
             />
-          </div>
-
-          <div className="flex gap-2">
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Danh mục" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả danh mục</SelectItem>
-                <SelectItem value="IMPROVEMENT">Cải tiến</SelectItem>
-                <SelectItem value="COMPLAINT">Phản ánh</SelectItem>
-                <SelectItem value="IDEA">Ý tưởng</SelectItem>
-                <SelectItem value="QUESTION">Thắc mắc</SelectItem>
-                <SelectItem value="OTHER">Khác</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Trạng thái" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                <SelectItem value="SUBMITTED">Đã gửi</SelectItem>
-                <SelectItem value="UNDER_REVIEW">Đang xem xét</SelectItem>
-                <SelectItem value="IN_PROGRESS">Đang xử lý</SelectItem>
-                <SelectItem value="RESOLVED">Đã giải quyết</SelectItem>
-                <SelectItem value="REJECTED">Bị từ chối</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Ưu tiên" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả mức độ</SelectItem>
-                <SelectItem value="URGENT">Khẩn cấp</SelectItem>
-                <SelectItem value="HIGH">Cao</SelectItem>
-                <SelectItem value="MEDIUM">Trung bình</SelectItem>
-                <SelectItem value="LOW">Thấp</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </div>
 
-        <TabsContent value="all" className="space-y-4">
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          ) : currentSuggestions.length === 0 ? (
-            <Card>
-              <CardContent className="py-8 text-center">
-                <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">
-                  {searchTerm || categoryFilter !== 'all' || statusFilter !== 'all' 
-                    ? 'Không tìm thấy kiến nghị nào' 
-                    : 'Chưa có kiến nghị nào'
-                  }
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {currentSuggestions.map(suggestion => (
-                <Card 
-                  key={suggestion.id} 
-                  className="hover:shadow-md transition-shadow cursor-pointer"
+        {/* Filter chips */}
+        <div style={{ display:'flex', gap:8, overflowX:'auto', paddingBottom:14, WebkitOverflowScrolling:'touch' as any }}>
+          {/* Category filters */}
+          <button
+            className="filter-chip"
+            onClick={() => setCategoryFilter('all')}
+            style={{
+              flexShrink:0, padding:'7px 14px', borderRadius:20, border:'none',
+              fontSize:12, fontWeight: categoryFilter === 'all' ? 700 : 500, cursor:'pointer',
+              background: categoryFilter === 'all' ? 'linear-gradient(135deg, #4338ca, #6366f1)' : '#fff',
+              color: categoryFilter === 'all' ? '#fff' : '#64748b',
+              boxShadow: categoryFilter === 'all' ? '0 3px 10px rgba(67,56,202,0.3)' : '0 1px 4px rgba(0,0,0,0.07)'
+            }}
+          >
+            Tất cả
+          </button>
+          {Object.entries(CATEGORY_CFG).map(([key, cfg]) => (
+            <button
+              key={key}
+              className="filter-chip"
+              onClick={() => setCategoryFilter(key)}
+              style={{
+                flexShrink:0, padding:'7px 14px', borderRadius:20, border:'none',
+                fontSize:12, fontWeight: categoryFilter === key ? 700 : 500, cursor:'pointer',
+                background: categoryFilter === key ? cfg.bg : '#fff',
+                color: categoryFilter === key ? cfg.color : '#64748b',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.07)',
+                display: 'flex', alignItems: 'center', gap: 4
+              }}
+            >
+              {cfg.icon}
+              {cfg.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Status filters */}
+        <div style={{ display:'flex', gap:8, overflowX:'auto', paddingBottom:14, WebkitOverflowScrolling:'touch' as any }}>
+          <button
+            className="filter-chip"
+            onClick={() => setStatusFilter('all')}
+            style={{
+              flexShrink:0, padding:'6px 12px', borderRadius:16, border:'none',
+              fontSize:11, fontWeight: statusFilter === 'all' ? 700 : 500, cursor:'pointer',
+              background: statusFilter === 'all' ? '#f1f5f9' : 'transparent',
+              color: statusFilter === 'all' ? '#475569' : '#94a3b8',
+              border: '1px solid ' + (statusFilter === 'all' ? '#cbd5e1' : 'transparent')
+            }}
+          >
+            Tất cả
+          </button>
+          {Object.entries(STATUS_CFG).map(([key, cfg]) => (
+            <button
+              key={key}
+              className="filter-chip"
+              onClick={() => setStatusFilter(key)}
+              style={{
+                flexShrink:0, padding:'6px 12px', borderRadius:16,
+                fontSize:11, fontWeight: statusFilter === key ? 700 : 500, cursor:'pointer',
+                background: statusFilter === key ? cfg.bg : 'transparent',
+                color: statusFilter === key ? cfg.color : '#94a3b8',
+                border: '1px solid ' + (statusFilter === key ? cfg.dotColor : 'transparent'),
+                display: 'flex', alignItems: 'center', gap: 4
+              }}
+            >
+              {statusFilter === key && (
+                <span style={{
+                  width: 6, height: 6, borderRadius: '50%',
+                  background: cfg.dotColor,
+                  display: 'inline-block'
+                }} />
+              )}
+              {cfg.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── CONTENT ── */}
+      <div style={{ padding:'0 16px' }}>
+        {loading ? <LoadingSpinner /> : currentSuggestions.length === 0 ? (
+          <EmptyState
+            icon={<MessageSquare style={{ width:44, height:44, color:'#818cf8' }} />}
+            title={activeTab === 'my' ? 'Chưa có kiến nghị' : 'Không tìm thấy'}
+            description={activeTab === 'my'
+              ? 'Bạn chưa gửi kiến nghị nào. Hãy chia sẻ ý kiến của bạn!'
+              : 'Không tìm thấy kiến nghị phù hợp với bộ lọc.'
+            }
+            actionLabel={activeTab === 'my' ? 'Gửi kiến nghị đầu tiên' : undefined}
+            onAction={activeTab === 'my' ? () => setShowCreateForm(true) : undefined}
+          />
+        ) : (
+          <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+            {currentSuggestions.map((suggestion, idx) => {
+              const categoryCfg = CATEGORY_CFG[suggestion.category]
+              const statusCfg = STATUS_CFG[suggestion.status]
+              const priorityCfg = PRIORITY_CFG[suggestion.priority]
+
+              return (
+                <div
+                  key={suggestion.id}
+                  className="suggestion-card"
                   onClick={() => handleViewSuggestion(suggestion)}
+                  style={{
+                    background: '#fff', borderRadius: 16,
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+                    overflow: 'hidden', cursor: 'pointer',
+                    animation: 'fadeInUp 0.35s ease both', animationDelay: `${idx * 0.05}s`
+                  }}
                 >
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 mb-3">
-                          <Badge className={getCategoryColor(suggestion.category)}>
-                            {getCategoryIcon(suggestion.category)}
-                            <span className="ml-1">{getCategoryLabel(suggestion.category)}</span>
-                          </Badge>
+                  <div style={{ display: 'flex', alignItems: 'stretch' }}>
+                    {/* Colored left bar */}
+                    <div style={{
+                      width: 4, flexShrink: 0,
+                      background: `linear-gradient(180deg, ${categoryCfg.color}, ${categoryCfg.color}88)`
+                    }} />
+                    <div style={{ flex: 1, padding: '14px' }}>
+                      {/* Badges */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 4,
+                          background: categoryCfg.bg, color: categoryCfg.color,
+                          borderRadius: 20, padding: '3px 10px', fontSize: 11, fontWeight: 600
+                        }}>
+                          {categoryCfg.icon}
+                          {categoryCfg.label}
+                        </span>
 
-                          <Badge className={getStatusColor(suggestion.status)}>
-                            {getStatusIcon(suggestion.status)}
-                            <span className="ml-1">{getStatusLabel(suggestion.status)}</span>
-                          </Badge>
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 4,
+                          background: statusCfg.bg, color: statusCfg.color,
+                          borderRadius: 20, padding: '3px 10px', fontSize: 11, fontWeight: 600
+                        }}>
+                          <span style={{
+                            width: 6, height: 6, borderRadius: '50%',
+                            background: statusCfg.dotColor,
+                            display: 'inline-block'
+                          }} />
+                          {statusCfg.label}
+                        </span>
 
-                          <Badge 
-                            variant="outline" 
-                            className={getPriorityColor(suggestion.priority)}
-                          >
-                            {getPriorityLabel(suggestion.priority)}
-                          </Badge>
-
-                          {suggestion.isAnonymous && (
-                            <Badge variant="secondary" className="text-xs">
-                              Ẩn danh
-                            </Badge>
-                          )}
-
-                          {suggestion.fileUrls && suggestion.fileUrls.length > 0 && (
-                            <Badge variant="outline" className="text-xs">
-                              {suggestion.fileUrls.length} file đính kèm
-                            </Badge>
-                          )}
-                        </div>
-
-                        <h3 className="font-semibold text-lg mb-2 line-clamp-1">
-                          {suggestion.title}
-                        </h3>
-
-                        <p className="text-muted-foreground mb-3 line-clamp-2">
-                          {suggestion.content}
-                        </p>
-
-                        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                          <span>
-                            Gửi: {formatDate(suggestion.submittedAt)}
+                        {suggestion.priority !== 'LOW' && (
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center',
+                            background: priorityCfg.bg, color: priorityCfg.color,
+                            borderRadius: 16, padding: '2px 8px', fontSize: 10, fontWeight: 700
+                          }}>
+                            {priorityCfg.label}
                           </span>
-                          
-                          {!suggestion.isAnonymous && suggestion.user && (
-                            <span>
-                              Bởi: {suggestion.user.fullName}
-                              {suggestion.user.unitName && ` (${suggestion.user.unitName})`}
-                            </span>
-                          )}
+                        )}
 
-                          {suggestion.responses && suggestion.responses.length > 0 && (
-                            <span className="flex items-center gap-1">
-                              <MessageSquare className="h-3 w-3" />
-                              {suggestion.responses.length} phản hồi
-                            </span>
-                          )}
-
-                          {suggestion.viewCount > 0 && (
-                            <span className="flex items-center gap-1">
-                              <Eye className="h-3 w-3" />
-                              {suggestion.viewCount} lượt xem
-                            </span>
-                          )}
-
-                          {suggestion.resolvedAt && (
-                            <span>
-                              Giải quyết: {formatDate(suggestion.resolvedAt)}
-                            </span>
-                          )}
-                        </div>
-
-                        {suggestion.tags && (
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            {suggestion.tags.split(',').map((tag, index) => (
-                              <Badge key={index} variant="secondary" className="text-xs">
-                                #{tag.trim()}
-                              </Badge>
-                            ))}
-                          </div>
+                        {suggestion.isAnonymous && (
+                          <span style={{
+                            background: '#f1f5f9', color: '#64748b',
+                            borderRadius: 16, padding: '2px 8px', fontSize: 10, fontWeight: 600
+                          }}>
+                            Ẩn danh
+                          </span>
                         )}
                       </div>
 
-                      <Button variant="ghost" size="sm">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
+                      {/* Title */}
+                      <h3 style={{
+                        color: '#0f172a', fontWeight: 700, fontSize: 15, marginBottom: 6, lineHeight: 1.4,
+                        display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden'
+                      }}>
+                        {suggestion.title}
+                      </h3>
 
-        <TabsContent value="my" className="space-y-4">
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          ) : mySuggestions.length === 0 ? (
-            <Card>
-              <CardContent className="py-8 text-center">
-                <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500 mb-4">
-                  Bạn chưa gửi kiến nghị nào
-                </p>
-                <Button onClick={() => setShowCreateForm(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Gửi kiến nghị đầu tiên
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {mySuggestions.map(suggestion => (
-                <Card 
-                  key={suggestion.id} 
-                  className="hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => handleViewSuggestion(suggestion)}
-                >
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 mb-3">
-                          <Badge className={getCategoryColor(suggestion.category)}>
-                            {getCategoryIcon(suggestion.category)}
-                            <span className="ml-1">{getCategoryLabel(suggestion.category)}</span>
-                          </Badge>
+                      {/* Content preview */}
+                      <p style={{
+                        color: '#64748b', fontSize: 13, marginBottom: 10, lineHeight: 1.5,
+                        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'
+                      }}>
+                        {suggestion.content}
+                      </p>
 
-                          <Badge className={getStatusColor(suggestion.status)}>
-                            {getStatusIcon(suggestion.status)}
-                            <span className="ml-1">{getStatusLabel(suggestion.status)}</span>
-                          </Badge>
-
-                          <Badge 
-                            variant="outline" 
-                            className={getPriorityColor(suggestion.priority)}
-                          >
-                            {getPriorityLabel(suggestion.priority)}
-                          </Badge>
-
-                          {suggestion.isAnonymous && (
-                            <Badge variant="secondary" className="text-xs">
-                              Ẩn danh
-                            </Badge>
-                          )}
-                        </div>
-
-                        <h3 className="font-semibold text-lg mb-2 line-clamp-1">
-                          {suggestion.title}
-                        </h3>
-
-                        <p className="text-muted-foreground mb-3 line-clamp-2">
-                          {suggestion.content}
-                        </p>
-
-                        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                          <span>
-                            Gửi: {formatDate(suggestion.submittedAt)}
+                      {/* Meta info */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: '#94a3b8' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Clock style={{ width: 12, height: 12 }} />
+                            {formatDate(suggestion.submittedAt)}
                           </span>
-                          
+                          {!suggestion.isAnonymous && suggestion.user && (
+                            <span>· {suggestion.user.fullName}</span>
+                          )}
                           {suggestion.responses && suggestion.responses.length > 0 && (
-                            <span className="flex items-center gap-1 text-blue-600">
-                              <MessageSquare className="h-3 w-3" />
-                              {suggestion.responses.length} phản hồi mới
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 3, color: '#2563eb' }}>
+                              <MessageSquare style={{ width: 12, height: 12 }} />
+                              {suggestion.responses.length}
                             </span>
                           )}
-
                           {suggestion.viewCount > 0 && (
-                            <span className="flex items-center gap-1">
-                              <Eye className="h-3 w-3" />
-                              {suggestion.viewCount} lượt xem
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                              <Eye style={{ width: 12, height: 12 }} />
+                              {suggestion.viewCount}
                             </span>
                           )}
                         </div>
+                        <ChevronRight style={{ width: 16, height: 16, color: '#cbd5e1' }} />
                       </div>
 
-                      <Button variant="ghost" size="sm">
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      {/* Tags */}
+                      {suggestion.tags && (
+                        <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                          {suggestion.tags.split(',').slice(0, 3).map((tag, i) => (
+                            <span key={i} style={{
+                              background: '#f8fafc', color: '#64748b',
+                              borderRadius: 8, padding: '2px 8px', fontSize: 10, fontWeight: 500
+                            }}>
+                              #{tag.trim()}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

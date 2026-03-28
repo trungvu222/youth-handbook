@@ -16,7 +16,7 @@ async function seed2026Activities() {
     
     // Get some units
     const units = await prisma.unit.findMany({ take: 3 });
-    
+    Còn hình này anh để làm icon app nhé anh!  Này chưa tách nền
     const activities2026 = [
       // January 2026
       {

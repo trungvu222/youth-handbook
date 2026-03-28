@@ -14,8 +14,8 @@ export const metadata = {
     title: 'Sổ Tay Quản Trị',
   },
   icons: {
-    icon: '/Huy_Hieu_Doan.png',
-    apple: [{ url: '/Huy_Hieu_Doan.png', sizes: '180x180', type: 'image/png' }],
+    icon: '/Icon-App-192.png',
+    apple: [{ url: '/Icon-App-180.png', sizes: '180x180', type: 'image/png' }],
   },
 };
 

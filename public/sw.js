@@ -6,7 +6,8 @@ const CACHE_NAME = 'stn-doan-v2';
 const APP_SHELL = [
   '/',
   '/manifest.json',
-  '/Huy_Hieu_Doan.png',
+  '/Logo-Web.jpg',
+  '/Icon-App-Chua-tach-nen.jpg',
 ];
 
 // ── Install: cache app shell ──────────────────────────────

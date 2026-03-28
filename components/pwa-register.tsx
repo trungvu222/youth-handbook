@@ -98,7 +98,7 @@ export function PWARegister() {
     >
       {/* Icon */}
       <img
-        src="/Huy_Hieu_Doan.png"
+        src="/Icon-App-Chua-tach-nen.jpg"
         alt="logo"
         style={{ width: 44, height: 44, borderRadius: 10, flexShrink: 0 }}
       />

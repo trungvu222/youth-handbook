@@ -28,9 +28,9 @@ export const metadata: Metadata = {
     telephone: false,
   },
   icons: {
-    icon: '/Huy_Hieu_Doan.png',
+    icon: '/Icon-App-192.png',
     apple: [
-      { url: '/Huy_Hieu_Doan.png', sizes: '180x180', type: 'image/png' },
+      { url: '/Icon-App-180.png', sizes: '180x180', type: 'image/png' },
     ],
   },
 }

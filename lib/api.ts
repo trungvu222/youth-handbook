@@ -2946,5 +2946,186 @@ export const chatApi = {
   },
 };
 
+// =====================================
+// MODULE 3.9: LIBRARY MANAGEMENT (Phòng HCM)
+// =====================================
+
+export interface Book {
+  id: string;
+  title: string;
+  author?: string;
+  publisher?: string;
+  qrCode: string;
+  isBorrowed?: boolean;
+  currentBorrower?: { id: string; fullName: string } | null;
+  borrowedAt?: string | null;
+  totalBorrowings?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BookBorrowing {
+  id: string;
+  bookId: string;
+  userId: string;
+  borrowedAt: string;
+  returnedAt?: string | null;
+  book?: Book;
+  user?: { id: string; fullName: string; unit?: { name: string } };
+}
+
+export interface BookStats {
+  totalBooks: number;
+  totalBorrowings: number;
+  currentlyBorrowed: number;
+  returned: number;
+}
+
+export const bookApi = {
+  // Get all books
+  async getBooks(params?: { search?: string; limit?: number }): Promise<ApiResponse<Book[]>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    const searchParams = new URLSearchParams();
+    if (params?.search) searchParams.append('search', params.search);
+    if (params?.limit) searchParams.append('limit', params.limit.toString());
+
+    return apiCall(`/books?${searchParams.toString()}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+
+  // Get single book
+  async getBook(id: string): Promise<ApiResponse<Book>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall(`/books/${id}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+
+  // Get book by QR code (for scanning)
+  async getBookByQR(qrCode: string): Promise<ApiResponse<Book>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall(`/books/scan/${qrCode}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+
+  // Create book (Admin)
+  async createBook(data: { title: string; author?: string; publisher?: string }): Promise<ApiResponse<Book>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall('/books', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Update book (Admin)
+  async updateBook(id: string, data: { title?: string; author?: string; publisher?: string }): Promise<ApiResponse<Book>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall(`/books/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Delete book (Admin)
+  async deleteBook(id: string): Promise<ApiResponse<void>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall(`/books/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+
+  // Borrow book (User scans QR)
+  async borrowBook(bookId: string, data?: { qrCode?: string; returnDate?: string }): Promise<ApiResponse<BookBorrowing>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall(`/books/${bookId}/borrow`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data || {}),
+    });
+  },
+
+  // Return book
+  async returnBook(borrowingId: string): Promise<ApiResponse<BookBorrowing>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall(`/books/borrowings/${borrowingId}/return`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+
+  // Get borrowing stats (Admin)
+  async getBorrowingStats(status?: 'borrowed' | 'returned'): Promise<ApiResponse<{ stats: BookStats; borrowings: any[] }>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+
+    return apiCall(`/books/admin/stats?${params.toString()}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+};
+
 export default authApi;
 

@@ -22,6 +22,7 @@ const ratingRoutes = require('./routes/rating');
 const suggestionRoutes = require('./routes/suggestions');
 const notificationRoutes = require('./routes/notifications');
 const chatRoutes = require('./routes/chat');
+const bookRoutes = require('./routes/books');
 // const adminRoutes = require('./routes/admin');
 
 // Import middleware
@@ -119,6 +120,7 @@ app.use('/api/rating', ratingRoutes);
 app.use('/api/suggestions', suggestionRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/books', bookRoutes);
 
 // Inline admin routes
 app.get('/api/admin/test', (req, res) => {
@@ -852,3 +854,4 @@ app.use(errorHandler);
 //}  // REMOVED - always start server
 
 module.exports = app;
+

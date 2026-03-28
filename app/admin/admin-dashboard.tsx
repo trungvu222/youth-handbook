@@ -32,7 +32,8 @@ import {
   ChevronRight,
   TrendingDown,
   UserX,
-  Newspaper
+  Newspaper,
+  Library
 } from 'lucide-react';
 
 // Import components quản lý đoàn viên
@@ -48,6 +49,7 @@ import { SurveyManagement } from '@/components/admin/survey-management';
 import { ReportsManagement } from '@/components/admin/reports-management';
 import { AdminProfile } from '@/components/admin/admin-profile';
 import { PostModeration } from '@/components/admin/post-moderation';
+import { BookManagement } from '@/components/admin/book-management';
 import { BACKEND_URL } from '@/lib/config';
 
 // Đảm bảo API_URL không có /api ở cuối
@@ -327,6 +329,7 @@ export default function AdminDashboard() {
     { id: 'ratings', label: 'Xếp loại chất lượng đoàn', icon: Star, path: '/admin/ratings' },
     { id: 'points', label: 'Điểm rèn luyện', icon: Trophy, path: '/admin/points' },
     { id: 'documents', label: 'Tài liệu đoàn', icon: FileText, path: '/admin/documents' },
+    { id: 'library', label: 'Phòng HCM', icon: Library, path: '/admin/library' },
     { id: 'exams', label: 'Kiểm tra tìm hiểu', icon: BookOpen, path: '/admin/exams' },
     { id: 'suggestions', label: 'Kiến nghị', icon: MessageSquare, path: '/admin/suggestions' },
     { id: 'news', label: 'Bảng tin', icon: Newspaper, path: '/admin/news' },
@@ -347,14 +350,18 @@ export default function AdminDashboard() {
           {/* Top row: icon + title */}
           <div className="flex items-center gap-3">
             <div className="p-2 md:p-3 bg-white/20 rounded-xl backdrop-blur-sm flex-shrink-0">
-              <svg className="h-6 w-6 md:h-8 md:w-8" viewBox="0 0 100 100" fill="currentColor">
-                <polygon points="50,5 61,35 95,35 68,57 79,90 50,70 21,90 32,57 5,35 39,35" fill="currentColor"/>
-              </svg>
+              <img
+                src="/logo-admin.png"
+                alt="Logo"
+                className="h-6 w-6 md:h-8 md:w-8 object-contain"
+              />
             </div>
             <div className="min-w-0">
-              <h1 className="text-base md:text-2xl lg:text-3xl font-bold tracking-tight leading-tight">HỆ THỐNG QUẢN LÝ ĐOÀN VIÊN</h1>
+              <h1 className="text-base md:text-2xl lg:text-3xl font-bold tracking-tight leading-tight">
+                HỆ THỐNG QUẢN LÝ ĐOÀN VIÊN TRUNG ĐOÀN 196
+              </h1>
               <p className="text-red-100 text-xs md:text-sm truncate">
-                Chào mừng, <span className="font-semibold text-white">{currentUser?.fullName}</span>
+                Chào mừng, <span className="font-semibold text-white">{currentUser?.fullName}</span>, <span className="font-semibold text-white">Ban chấp hành Đoàn Cơ sở</span>
               </p>
             </div>
           </div>
@@ -768,6 +775,8 @@ export default function AdminDashboard() {
         return <PointsManagement />;
       case 'documents':
         return <DocumentManagement />;
+      case 'library':
+        return <BookManagement />;
       case 'exams':
         return <ExamManagement />;
       case 'suggestions':

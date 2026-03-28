@@ -10,13 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { 
-  Plus, 
-  Minus, 
-  Settings, 
-  History, 
-  TrendingUp, 
-  TrendingDown, 
+import {
+  Plus,
+  Minus,
+  Settings,
+  History,
+  TrendingUp,
+  TrendingDown,
   Trophy,
   Users,
   Star,
@@ -30,7 +30,8 @@ import {
   Save,
   CheckCircle,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  RotateCcw
 } from "lucide-react"
 import { BACKEND_URL } from '@/lib/config'
 import { useToast } from '@/hooks/use-toast'
@@ -130,6 +131,8 @@ export function PointsManagement() {
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
   const [refreshLoading, setRefreshLoading] = useState(false)
+  const [resetLoading, setResetLoading] = useState<string | null>(null)
+  const [bulkResetLoading, setBulkResetLoading] = useState(false)
   const [error, setError] = useState("")
   
   // getAuthToken first (needed for config loading)
@@ -448,6 +451,103 @@ export function PointsManagement() {
     }
   }
 
+  const handleResetPoints = async (memberId: string, memberName: string) => {
+    if (!confirm(`Bạn có chắc muốn reset điểm của ${memberName} về mặc định (100 điểm)?`)) {
+      return;
+    }
+
+    try {
+      setResetLoading(memberId);
+      const token = getAuthToken();
+
+      const response = await fetch(`${API_BASE_URL}/points/reset`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          userId: memberId,
+          resetValue: 100
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast({
+          title: "Reset điểm thành công",
+          description: `Đã reset điểm của ${memberName} về 100 điểm`,
+        });
+        fetchLeaderboard();
+        fetchHistory();
+      } else {
+        toast({
+          title: "Lỗi",
+          description: data.error || 'Có lỗi xảy ra',
+          variant: "destructive"
+        });
+      }
+    } catch (err) {
+      console.error('Error resetting points:', err);
+      toast({
+        title: "Lỗi kết nối",
+        description: "Không thể kết nối đến server",
+        variant: "destructive"
+      });
+    } finally {
+      setResetLoading(null);
+    }
+  }
+
+  const handleResetAllPoints = async () => {
+    if (!confirm(`Bạn có chắc muốn reset điểm của TẤT CẢ ${members.length} đoàn viên về mặc định (100 điểm)?`)) {
+      return;
+    }
+
+    try {
+      setBulkResetLoading(true);
+      const token = getAuthToken();
+
+      const response = await fetch(`${API_BASE_URL}/points/reset-all`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          resetValue: 100
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast({
+          title: "Reset điểm thành công",
+          description: `Đã reset điểm của ${members.length} đoàn viên về 100 điểm`,
+        });
+        fetchLeaderboard();
+        fetchHistory();
+      } else {
+        toast({
+          title: "Lỗi",
+          description: data.error || 'Có lỗi xảy ra',
+          variant: "destructive"
+        });
+      }
+    } catch (err) {
+      console.error('Error resetting all points:', err);
+      toast({
+        title: "Lỗi kết nối",
+        description: "Không thể kết nối đến server",
+        variant: "destructive"
+      });
+    } finally {
+      setBulkResetLoading(false);
+    }
+  }
+
   const handleRefresh = async () => {
     setRefreshLoading(true);
     setError(""); // Clear lỗi trước khi refresh
@@ -713,7 +813,7 @@ export function PointsManagement() {
             </div>
           </div>
           <div className="flex gap-3">
-            <Button 
+            <Button
               onClick={handleRefresh}
               disabled={refreshLoading}
               variant="outline"
@@ -722,7 +822,16 @@ export function PointsManagement() {
               <RefreshCw className={`h-5 w-5 mr-2 ${refreshLoading ? 'animate-spin' : ''}`} />
               {refreshLoading ? 'Đang tải...' : 'Làm mới'}
             </Button>
-            <Button 
+            <Button
+              onClick={handleResetAllPoints}
+              disabled={bulkResetLoading || members.length === 0}
+              variant="outline"
+              className="bg-white/20 backdrop-blur-sm text-white border-white/30 px-5 py-3 h-12 rounded-xl font-semibold hover:bg-white/30 transition-all duration-300 flex items-center disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl hover:scale-105"
+            >
+              <RotateCcw className={`h-5 w-5 mr-2 ${bulkResetLoading ? 'animate-spin' : ''}`} />
+              {bulkResetLoading ? 'Đang reset...' : 'Reset tất cả'}
+            </Button>
+            <Button
               onClick={() => setShowExportDialog(true)}
               className="bg-white text-red-600 px-5 py-3 h-12 rounded-xl font-semibold hover:bg-red-50 transition-all duration-300 flex items-center shadow-lg hover:shadow-xl hover:scale-105"
             >
@@ -948,19 +1057,31 @@ export function PointsManagement() {
                         </td>
                         <td className="px-6 py-5 whitespace-nowrap">
                           <div className="flex space-x-2">
-                            <button 
-                              onClick={() => { setSelectedMember(member.id); setActiveTab("add-points"); }} 
-                              className="p-2 bg-green-100 text-green-600 hover:bg-green-600 hover:text-white rounded-lg transition-all duration-300 shadow-sm hover:shadow-md hover:scale-110" 
+                            <button
+                              onClick={() => { setSelectedMember(member.id); setActiveTab("add-points"); }}
+                              className="p-2 bg-green-100 text-green-600 hover:bg-green-600 hover:text-white rounded-lg transition-all duration-300 shadow-sm hover:shadow-md hover:scale-110"
                               title="Cộng điểm"
                             >
                               <Plus className="h-5 w-5" />
                             </button>
-                            <button 
-                              onClick={() => { setSelectedMember(member.id); setActiveTab("add-points"); }} 
-                              className="p-2 bg-red-100 text-red-600 hover:bg-red-600 hover:text-white rounded-lg transition-all duration-300 shadow-sm hover:shadow-md hover:scale-110" 
+                            <button
+                              onClick={() => { setSelectedMember(member.id); setActiveTab("add-points"); }}
+                              className="p-2 bg-red-100 text-red-600 hover:bg-red-600 hover:text-white rounded-lg transition-all duration-300 shadow-sm hover:shadow-md hover:scale-110"
                               title="Trừ điểm"
                             >
                               <Minus className="h-5 w-5" />
+                            </button>
+                            <button
+                              onClick={() => handleResetPoints(member.id, member.fullName)}
+                              disabled={resetLoading === member.id}
+                              className="p-2 bg-blue-100 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition-all duration-300 shadow-sm hover:shadow-md hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Reset điểm về 100"
+                            >
+                              {resetLoading === member.id ? (
+                                <Loader2 className="h-5 w-5 animate-spin" />
+                              ) : (
+                                <RotateCcw className="h-5 w-5" />
+                              )}
                             </button>
                           </div>
                         </td>

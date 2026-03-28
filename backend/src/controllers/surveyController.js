@@ -8,6 +8,20 @@ const getSurveys = async (req, res, next) => {
     const { status, limit = 20 } = req.query;
     const userId = req.user.id;
 
+    // Auto-expire surveys that have passed their endDate
+    const now = new Date();
+    await prisma.survey.updateMany({
+      where: {
+        status: 'ACTIVE',
+        endDate: {
+          lt: now
+        }
+      },
+      data: {
+        status: 'CLOSED'
+      }
+    });
+
     let whereClause = {};
 
     // Admin/Leader can see all surveys
@@ -88,6 +102,20 @@ const getSurveys = async (req, res, next) => {
 const getSurvey = async (req, res, next) => {
   try {
     const { id } = req.params;
+
+    // Auto-expire surveys that have passed their endDate
+    const now = new Date();
+    await prisma.survey.updateMany({
+      where: {
+        status: 'ACTIVE',
+        endDate: {
+          lt: now
+        }
+      },
+      data: {
+        status: 'CLOSED'
+      }
+    });
 
     const survey = await prisma.survey.findUnique({
       where: { id },
@@ -234,26 +262,49 @@ const updateSurvey = async (req, res, next) => {
       });
     }
 
+    // If questions are provided, stringify them
+    if (updateData.questions && Array.isArray(updateData.questions)) {
+      updateData.questions = JSON.stringify(updateData.questions);
+    }
+
+    // Convert date strings to Date objects
+    if (updateData.startDate && typeof updateData.startDate === 'string') {
+      updateData.startDate = new Date(updateData.startDate);
+    }
+    if (updateData.endDate && typeof updateData.endDate === 'string') {
+      updateData.endDate = new Date(updateData.endDate);
+    }
+
+    // Remove updatedAt if it exists (Survey model doesn't have this field)
+    delete updateData.updatedAt;
+
     const updatedSurvey = await prisma.survey.update({
       where: { id },
-      data: {
-        ...updateData,
-        updatedAt: new Date()
-      },
+      data: updateData,
       include: {
         creator: {
           select: {
             id: true,
             fullName: true
           }
-        },
-        questions: true
+        }
       }
     });
 
+    // Parse questions back for response
+    let parsedQuestions = [];
+    try {
+      parsedQuestions = updatedSurvey.questions ? JSON.parse(updatedSurvey.questions) : [];
+    } catch (e) {
+      console.error('Error parsing questions:', e);
+    }
+
     res.status(200).json({
       success: true,
-      data: updatedSurvey
+      data: {
+        ...updatedSurvey,
+        questions: parsedQuestions
+      }
     });
 
   } catch (error) {
@@ -307,6 +358,20 @@ const deleteSurvey = async (req, res, next) => {
 // @access  Private/Admin/Leader
 const getSurveyStats = async (req, res, next) => {
   try {
+    // Auto-expire surveys that have passed their endDate
+    const now = new Date();
+    await prisma.survey.updateMany({
+      where: {
+        status: 'ACTIVE',
+        endDate: {
+          lt: now
+        }
+      },
+      data: {
+        status: 'CLOSED'
+      }
+    });
+
     // Get basic counts
     const [
       totalSurveys,
@@ -458,11 +523,23 @@ const submitSurveyResponse = async (req, res, next) => {
     const userId = req.user.id;
     const { answers } = req.body;
 
-    // Check survey exists and is active
+    // Check survey exists
     const survey = await prisma.survey.findUnique({ where: { id } });
     if (!survey) {
       return res.status(404).json({ success: false, error: 'Không tìm thấy khảo sát' });
     }
+
+    // Auto-expire if past endDate
+    const now = new Date();
+    if (survey.status === 'ACTIVE' && survey.endDate && new Date(survey.endDate) < now) {
+      await prisma.survey.update({
+        where: { id },
+        data: { status: 'CLOSED' }
+      });
+      return res.status(400).json({ success: false, error: 'Khảo sát đã hết hạn' });
+    }
+
+    // Check if survey is active
     if (survey.status !== 'ACTIVE') {
       return res.status(400).json({ success: false, error: 'Khảo sát không còn hoạt động' });
     }
