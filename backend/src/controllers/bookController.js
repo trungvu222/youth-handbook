@@ -309,8 +309,9 @@ const borrowBook = async (req, res, next) => {
       data: {
         bookId: book.id,
         userId,
-        borrowedAt: new Date(),
-        returnedAt: returnDate ? new Date(returnDate) : null
+        borrowedAt,
+        returnedAt: null, // Always null when borrowing, only set when returning
+        dueDate: returnDate ? new Date(returnDate) : null // Add dueDate field for expected return date
       },
       include: {
         book: true,
@@ -318,6 +319,12 @@ const borrowBook = async (req, res, next) => {
           select: { id: true, fullName: true }
         }
       }
+    });
+
+    // Update book status to borrowed
+    await prisma.book.update({
+      where: { id: book.id },
+      data: { isBorrowed: true }
     });
 
     console.log('📖 Book borrowed:', {
@@ -389,6 +396,12 @@ const returnBook = async (req, res, next) => {
       }
     });
 
+    // Update book status to available
+    await prisma.book.update({
+      where: { id: borrowing.book.id },
+      data: { isBorrowed: false }
+    });
+
     console.log('📗 Book returned:', {
       bookTitle: borrowing.book.title,
       borrower: borrowing.user.fullName,
@@ -455,6 +468,7 @@ const getBorrowingStats = async (req, res, next) => {
       author: b.book.author || '',
       publisher: b.book.publisher || '',
       borrowedAt: b.borrowedAt,
+      dueDate: b.dueDate,
       returnedAt: b.returnedAt,
       status: b.returnedAt ? 'Đã trả' : 'Đang mượn'
     }));

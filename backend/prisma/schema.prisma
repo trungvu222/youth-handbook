@@ -953,6 +953,7 @@ model Book {
   author      String?  // Tác giả
   publisher   String?  // Nhà xuất bản
   qrCode      String   @unique @map("qr_code") // Mã QR unique
+  isBorrowed  Boolean  @default(false) @map("is_borrowed") // Trạng thái mượn
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
@@ -967,7 +968,8 @@ model BookBorrowing {
   bookId      String    @map("book_id")
   userId      String    @map("user_id")
   borrowedAt  DateTime  @default(now()) @map("borrowed_at") // Thời gian mượn (auto)
-  returnedAt  DateTime? @map("returned_at") // Thời gian trả (user nhập)
+  dueDate     DateTime? @map("due_date") // Ngày dự kiến trả (user nhập)
+  returnedAt  DateTime? @map("returned_at") // Thời gian thực tế trả (admin set)
   createdAt   DateTime  @default(now()) @map("created_at")
 
   // Relations
