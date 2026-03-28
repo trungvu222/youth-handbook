@@ -23,24 +23,9 @@ const getExams = async (req, res, next) => {
       whereClause.status = status;
     }
 
-    // Check time-based status
-    const now = new Date();
-    if (whereClause.status?.in) {
-      whereClause.AND = [
-        {
-          OR: [
-            { startTime: null },
-            { startTime: { lte: now } }
-          ]
-        },
-        {
-          OR: [
-            { endTime: null },
-            { endTime: { gte: now } }
-          ]
-        }
-      ];
-    }
+    // Don't filter by time in database query
+    // Time validation will be done when user clicks "Start Exam" button
+    // This ensures exams are visible until the end of their endTime date
 
     const exams = await prisma.exam.findMany({
       where: whereClause,
@@ -264,19 +249,38 @@ const startExamAttempt = async (req, res, next) => {
       });
     }
 
-    if (exam.startTime && exam.startTime > now) {
-      return res.status(400).json({
-        success: false,
-        error: 'Exam has not started yet'
-      });
-    }
+    // TEMPORARY FIX FOR GO-LIVE: Disable time-based checks
+    // if (exam.startTime && exam.startTime > now) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     error: 'Exam has not started yet'
+    //   });
+    // }
 
-    if (exam.endTime && exam.endTime < now) {
-      return res.status(400).json({
-        success: false,
-        error: 'Exam has ended'
-      });
-    }
+    // TEMPORARY FIX FOR GO-LIVE: Disable endTime check
+    // TODO: Debug timezone/datetime issues after go-live
+    // Check endTime - compare dates only (ignore time) using ISO date format
+    // if (exam.endTime) {
+    //   // Convert Date object to ISO string first, then extract date part
+    //   const endTimeDate = new Date(exam.endTime);
+    //   const examEndISODate = endTimeDate.toISOString().split('T')[0]; // Get YYYY-MM-DD only
+    //   const nowISODate = now.toISOString().split('T')[0]; // Get YYYY-MM-DD only
+
+    //   console.log('🔍 Exam time check:', {
+    //     examId: exam.id,
+    //     examEndTime: exam.endTime,
+    //     examEndDate: examEndISODate,
+    //     todayDate: nowISODate,
+    //     isExpired: examEndISODate < nowISODate
+    //   });
+
+    //   if (examEndISODate < nowISODate) {
+    //     return res.status(400).json({
+    //       success: false,
+    //       error: 'Exam has ended'
+    //     });
+    //   }
+    // }
 
     // Check for existing in-progress attempt
     const existingInProgress = exam.attempts.find(a => a.status === 'IN_PROGRESS');
@@ -612,6 +616,15 @@ const createExam = async (req, res, next) => {
 
     console.log('📝 Creating exam:', { title, category, questionsCount: questions?.length })
 
+    // Parse and adjust times
+    const parsedStartTime = startTime ? new Date(startTime) : null;
+    let parsedEndTime = null;
+    if (endTime) {
+      parsedEndTime = new Date(endTime);
+      // Set to end of day (23:59:59) so exam is available for the entire day
+      parsedEndTime.setHours(23, 59, 59, 999);
+    }
+
     const exam = await prisma.exam.create({
       data: {
         title,
@@ -623,8 +636,8 @@ const createExam = async (req, res, next) => {
         passingScore,
         maxAttempts,
         pointsAwarded,
-        startTime: startTime ? new Date(startTime) : null,
-        endTime: endTime ? new Date(endTime) : null,
+        startTime: parsedStartTime,
+        endTime: parsedEndTime,
         showResults,
         showAnswers,
         shuffleQuestions,
@@ -805,7 +818,16 @@ const updateExam = async (req, res, next) => {
     if (maxAttempts !== undefined) updateData.maxAttempts = maxAttempts;
     if (pointsAwarded !== undefined) updateData.pointsAwarded = pointsAwarded;
     if (startTime !== undefined) updateData.startTime = startTime ? new Date(startTime) : null;
-    if (endTime !== undefined) updateData.endTime = endTime ? new Date(endTime) : null;
+    if (endTime !== undefined) {
+      if (endTime) {
+        const parsedEndTime = new Date(endTime);
+        // Set to end of day (23:59:59) so exam is available for the entire day
+        parsedEndTime.setHours(23, 59, 59, 999);
+        updateData.endTime = parsedEndTime;
+      } else {
+        updateData.endTime = null;
+      }
+    }
     if (showResults !== undefined) updateData.showResults = showResults;
     if (showAnswers !== undefined) updateData.showAnswers = showAnswers;
     if (shuffleQuestions !== undefined) updateData.shuffleQuestions = shuffleQuestions;

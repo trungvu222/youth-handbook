@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ratingApi } from '../../lib/api'
+import { ratingApi, notificationApi } from '../../lib/api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card'
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog'
 import { Alert, AlertDescription } from '../ui/alert'
-import { 
+import {
   Plus,
   Search,
   Calendar,
@@ -27,7 +27,8 @@ import {
   Eye,
   Edit,
   Trash2,
-  Trophy
+  Trophy,
+  RefreshCw
 } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 
@@ -146,6 +147,7 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
   const [pendingRatings, setPendingRatings] = useState<SelfRating[]>([])
   const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedPeriod, setSelectedPeriod] = useState<RatingPeriod | null>(null)
   const [selectedRating, setSelectedRating] = useState<SelfRating | null>(null)
@@ -240,7 +242,6 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
     description: '',
     startDate: '',
     endDate: '',
-    targetRating: 'GOOD' as 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'POOR',
     criteria: [
       { name: '', description: '', isRequired: true }
     ]
@@ -307,7 +308,18 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
       setLoading(false)
     }
   }
-  
+
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    await loadData()
+    setRefreshing(false)
+    toast({
+      title: '✅ Đã làm mới',
+      description: 'Dữ liệu đã được cập nhật',
+      duration: 2000,
+    })
+  }
+
   const loadAllPeriodsStats = async (periodsToLoad: RatingPeriod[]) => {
     try {
       setLoadingAllStats(true)
@@ -441,15 +453,6 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
       return
     }
 
-    if (!formData.targetRating) {
-      toast({
-        title: 'Lỗi',
-        description: 'Vui lòng chọn xếp loại mục tiêu',
-        variant: 'destructive'
-      })
-      return
-    }
-
     if (formData.criteria.some(c => !c.name.trim() || !c.description.trim())) {
       toast({
         title: 'Lỗi',
@@ -469,7 +472,6 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
           id: `criteria_${index}`,
           ...c
         })),
-        targetRating: formData.targetRating,
         targetAudience: 'ALL' as const
       }
 
@@ -556,14 +558,34 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
   const handleSendReminder = async (periodId: string) => {
     try {
       console.log('[Rating] Sending reminder for period:', periodId)
-      const response = await ratingApi.sendRatingReminder(periodId)
+
+      // Find the period to get its title
+      const period = periods.find(p => p.id === periodId)
+      if (!period) {
+        toast({
+          title: 'Lỗi',
+          description: 'Không tìm thấy kỳ xếp loại',
+          variant: 'destructive'
+        })
+        return
+      }
+
+      // Send notification using notificationApi to create real notifications
+      const response = await notificationApi.sendNotification({
+        title: `📋 Nhắc nhở xếp loại: ${period.title}`,
+        message: `Đã đến thời gian tự đánh giá xếp loại chất lượng đoàn viên cho kỳ "${period.title}". Hạn chót: ${new Date(period.endDate).toLocaleDateString('vi-VN')}.\n\nVui lòng vào mục "Xếp loại" để thực hiện đánh giá.`,
+        type: 'RATING_REMINDER',
+        relatedId: periodId,
+        recipients: 'all',
+      })
       console.log('[Rating] Reminder response:', response)
 
       if (response.success) {
+        const sentCount = response.data?.sent ?? 'tất cả'
         console.log('[Rating] Showing success toast')
         toast({
           title: '✅ Gửi thành công',
-          description: 'Đã gửi thông báo đến tất cả đoàn viên',
+          description: `Đã gửi thông báo nhắc nhở đến ${sentCount} đoàn viên`,
           duration: 3000,
           className: 'bg-green-50 border-green-500 text-green-900'
         })
@@ -591,7 +613,6 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
       description: '',
       startDate: '',
       endDate: '',
-      targetRating: 'GOOD' as 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'POOR',
       criteria: [
         { name: '', description: '', isRequired: true }
       ]
@@ -634,9 +655,41 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
     switch (status) {
       case 'ACTIVE': return 'bg-green-100 text-green-800'
       case 'DRAFT': return 'bg-gray-100 text-gray-800'
-      case 'COMPLETED': return 'bg-blue-100 text-blue-800'
+      case 'COMPLETED': return 'bg-red-100 text-red-800'
       case 'CANCELLED': return 'bg-red-100 text-red-800'
       default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  // Xác định status hiển thị dựa trên thời gian thực tế
+  const getEffectiveStatus = (period: RatingPeriod): 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED' => {
+    // Nếu period bị cancelled hoặc draft, giữ nguyên status từ database
+    if (period.status === 'CANCELLED' || period.status === 'DRAFT') {
+      return period.status
+    }
+
+    // Kiểm tra theo thời gian thực tế
+    const now = new Date()
+    const startDate = new Date(period.startDate)
+    const endDate = new Date(period.endDate)
+
+    if (now < startDate) {
+      return 'DRAFT'  // Chưa bắt đầu → hiển thị như DRAFT
+    } else if (now >= startDate && now <= endDate) {
+      return 'ACTIVE'  // Đang diễn ra
+    } else {
+      return 'COMPLETED'  // Đã kết thúc
+    }
+  }
+
+  const getEffectiveStatusLabel = (period: RatingPeriod): string => {
+    const effectiveStatus = getEffectiveStatus(period)
+    switch (effectiveStatus) {
+      case 'ACTIVE': return 'Đang diễn ra'
+      case 'COMPLETED': return 'Đã kết thúc'
+      case 'DRAFT': return period.status === 'DRAFT' ? 'Nháp' : 'Chưa bắt đầu'
+      case 'CANCELLED': return 'Đã hủy'
+      default: return 'Không xác định'
     }
   }
 
@@ -739,23 +792,35 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
             </p>
           </div>
 
-          <Button 
-            onClick={() => {
-              setSelectedPeriod(null)
-              setFormData({
-                title: '',
-                description: '',
-                startDate: '',
-                endDate: '',
-                criteria: [{ name: '', description: '', isRequired: true }]
-              })
-              setShowCreateDialog(true)
-            }}
-            className="bg-white text-indigo-600 hover:bg-indigo-50 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 font-bold px-6 py-6 text-base rounded-2xl"
-          >
-            <Plus className="h-5 w-5 mr-2" />
-            Tạo kỳ xếp loại
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              variant="outline"
+              className="bg-white/20 border-white/30 text-white hover:bg-white/30 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 font-bold px-4 py-6 text-base rounded-2xl"
+            >
+              <RefreshCw className={`h-5 w-5 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Đang tải...' : 'Làm mới'}
+            </Button>
+
+            <Button
+              onClick={() => {
+                setSelectedPeriod(null)
+                setFormData({
+                  title: '',
+                  description: '',
+                  startDate: '',
+                  endDate: '',
+                  criteria: [{ name: '', description: '', isRequired: true }]
+                })
+                setShowCreateDialog(true)
+              }}
+              className="bg-white text-indigo-600 hover:bg-indigo-50 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 font-bold px-6 py-6 text-base rounded-2xl"
+            >
+              <Plus className="h-5 w-5 mr-2" />
+              Tạo kỳ xếp loại
+            </Button>
+          </div>
         </div>
         
         {/* Animated particles */}
@@ -855,17 +920,19 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
               </div>
             ) : (
               paginatedPeriods.map(period => {
-                const isActive = period.status === 'ACTIVE'
-                const isCompleted = period.status === 'COMPLETED'
-                const isDraft = period.status === 'DRAFT'
-                
-                const borderColor = isActive ? 'border-l-green-500' : isCompleted ? 'border-l-blue-500' : isDraft ? 'border-l-amber-400' : 'border-l-gray-400'
-                const statusBg = isActive ? 'bg-gradient-to-r from-green-500 to-emerald-600' : isCompleted ? 'bg-gradient-to-r from-blue-500 to-indigo-600' : isDraft ? 'bg-gradient-to-r from-amber-400 to-orange-500' : 'bg-gradient-to-r from-gray-400 to-gray-500'
-                const glowColor = isActive ? 'shadow-green-500/20' : isCompleted ? 'shadow-blue-500/20' : isDraft ? 'shadow-amber-500/20' : 'shadow-gray-500/20'
-                
+                const effectiveStatus = getEffectiveStatus(period)
+                const isActive = effectiveStatus === 'ACTIVE'
+                const isCompleted = effectiveStatus === 'COMPLETED'
+                const isDraft = effectiveStatus === 'DRAFT'
+                const isCancelled = period.status === 'CANCELLED'
+
+                const borderColor = isActive ? 'border-l-green-500' : isCompleted ? 'border-l-red-500' : isDraft ? 'border-l-amber-400' : 'border-l-gray-400'
+                const statusBg = isActive ? 'bg-gradient-to-r from-green-500 to-emerald-600' : isCompleted ? 'bg-gradient-to-r from-red-500 to-red-700' : isDraft ? 'bg-gradient-to-r from-amber-400 to-orange-500' : 'bg-gradient-to-r from-gray-400 to-gray-500'
+                const glowColor = isActive ? 'shadow-green-500/20' : isCompleted ? 'shadow-red-500/20' : isDraft ? 'shadow-amber-500/20' : 'shadow-gray-500/20'
+
                 return (
                   <div key={period.id} className="group relative">
-                    <div className={`absolute -inset-0.5 bg-gradient-to-r ${isActive ? 'from-green-400 to-emerald-500' : isCompleted ? 'from-blue-400 to-indigo-500' : isDraft ? 'from-amber-400 to-orange-500' : 'from-gray-400 to-gray-500'} rounded-2xl opacity-20 group-hover:opacity-40 blur transition-all duration-300`}></div>
+                    <div className={`absolute -inset-0.5 bg-gradient-to-r ${isActive ? 'from-green-400 to-emerald-500' : isCompleted ? 'from-red-400 to-red-600' : isDraft ? 'from-amber-400 to-orange-500' : 'from-gray-400 to-gray-500'} rounded-2xl opacity-20 group-hover:opacity-40 blur transition-all duration-300`}></div>
                     <Card className={`relative border-l-4 ${borderColor} hover:shadow-2xl ${glowColor} transition-all duration-300 rounded-2xl overflow-hidden bg-white/90 backdrop-blur-sm hover:-translate-y-1`}>
                       <CardContent className="p-0">
                       <div className="flex">
@@ -874,9 +941,9 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
                           <div className="flex items-center gap-3 mb-4">
                             <span className={`${statusBg} text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg flex items-center gap-1.5`}>
                               <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-white animate-pulse' : 'bg-white/70'}`}></span>
-                              {isActive ? 'Đang diễn ra' : isCompleted ? 'Đã kết thúc' : isDraft ? 'Dự thảo' : 'Đã hủy'}
+                              {getEffectiveStatusLabel(period)}
                             </span>
-                            {period.pendingApprovals && period.pendingApprovals > 0 && (
+                            {(period.pendingApprovals ?? 0) > 0 && (
                               <span className="relative inline-flex">
                                 <span className="bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
                                   <Clock className="h-3.5 w-3.5 animate-pulse" />
@@ -925,7 +992,7 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
 
                         {/* Actions Column */}
                         <div className="flex flex-col items-center justify-center gap-3 px-5 py-4 bg-gradient-to-br from-gray-50 to-gray-100/50 border-l border-gray-200">
-                          {period.status === 'ACTIVE' && (
+                          {getEffectiveStatus(period) === 'ACTIVE' && (
                             <Button
                               variant="default"
                               size="sm"
@@ -1029,13 +1096,11 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
                               <div className="text-xs text-muted-foreground">Đoàn viên</div>
                             </div>
                             <div className={`px-4 py-2 rounded-full text-sm font-semibold ${
-                              period.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 
-                              period.status === 'COMPLETED' ? 'bg-blue-100 text-blue-800' : 
+                              getEffectiveStatus(period) === 'ACTIVE' ? 'bg-green-100 text-green-800' :
+                              getEffectiveStatus(period) === 'COMPLETED' ? 'bg-red-100 text-red-800' :
                               'bg-gray-100 text-gray-800'
                             }`}>
-                              {period.status === 'ACTIVE' ? 'Đang diễn ra' : 
-                               period.status === 'COMPLETED' ? 'Đã kết thúc' : 
-                               'Nháp'}
+                              {getEffectiveStatusLabel(period)}
                             </div>
                           </div>
                         </div>
@@ -1405,13 +1470,11 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
                             </div>
                           </div>
                           <div className={`px-4 py-2 rounded-full text-sm font-semibold ${
-                            period.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 
-                            period.status === 'COMPLETED' ? 'bg-blue-100 text-blue-800' : 
+                            getEffectiveStatus(period) === 'ACTIVE' ? 'bg-green-100 text-green-800' :
+                            getEffectiveStatus(period) === 'COMPLETED' ? 'bg-red-100 text-red-800' :
                             'bg-gray-100 text-gray-800'
                           }`}>
-                            {period.status === 'ACTIVE' ? 'Đang diễn ra' : 
-                             period.status === 'COMPLETED' ? 'Đã kết thúc' : 
-                             'Nháp'}
+                            {getEffectiveStatusLabel(period)}
                           </div>
                         </div>
                       </CardContent>
@@ -1672,45 +1735,6 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
               </div>
             </div>
 
-            {/* Target Rating Selection */}
-            <div>
-              <Label>Xếp loại mục tiêu *</Label>
-              <p className="text-sm text-muted-foreground mb-3">
-                Chọn xếp loại mục tiêu cho kỳ đánh giá này. Đoàn viên sẽ nhận được thông báo về xếp loại mục tiêu.
-              </p>
-              <RadioGroup value={formData.targetRating} onValueChange={(value) => setFormData(prev => ({ ...prev, targetRating: value as any }))}>
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-3 p-3 rounded-lg border-2 border-purple-200 hover:bg-purple-50 cursor-pointer">
-                    <RadioGroupItem value="EXCELLENT" id="target-rating-excellent" />
-                    <Label htmlFor="target-rating-excellent" className="flex-1 cursor-pointer font-medium">
-                      Hoàn thành xuất sắc nhiệm vụ
-                    </Label>
-                  </div>
-
-                  <div className="flex items-center space-x-3 p-3 rounded-lg border-2 border-blue-200 hover:bg-blue-50 cursor-pointer">
-                    <RadioGroupItem value="GOOD" id="target-rating-good" />
-                    <Label htmlFor="target-rating-good" className="flex-1 cursor-pointer font-medium">
-                      Hoàn thành tốt nhiệm vụ
-                    </Label>
-                  </div>
-
-                  <div className="flex items-center space-x-3 p-3 rounded-lg border-2 border-green-200 hover:bg-green-50 cursor-pointer">
-                    <RadioGroupItem value="AVERAGE" id="target-rating-average" />
-                    <Label htmlFor="target-rating-average" className="flex-1 cursor-pointer font-medium">
-                      Hoàn thành nhiệm vụ
-                    </Label>
-                  </div>
-
-                  <div className="flex items-center space-x-3 p-3 rounded-lg border-2 border-red-300 hover:bg-red-50 cursor-pointer">
-                    <RadioGroupItem value="POOR" id="target-rating-poor" />
-                    <Label htmlFor="target-rating-poor" className="flex-1 cursor-pointer font-medium">
-                      Không hoàn thành nhiệm vụ
-                    </Label>
-                  </div>
-                </div>
-              </RadioGroup>
-            </div>
-
             {/* Criteria */}
             <div>
               <div className="flex justify-between items-center mb-3">
@@ -1859,10 +1883,10 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="EXCELLENT">Xuất sắc</SelectItem>
-                        <SelectItem value="GOOD">Khá</SelectItem>
-                        <SelectItem value="AVERAGE">Trung bình</SelectItem>
-                        <SelectItem value="POOR">Yếu</SelectItem>
+                        <SelectItem value="EXCELLENT">Hoàn thành xuất sắc nhiệm vụ</SelectItem>
+                        <SelectItem value="GOOD">Hoàn thành tốt nhiệm vụ</SelectItem>
+                        <SelectItem value="AVERAGE">Hoàn thành nhiệm vụ</SelectItem>
+                        <SelectItem value="POOR">Không hoàn thành nhiệm vụ</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

@@ -7,7 +7,8 @@ const CACHE_NAME = 'stn-admin-v1';
 const APP_SHELL = [
   '/admin',
   '/admin-manifest.json',
-  '/Huy_Hieu_Doan.png',
+  '/Logo-Web.jpg',
+  '/Icon-App-Chua-tach-nen.jpg',
 ];
 
 // ── Install ───────────────────────────────────────────────

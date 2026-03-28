@@ -306,9 +306,9 @@ export default function AdminLogin() {
             <div className="text-center space-y-4">
               <div className="relative inline-flex items-center justify-center">
                 <div className="absolute w-32 h-32 bg-red-500/15 rounded-full blur-2xl" />
-                <img 
-                  src="/Huy_Hieu_Doan.png" 
-                  alt="Đoàn TNCS Hồ Chí Minh" 
+                <img
+                  src="/Logo-Web.jpg"
+                  alt="Đoàn TNCS Hồ Chí Minh"
                   className="relative w-28 h-28 object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] select-none pointer-events-none"
                   draggable={false}
                 />

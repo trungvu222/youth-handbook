@@ -1,0 +1,15 @@
+
+> youth-handbook-backend@1.0.0 dev
+> nodemon src/index.js
+
+[33m[nodemon] 3.1.10[39m
+[33m[nodemon] to restart at any time, enter `rs`[39m
+[33m[nodemon] watching path(s): *.*[39m
+[33m[nodemon] watching extensions: js,mjs,cjs,json[39m
+[32m[nodemon] starting `node src/index.js`[39m
+🚀 Youth Handbook Backend running on port 3001
+📊 Health check: http://localhost:3001/api/health
+📍 Server address: {"address":"0.0.0.0","family":"IPv4","port":3001}
+⏰ Server time: 2026-03-23T15:27:10.876Z
+✅ Backend started successfully - ready to accept connections
+✅ Prisma connected to database

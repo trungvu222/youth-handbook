@@ -4,6 +4,8 @@ const {
   getLeaderboard,
   addPoints,
   subtractPoints,
+  resetPoints,
+  resetAllPoints,
   getPointsHistory,
   getUnits,
   getPointsConfig,
@@ -34,6 +36,12 @@ router.post('/add', addPoints);
 
 // Subtract points (Admin/Leader only)
 router.post('/subtract', subtractPoints);
+
+// Reset points for a single user (Admin/Leader only)
+router.post('/reset', resetPoints);
+
+// Reset points for all users (Admin only)
+router.post('/reset-all', authorize('ADMIN'), resetAllPoints);
 
 module.exports = router;
 

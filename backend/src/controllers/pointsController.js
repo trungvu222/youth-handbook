@@ -409,10 +409,149 @@ const updatePointsConfig = async (req, res, next) => {
   }
 };
 
+// @desc    Reset points for a single user
+// @route   POST /api/points/reset
+// @access  Private (Admin/Leader)
+const resetPoints = async (req, res, next) => {
+  try {
+    const { userId, resetValue = 100 } = req.body;
+    const currentUser = req.user;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Vui lòng cung cấp userId'
+      });
+    }
+
+    // Check if user exists
+    const targetUser = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { unit: true }
+    });
+
+    if (!targetUser) {
+      return res.status(404).json({
+        success: false,
+        error: 'Không tìm thấy đoàn viên'
+      });
+    }
+
+    // Leader can only modify users in their unit
+    if (currentUser.role === 'LEADER' && targetUser.unitId !== currentUser.unitId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Bạn chỉ có thể reset điểm của đoàn viên trong chi đoàn của mình'
+      });
+    }
+
+    const oldPoints = targetUser.points;
+    const pointsDifference = resetValue - oldPoints;
+
+    // Update user points and create history
+    const [updatedUser, pointsHistory] = await prisma.$transaction([
+      prisma.user.update({
+        where: { id: userId },
+        data: {
+          points: resetValue
+        },
+        include: { unit: true }
+      }),
+      prisma.pointsHistory.create({
+        data: {
+          userId,
+          points: pointsDifference,
+          reason: `Reset điểm về mặc định (${resetValue} điểm)`,
+          type: pointsDifference > 0 ? 'EARN' : 'DEDUCT'
+        }
+      })
+    ]);
+
+    const { passwordHash, ...userWithoutPassword } = updatedUser;
+
+    res.status(200).json({
+      success: true,
+      message: `Đã reset điểm của ${updatedUser.fullName} về ${resetValue}`,
+      data: {
+        user: userWithoutPassword,
+        history: pointsHistory
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Reset points for all users
+// @route   POST /api/points/reset-all
+// @access  Private (Admin only)
+const resetAllPoints = async (req, res, next) => {
+  try {
+    const { resetValue = 100 } = req.body;
+    const currentUser = req.user;
+
+    // Only admin can reset all points
+    if (currentUser.role !== 'ADMIN') {
+      return res.status(403).json({
+        success: false,
+        error: 'Chỉ admin mới có thể reset tất cả điểm'
+      });
+    }
+
+    // Get all active users
+    const users = await prisma.user.findMany({
+      where: { isActive: true },
+      select: { id: true, fullName: true, points: true }
+    });
+
+    // Create bulk update and history records
+    const updates = [];
+    const historyRecords = [];
+
+    for (const user of users) {
+      const pointsDifference = resetValue - user.points;
+
+      updates.push(
+        prisma.user.update({
+          where: { id: user.id },
+          data: { points: resetValue }
+        })
+      );
+
+      historyRecords.push(
+        prisma.pointsHistory.create({
+          data: {
+            userId: user.id,
+            points: pointsDifference,
+            reason: `Reset điểm hàng loạt về mặc định (${resetValue} điểm)`,
+            type: pointsDifference > 0 ? 'EARN' : 'DEDUCT'
+          }
+        })
+      );
+    }
+
+    // Execute all updates in a transaction
+    await prisma.$transaction([...updates, ...historyRecords]);
+
+    res.status(200).json({
+      success: true,
+      message: `Đã reset điểm của ${users.length} đoàn viên về ${resetValue}`,
+      data: {
+        affectedUsers: users.length,
+        resetValue
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getLeaderboard,
   addPoints,
   subtractPoints,
+  resetPoints,
+  resetAllPoints,
   getPointsHistory,
   getUnits,
   getPointsConfig,

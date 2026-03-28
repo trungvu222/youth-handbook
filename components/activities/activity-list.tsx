@@ -182,7 +182,7 @@ export default function ActivityList({ onActivitySelect }: ActivityListProps) {
     const statuses = {
       'DRAFT': { text: 'Nháp', color: 'bg-gray-100 text-gray-800' },
       'ACTIVE': { text: 'Đang mở', color: 'bg-green-100 text-green-800' },
-      'COMPLETED': { text: 'Đã kết thúc', color: 'bg-blue-100 text-blue-800' },
+      'COMPLETED': { text: 'Đã kết thúc', color: 'bg-red-100 text-red-800' },
       'CANCELLED': { text: 'Đã hủy', color: 'bg-red-100 text-red-800' }
     }
     return statuses[status as keyof typeof statuses] || { text: status, color: 'bg-gray-100 text-gray-800' }
