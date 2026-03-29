@@ -283,6 +283,18 @@ export default function SuggestionsScreen() {
         .suggestion-card:active { transform: scale(0.985); }
         .tab-btn      { transition: all 0.2s ease; }
         .filter-chip  { transition: all 0.18s ease; }
+        
+        @media (max-width: 374px) {
+          .stats-value { font-size: 18px !important; }
+          .stats-label { font-size: 9px !important; }
+          .hide-on-mobile { display: none; }
+        }
+        
+        @media (min-width: 640px) {
+          .sm\\\\:flex-row { flex-direction: row !important; }
+          .sm\\\\:items-center { align-items: center !important; }
+          .sm\\\\:justify-between { justify-content: space-between !important; }
+        }
       `}</style>
 
       {/* ── GRADIENT HEADER ── */}
@@ -299,7 +311,7 @@ export default function SuggestionsScreen() {
         <div style={{ position:'absolute', top:30,  left:'50%', width:120, height:120, borderRadius:'50%', background:'rgba(255,255,255,0.03)', zIndex:0, transform:'translateX(-50%)' }} />
 
         {/* Title row */}
-        <div style={{ position:'relative', zIndex:1, display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: 20 }}>
+        <div style={{ position:'relative', zIndex:1, display:'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }} className="sm:flex-row sm:items-center sm:justify-between">
           <div style={{ display:'flex', alignItems:'center', gap:12 }}>
             <div style={{
               width:46, height:46, borderRadius:15,
@@ -318,7 +330,7 @@ export default function SuggestionsScreen() {
             <button
               onClick={() => loadData(true)}
               style={{
-                width:38, height:38, borderRadius:12, border:'none',
+                width:38, height:44, borderRadius:12, border:'none',
                 background:'rgba(255,255,255,0.15)', backdropFilter:'blur(8px)',
                 cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
               }}
@@ -328,14 +340,14 @@ export default function SuggestionsScreen() {
             <button
               onClick={() => setShowCreateForm(true)}
               style={{
-                height:38, borderRadius:12, border:'none', padding: '0 16px',
+                height:44, borderRadius:12, border:'none', padding: '0 16px',
                 background:'rgba(255,255,255,0.95)', backdropFilter:'blur(8px)',
                 cursor:'pointer', display:'flex', alignItems:'center', gap: 6,
                 fontWeight: 700, fontSize: 14, color: '#4338ca'
               }}
             >
               <Plus style={{ width:16, height:16 }} />
-              Gửi góp ý
+              <span className="hide-on-mobile">Gửi góp ý</span>
             </button>
           </div>
         </div>
@@ -355,8 +367,8 @@ export default function SuggestionsScreen() {
             <div key={i} style={{ display:'flex', alignItems:'center' }}>
               {i > 0 && <div style={{ width:1, height:36, background:'rgba(255,255,255,0.15)', marginRight: 0 }} />}
               <div style={{ textAlign:'center', flex:1 }}>
-                <div style={{ color: s.color, fontSize:22, fontWeight:800, lineHeight:1 }}>{s.value}</div>
-                <div style={{ color:'rgba(255,255,255,0.65)', fontSize:11, marginTop:4 }}>{s.label}</div>
+                <div style={{ color: s.color, fontSize:20, fontWeight:800, lineHeight:1 }} className="stats-value">{s.value}</div>
+                <div style={{ color:'rgba(255,255,255,0.65)', fontSize:10, marginTop:4 }} className="stats-label">{s.label}</div>
               </div>
             </div>
           ))}
@@ -381,7 +393,7 @@ export default function SuggestionsScreen() {
               style={{
                 flex:1, display:'flex', alignItems:'center', justifyContent:'center',
                 gap:5, padding:'10px 4px', borderRadius:13, border:'none', cursor:'pointer',
-                fontSize:12, fontWeight: isActive ? 700 : 500,
+                fontSize:11, fontWeight: isActive ? 700 : 500,
                 background: isActive ? 'linear-gradient(135deg, #4338ca, #6366f1)' : 'transparent',
                 color: isActive ? '#fff' : '#94a3b8',
                 boxShadow: isActive ? '0 3px 10px rgba(67,56,202,0.3)' : 'none'
@@ -407,9 +419,10 @@ export default function SuggestionsScreen() {
       <div style={{ padding: '20px 16px 0' }}>
         <div style={{ marginBottom: 14 }}>
           <div style={{
-            background: '#fff', borderRadius: 14, padding: '10px 14px',
+            background: '#fff', borderRadius: 14, padding: '12px 14px',
             display: 'flex', alignItems: 'center', gap: 10,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+            minHeight: 44
           }}>
             <Search style={{ width: 18, height: 18, color: '#94a3b8' }} />
             <input
@@ -467,7 +480,7 @@ export default function SuggestionsScreen() {
             className="filter-chip"
             onClick={() => setStatusFilter('all')}
             style={{
-              flexShrink:0, padding:'6px 12px', borderRadius:16, border:'none',
+              flexShrink:0, padding:'6px 12px', borderRadius:16,
               fontSize:11, fontWeight: statusFilter === 'all' ? 700 : 500, cursor:'pointer',
               background: statusFilter === 'all' ? '#f1f5f9' : 'transparent',
               color: statusFilter === 'all' ? '#475569' : '#94a3b8',
@@ -602,17 +615,17 @@ export default function SuggestionsScreen() {
                         {suggestion.content}
                       </p>
 
-                      {/* Meta info - Simple text display */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 13, color: '#64748b', marginTop: 8 }}>
+                      {/* Meta info - Simple text display - ALWAYS HORIZONTAL */}
+                      <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 16, fontSize: 13, color: '#64748b', marginTop: 8 }}>
                         {/* Response count */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <MessageSquare style={{ width: 16, height: 16 }} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                          <MessageSquare style={{ width: 16, height: 16, flexShrink: 0 }} />
                           <span>{typeof suggestion.responses === 'number' ? suggestion.responses : (Array.isArray(suggestion.responses) ? suggestion.responses.length : 0)} phản hồi</span>
                         </div>
 
                         {/* Created date */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <Clock style={{ width: 16, height: 16 }} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                          <Clock style={{ width: 16, height: 16, flexShrink: 0 }} />
                           <span>{new Date(suggestion.submittedAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
                         </div>
                       </div>

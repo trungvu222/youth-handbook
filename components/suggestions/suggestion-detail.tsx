@@ -291,7 +291,9 @@ export function SuggestionDetail({ suggestion: initialSuggestion, onBack, onUpda
               fontSize: 20, 
               lineHeight: 1.4,
               marginBottom: 12,
-              letterSpacing: '-0.3px'
+              letterSpacing: '-0.3px',
+              wordBreak: 'break-word',
+              overflowWrap: 'break-word'
             }}>
               {suggestion.title}
             </h1>
@@ -299,13 +301,13 @@ export function SuggestionDetail({ suggestion: initialSuggestion, onBack, onUpda
             {/* Meta Info - Compact inline style */}
             <div style={{ 
               display: 'flex', 
-              alignItems: 'center', 
-              gap: 20, 
+              flexDirection: 'column',
+              gap: 8, 
               paddingBottom: 16,
               borderBottom: '1px solid #e2e8f0',
               fontSize: 13,
               color: '#64748b'
-            }}>
+            }} className="sm:flex-row sm:gap-20">
               {/* Response Count */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <MessageSquare style={{ width: 16, height: 16, color: '#2563eb' }} />
@@ -413,11 +415,14 @@ export function SuggestionDetail({ suggestion: initialSuggestion, onBack, onUpda
                       background: '#fff',
                       borderRadius: 10,
                       padding: 12,
-                      border: '1px solid #e2e8f0'
+                      border: '1px solid #e2e8f0',
+                      gap: 10
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
-                      {getFileIcon(url)}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                      <div style={{ flexShrink: 0 }}>
+                        {getFileIcon(url)}
+                      </div>
                       <span style={{ 
                         fontSize: 14, 
                         fontWeight: 500,
@@ -575,9 +580,9 @@ export function SuggestionDetail({ suggestion: initialSuggestion, onBack, onUpda
                   <div key={response.id} style={{
                     border: '1px solid #e2e8f0',
                     borderRadius: 12,
-                    padding: 16,
+                    padding: 12,
                     background: index % 2 === 0 ? '#fafafa' : '#fff'
-                  }}>
+                  }} className="sm:p-16">
                     <div style={{ display: 'flex', alignItems: 'start', gap: 12 }}>
                       <Avatar className="h-10 w-10" style={{ flexShrink: 0 }}>
                         <AvatarFallback style={{ 

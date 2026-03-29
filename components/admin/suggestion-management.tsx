@@ -390,36 +390,36 @@ export default function SuggestionManagement() {
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32" />
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full -ml-24 -mb-24" />
         <div className="relative">
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-2">
             <div className="p-2.5 bg-white/20 rounded-xl backdrop-blur-sm">
               <MessageSquare className="h-6 w-6 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-white">Quản lý kiến nghị</h1>
           </div>
-          <p className="text-blue-100 ml-14">
+          <p className="text-blue-100 sm:ml-14">
             Xem, phản hồi và theo dõi tiến độ xử lý kiến nghị từ đoàn viên
           </p>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 p-1 bg-gray-100/80 rounded-xl h-auto">
-          <TabsTrigger value="all" className="flex items-center gap-2 py-2.5 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md transition-all">
+        <TabsList className="flex overflow-x-auto scrollbar-hide sm:grid sm:grid-cols-4 w-full p-1 bg-gray-100/80 rounded-xl h-auto">
+          <TabsTrigger value="all" className="flex items-center gap-2 py-2.5 px-3 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md transition-all whitespace-nowrap flex-shrink-0">
             <FileText className="h-4 w-4" />
             <span className="font-medium">Tất cả</span>
             <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full font-semibold">{suggestions.length}</span>
           </TabsTrigger>
-          <TabsTrigger value="pending" className="flex items-center gap-2 py-2.5 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md transition-all">
+          <TabsTrigger value="pending" className="flex items-center gap-2 py-2.5 px-3 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md transition-all whitespace-nowrap flex-shrink-0">
             <Clock className="h-4 w-4" />
             <span className="font-medium">Chờ xử lý</span>
             <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full font-semibold">{pendingCount}</span>
           </TabsTrigger>
-          <TabsTrigger value="processing" className="flex items-center gap-2 py-2.5 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md transition-all">
+          <TabsTrigger value="processing" className="flex items-center gap-2 py-2.5 px-3 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md transition-all whitespace-nowrap flex-shrink-0">
             <AlertTriangle className="h-4 w-4" />
             <span className="font-medium">Đang xử lý</span>
             <span className="bg-orange-100 text-orange-700 text-xs px-2 py-0.5 rounded-full font-semibold">{processingCount}</span>
           </TabsTrigger>
-          <TabsTrigger value="completed" className="flex items-center gap-2 py-2.5 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md transition-all">
+          <TabsTrigger value="completed" className="flex items-center gap-2 py-2.5 px-3 rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md transition-all whitespace-nowrap flex-shrink-0">
             <CheckCircle className="h-4 w-4" />
             <span className="font-medium">Đã xong</span>
             <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-semibold">{completedCount}</span>
@@ -429,7 +429,7 @@ export default function SuggestionManagement() {
         {/* Filters - Modern Style */}
         <Card className="shadow-sm border-0 bg-white/80 backdrop-blur-sm">
           <CardContent className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
               <div className="relative lg:col-span-2">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
@@ -498,12 +498,12 @@ export default function SuggestionManagement() {
 
         {/* Statistics - Modern Design */}
         {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {/* Tổng kiến nghị */}
             <Card className="relative overflow-hidden bg-gradient-to-br from-blue-50 to-blue-100 border-0 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group">
               <div className="absolute top-0 right-0 w-24 h-24 bg-blue-200/30 rounded-full -mr-10 -mt-10 group-hover:scale-110 transition-transform duration-300" />
               <div className="absolute bottom-0 left-0 w-16 h-16 bg-blue-300/20 rounded-full -ml-8 -mb-8" />
-              <CardContent className="p-5 relative">
+              <CardContent className="p-4 sm:p-5 relative">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-semibold text-blue-800">Tổng kiến nghị</span>
                   <div className="p-2.5 bg-blue-500/15 rounded-xl backdrop-blur-sm">
@@ -519,7 +519,7 @@ export default function SuggestionManagement() {
             <Card className="relative overflow-hidden bg-gradient-to-br from-amber-50 to-amber-100 border-0 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group">
               <div className="absolute top-0 right-0 w-24 h-24 bg-amber-200/30 rounded-full -mr-10 -mt-10 group-hover:scale-110 transition-transform duration-300" />
               <div className="absolute bottom-0 left-0 w-16 h-16 bg-amber-300/20 rounded-full -ml-8 -mb-8" />
-              <CardContent className="p-5 relative">
+              <CardContent className="p-4 sm:p-5 relative">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-semibold text-amber-800">Chờ xử lý</span>
                   <div className="p-2.5 bg-amber-500/15 rounded-xl backdrop-blur-sm">
@@ -535,7 +535,7 @@ export default function SuggestionManagement() {
             <Card className="relative overflow-hidden bg-gradient-to-br from-orange-50 to-orange-100 border-0 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group">
               <div className="absolute top-0 right-0 w-24 h-24 bg-orange-200/30 rounded-full -mr-10 -mt-10 group-hover:scale-110 transition-transform duration-300" />
               <div className="absolute bottom-0 left-0 w-16 h-16 bg-orange-300/20 rounded-full -ml-8 -mb-8" />
-              <CardContent className="p-5 relative">
+              <CardContent className="p-4 sm:p-5 relative">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-semibold text-orange-800">Đang xử lý</span>
                   <div className="p-2.5 bg-orange-500/15 rounded-xl backdrop-blur-sm">
@@ -551,7 +551,7 @@ export default function SuggestionManagement() {
             <Card className="relative overflow-hidden bg-gradient-to-br from-green-50 to-green-100 border-0 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group">
               <div className="absolute top-0 right-0 w-24 h-24 bg-green-200/30 rounded-full -mr-10 -mt-10 group-hover:scale-110 transition-transform duration-300" />
               <div className="absolute bottom-0 left-0 w-16 h-16 bg-green-300/20 rounded-full -ml-8 -mb-8" />
-              <CardContent className="p-5 relative">
+              <CardContent className="p-4 sm:p-5 relative">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-semibold text-green-800">Đã giải quyết</span>
                   <div className="p-2.5 bg-green-500/15 rounded-xl backdrop-blur-sm">
@@ -567,7 +567,7 @@ export default function SuggestionManagement() {
             <Card className="relative overflow-hidden bg-gradient-to-br from-purple-50 to-purple-100 border-0 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group">
               <div className="absolute top-0 right-0 w-24 h-24 bg-purple-200/30 rounded-full -mr-10 -mt-10 group-hover:scale-110 transition-transform duration-300" />
               <div className="absolute bottom-0 left-0 w-16 h-16 bg-purple-300/20 rounded-full -ml-8 -mb-8" />
-              <CardContent className="p-5 relative">
+              <CardContent className="p-4 sm:p-5 relative">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-semibold text-purple-800">Tỷ lệ hoàn thành</span>
                   <div className="p-2.5 bg-purple-500/15 rounded-xl backdrop-blur-sm">
@@ -605,9 +605,9 @@ export default function SuggestionManagement() {
             ) : (
               filteredSuggestions.map(suggestion => (
                 <Card key={suggestion.id} className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 border-l-4 border-l-transparent hover:border-l-blue-500 bg-white">
-                  <CardContent className="p-5">
-                    <div className="flex items-start justify-between gap-6">
-                      <div className="flex-1 min-w-0">
+                  <CardContent className="p-4 sm:p-5">
+                    <div className="flex flex-col sm:flex-row items-start justify-between gap-4 sm:gap-6">
+                      <div className="flex-1 min-w-0 w-full">
                         {/* Badges row */}
                         <div className="flex flex-wrap items-center gap-2 mb-4">
                           <Badge className={`${getCategoryColor(suggestion.category)} shadow-sm`}>
@@ -634,17 +634,17 @@ export default function SuggestionManagement() {
                         </div>
 
                         {/* Title */}
-                        <h3 className="font-bold text-lg mb-2 line-clamp-1 text-gray-900 group-hover:text-blue-700 transition-colors">
+                        <h3 className="font-bold text-base sm:text-lg mb-2 line-clamp-1 text-gray-900 group-hover:text-blue-700 transition-colors">
                           {suggestion.title}
                         </h3>
 
                         {/* Content preview */}
-                        <p className="text-gray-600 mb-4 line-clamp-2 leading-relaxed">
+                        <p className="text-gray-600 mb-4 line-clamp-2 leading-relaxed text-sm sm:text-base">
                           {suggestion.content}
                         </p>
 
                         {/* Meta info with icons */}
-                        <div className="flex flex-wrap items-center gap-5 text-sm">
+                        <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2 sm:gap-5 text-sm">
                           <span className="flex items-center gap-1.5 text-gray-500 bg-gray-50 px-2.5 py-1 rounded-full">
                             <Calendar className="h-3.5 w-3.5" />
                             {formatDate(suggestion.submittedAt)}
@@ -673,13 +673,13 @@ export default function SuggestionManagement() {
                       </div>
 
                       {/* Actions */}
-                      <div className="flex flex-col items-end gap-3">
+                      <div className="flex flex-row sm:flex-col items-center sm:items-end gap-3 w-full sm:w-auto">
                         {/* Status Update */}
                         <Select
                           value={suggestion.status}
                           onValueChange={(value) => handleUpdateStatus(suggestion.id, value)}
                         >
-                          <SelectTrigger className="w-36 h-9 text-sm bg-gray-50 border-gray-200 hover:bg-white transition-colors">
+                          <SelectTrigger className="w-full sm:w-36 h-11 sm:h-9 text-sm bg-gray-50 border-gray-200 hover:bg-white transition-colors">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -694,7 +694,7 @@ export default function SuggestionManagement() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:text-blue-800 transition-all"
+                          className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:text-blue-800 transition-all h-11 sm:h-9 w-full sm:w-auto"
                           onClick={() => {
                             setSelectedSuggestion(suggestion)
                             loadSuggestionDetail(suggestion.id)
@@ -947,7 +947,7 @@ export default function SuggestionManagement() {
           resetResponseForm()
         }
       }}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" style={{ maxWidth: 'min(48rem, calc(100vw - 32px))' }}>
           <DialogHeader>
             <DialogTitle>Phản hồi kiến nghị</DialogTitle>
             <DialogDescription>

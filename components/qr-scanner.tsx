@@ -165,18 +165,22 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
   return (
     <div style={{
       position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-      background: "rgba(0,0,0,0.9)", zIndex: 9999,
-      display: "flex", flexDirection: "column"
+      background: "#000", zIndex: 99999,
+      display: "flex", flexDirection: "column",
+      isolation: "isolate",
+      padding: 'max(env(safe-area-inset-top), 16px) 16px max(env(safe-area-inset-bottom), 16px)'
     }}>
       {/* Toast Notification - Portal style to ensure it's on top */}
       {toast.show && (
         <div style={{
           position: "fixed", 
-          bottom: 20, 
+          bottom: 'max(env(safe-area-inset-bottom), 20px)', 
+          left: 20,
           right: 20,
           zIndex: 999999, 
-          minWidth: 280, 
-          maxWidth: 400,
+          minWidth: 'min(280px, calc(100vw - 40px))', 
+          maxWidth: 'min(400px, calc(100vw - 40px))',
+          margin: '0 auto',
           background: toast.type === 'success' ? "#10b981" : "#ef4444",
           color: "#fff", 
           padding: "16px 20px", 
@@ -213,7 +217,8 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
       {/* Header */}
       <div style={{
         padding: "16px", display: "flex", alignItems: "center",
-        justifyContent: "space-between", background: "rgba(0,0,0,0.5)"
+        justifyContent: "space-between", background: "#000",
+        borderBottom: "1px solid rgba(255,255,255,0.1)"
       }}>
         <h2 style={{ color: "#fff", fontSize: 18, fontWeight: 700 }}>
           Quét mã QR
@@ -221,7 +226,7 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
         <button
           onClick={onClose}
           style={{
-            width: 36, height: 36, borderRadius: "50%",
+            minWidth: 44, minHeight: 44, width: 44, height: 44, borderRadius: "50%",
             background: "rgba(255,255,255,0.2)", border: "none",
             color: "#fff", cursor: "pointer", display: "flex",
             alignItems: "center", justifyContent: "center"
@@ -237,7 +242,7 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
           /* Success Screen */
           <div style={{
             background: "#fff", borderRadius: 20, padding: 24,
-            maxWidth: 400, width: "100%"
+            maxWidth: 'min(400px, calc(100vw - 40px))', width: "100%"
           }}>
             <div style={{ textAlign: "center", marginBottom: 20 }}>
               <div style={{
@@ -280,7 +285,7 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
             <button
               onClick={onClose}
               style={{
-                width: "100%", padding: "12px 0", borderRadius: 12,
+                width: "100%", minHeight: 44, padding: "12px 0", borderRadius: 12,
                 border: "none", background: "linear-gradient(135deg, #667eea, #764ba2)",
                 color: "#fff", fontSize: 14, fontWeight: 700,
                 cursor: "pointer"
@@ -292,7 +297,7 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
         ) : !result ? (
           <>
             <div style={{
-              width: 250, height: 250, border: "3px solid #fff",
+              width: 'min(250px, 80vw)', height: 'min(250px, 80vw)', border: "3px solid #fff",
               borderRadius: 20, position: "relative", marginBottom: 24
             }}>
               <div style={{
@@ -326,7 +331,7 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
             </div>
 
             {/* Manual Input (temporary) */}
-            <div style={{ width: "100%", maxWidth: 300 }}>
+            <div style={{ width: "100%", maxWidth: '100%' }}>
               <input
                 type="text"
                 placeholder="Hoặc nhập mã QR thủ công..."
@@ -336,12 +341,12 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
                   }
                 }}
                 style={{
-                  width: "100%", padding: "12px 16px", borderRadius: 12,
-                  border: "2px solid rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.1)",
-                  color: "#fff", fontSize: 14, outline: "none"
+                  width: "100%", minHeight: 44, padding: "12px 16px", borderRadius: 12,
+                  border: "2px solid #667eea", background: "#fff",
+                  color: "#1e293b", fontSize: 14, outline: "none"
                 }}
               />
-              <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, marginTop: 8, textAlign: "center" }}>
+              <p style={{ color: "rgba(255,255,255,0.8)", fontSize: 12, marginTop: 8, textAlign: "center" }}>
                 Nhấn Enter để tìm kiếm
               </p>
             </div>
@@ -360,7 +365,7 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
         ) : (
           <div style={{
             background: "#fff", borderRadius: 20, padding: 24,
-            maxWidth: 400, width: "100%"
+            maxWidth: 'min(400px, calc(100vw - 40px))', width: "100%"
           }}>
             <div style={{ textAlign: "center", marginBottom: 20 }}>
               {result.isBorrowed ? (
@@ -443,7 +448,7 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
               <button
                 onClick={onClose}
                 style={{
-                  flex: 1, padding: "12px 0", borderRadius: 12,
+                  flex: 1, minHeight: 44, padding: "12px 0", borderRadius: 12,
                   border: "2px solid #e2e8f0", background: "#fff",
                   color: "#64748b", fontSize: 14, fontWeight: 600,
                   cursor: "pointer"
@@ -457,7 +462,7 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
                     onClick={handleReturn}
                     disabled={processing}
                     style={{
-                      flex: 1, padding: "12px 0", borderRadius: 12,
+                      flex: 1, minHeight: 44, padding: "12px 0", borderRadius: 12,
                       border: "none", background: "linear-gradient(135deg, #f59e0b, #d97706)",
                       color: "#fff", fontSize: 14, fontWeight: 700,
                       cursor: processing ? "not-allowed" : "pointer",
@@ -470,7 +475,7 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
                   <button
                     disabled
                     style={{
-                      flex: 1, padding: "12px 0", borderRadius: 12,
+                      flex: 1, minHeight: 44, padding: "12px 0", borderRadius: 12,
                       border: "none", background: "#e2e8f0",
                       color: "#94a3b8", fontSize: 14, fontWeight: 700,
                       cursor: "not-allowed"
@@ -484,7 +489,7 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
                   onClick={handleBorrow}
                   disabled={processing}
                   style={{
-                    flex: 1, padding: "12px 0", borderRadius: 12,
+                    flex: 1, minHeight: 44, padding: "12px 0", borderRadius: 12,
                     border: "none", background: "linear-gradient(135deg, #667eea, #764ba2)",
                     color: "#fff", fontSize: 14, fontWeight: 700,
                     cursor: processing ? "not-allowed" : "pointer",
