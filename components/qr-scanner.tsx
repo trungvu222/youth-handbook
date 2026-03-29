@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { bookApi, authApi } from "@/lib/api"
 import { X, Camera, CheckCircle, AlertCircle, Calendar } from "lucide-react"
-import { Html5Qrcode } from "html5-qrcode"
+import jsQR from "jsqr"
 
 interface QRScannerProps {
   onClose: () => void
@@ -26,8 +26,10 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
   const [toast, setToast] = useState<Toast>({ show: false, message: '', type: 'success' })
   const [cameraStarted, setCameraStarted] = useState(false)
   const [cameraError, setCameraError] = useState<string | null>(null)
-  const scannerRef = useRef<Html5Qrcode | null>(null)
-  const qrReaderRef = useRef<HTMLDivElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const scanningRef = useRef<boolean>(false)
+  const streamRef = useRef<MediaStream | null>(null)
 
   useEffect(() => {
     // Get current user ID
@@ -51,28 +53,22 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
       console.log('[QR Scanner] Starting camera...')
       setCameraError(null)
       
-      const html5QrCode = new Html5Qrcode("qr-reader")
-      scannerRef.current = html5QrCode
-
-      await html5QrCode.start(
-        { facingMode: "environment" }, // Use back camera
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 }
-        },
-        (decodedText) => {
-          console.log('[QR Scanner] QR Code detected:', decodedText)
-          // Stop camera and process QR code
-          stopCamera()
-          handleQRCodeScanned(decodedText)
-        },
-        (errorMessage) => {
-          // Ignore scanning errors (happens continuously when no QR code is detected)
-        }
-      )
-
-      console.log('[QR Scanner] Camera started successfully')
-      setCameraStarted(true)
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+      })
+      
+      streamRef.current = stream
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+        await videoRef.current.play()
+        console.log('[QR Scanner] Camera started successfully')
+        setCameraStarted(true)
+        
+        // Start scanning for QR codes
+        scanningRef.current = true
+        requestAnimationFrame(scanQRCode)
+      }
     } catch (err: any) {
       console.error('[QR Scanner] Camera error:', err)
       setCameraError(err.message || "Không thể mở camera. Vui lòng kiểm tra quyền truy cập camera.")
@@ -80,13 +76,58 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
     }
   }
 
+  const scanQRCode = () => {
+    if (!scanningRef.current || !videoRef.current || !canvasRef.current) {
+      return
+    }
+
+    const video = videoRef.current
+    const canvas = canvasRef.current
+    const context = canvas.getContext('2d')
+
+    if (!context || video.readyState !== video.HAVE_ENOUGH_DATA) {
+      requestAnimationFrame(scanQRCode)
+      return
+    }
+
+    // Set canvas size to match video
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+
+    // Draw video frame to canvas
+    context.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+    // Get image data and scan for QR code
+    const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+      inversionAttempts: "dontInvert",
+    })
+
+    if (code && code.data) {
+      console.log('[QR Scanner] QR Code detected:', code.data)
+      scanningRef.current = false // Stop scanning
+      handleQRCodeScanned(code.data)
+    } else {
+      // Continue scanning
+      requestAnimationFrame(scanQRCode)
+    }
+  }
+
   const stopCamera = async () => {
     try {
-      if (scannerRef.current && scannerRef.current.isScanning) {
-        console.log('[QR Scanner] Stopping camera...')
-        await scannerRef.current.stop()
-        console.log('[QR Scanner] Camera stopped')
+      console.log('[QR Scanner] Stopping camera...')
+      scanningRef.current = false
+      
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop())
+        streamRef.current = null
       }
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = null
+      }
+      
+      console.log('[QR Scanner] Camera stopped')
     } catch (err) {
       console.error('[QR Scanner] Error stopping camera:', err)
     }
@@ -228,14 +269,7 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
     })
   }
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString("vi-VN", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit"
-    })
-  }
+
 
   return (
     <div style={{
@@ -286,31 +320,6 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
             opacity: 1;
             transform: translateY(0);
           }
-        }
-        
-        /* Hide duplicate video element from html5-qrcode */
-        #qr-reader video {
-          width: 100% !important;
-          height: auto !important;
-          max-height: 400px !important;
-          object-fit: cover !important;
-          border-radius: 20px !important;
-        }
-        
-        #qr-reader canvas {
-          display: none !important;
-        }
-        
-        #qr-reader__dashboard {
-          display: none !important;
-        }
-        
-        #qr-reader__dashboard_section {
-          display: none !important;
-        }
-        
-        #qr-reader__dashboard_section_csr {
-          display: none !important;
         }
       `}</style>
 
@@ -396,20 +405,38 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
           </div>
         ) : !result ? (
           <>
-            {/* Camera View - Always show the container */}
-            <div style={{ width: '100%', maxWidth: 'min(400px, calc(100vw - 40px))', marginBottom: 24, position: 'relative' }}>
-              {/* QR Reader Container - Always rendered */}
-              <div 
-                id="qr-reader" 
-                ref={qrReaderRef}
-                style={{ 
+            {/* Camera View */}
+            <div style={{ 
+              width: '100%', 
+              maxWidth: 'min(400px, calc(100vw - 40px))', 
+              marginBottom: 24, 
+              position: 'relative',
+              borderRadius: 20,
+              overflow: 'hidden',
+              background: '#000'
+            }}>
+              {/* Video Element */}
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                style={{
                   width: '100%',
-                  borderRadius: 20,
-                  overflow: 'hidden'
+                  height: 'auto',
+                  maxHeight: '400px',
+                  objectFit: 'cover',
+                  display: cameraStarted && !cameraError ? 'block' : 'none'
                 }}
               />
               
-              {/* Loading overlay - shown while camera is starting */}
+              {/* Hidden canvas for QR scanning */}
+              <canvas
+                ref={canvasRef}
+                style={{ display: 'none' }}
+              />
+              
+              {/* Loading overlay */}
               {!cameraStarted && !cameraError && (
                 <div style={{
                   position: 'absolute',
@@ -417,11 +444,11 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
                   left: 0,
                   right: 0,
                   bottom: 0,
+                  minHeight: '300px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   background: 'rgba(0,0,0,0.8)',
-                  borderRadius: 20,
                   zIndex: 10
                 }}>
                   <div style={{ textAlign: "center" }}>
@@ -439,11 +466,11 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
                   left: 0,
                   right: 0,
                   bottom: 0,
+                  minHeight: '300px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   background: 'rgba(0,0,0,0.9)',
-                  borderRadius: 20,
                   zIndex: 10,
                   padding: 24
                 }}>
