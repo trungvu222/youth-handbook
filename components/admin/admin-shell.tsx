@@ -114,7 +114,7 @@ export function AdminShell({ children }: AdminShellProps) {
   const roleLabel = userRole === 'LEADER' ? 'Bí thư chi đoàn' : 'Quản trị viên';
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden relative">
+    <div className="flex min-h-screen bg-gray-50 relative">
       {/* Mobile backdrop overlay */}
       {isMobile && sidebarOpen && (
         <div
@@ -129,9 +129,10 @@ export function AdminShell({ children }: AdminShellProps) {
             ? `fixed inset-y-0 left-0 z-50 w-72 shadow-xl transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`
             : `border-r border-gray-200 ${sidebarOpen ? 'w-64' : 'w-20'}`
         }`}
+        style={isMobile ? {} : { position: 'sticky', top: 0, height: '100vh' }}
       >
         {/* Logo */}
-        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-red-600 to-red-500">
+        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-red-600 to-red-500 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm flex-shrink-0">
               <svg className="h-6 w-6 text-white" viewBox="0 0 100 100" fill="currentColor">
@@ -148,7 +149,7 @@ export function AdminShell({ children }: AdminShellProps) {
         </div>
 
         {/* User Info */}
-        <div className="p-4 border-b border-gray-200">
+        <div className="p-4 border-b border-gray-200 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center text-white font-bold">
               {currentUser?.fullName?.charAt(0) || 'A'}
@@ -199,7 +200,7 @@ export function AdminShell({ children }: AdminShellProps) {
         </nav>
 
         {/* Logout Button */}
-        <div className="p-4 border-t border-gray-200 bg-white">
+        <div className="p-4 border-t border-gray-200 bg-white flex-shrink-0">
           <button
             onClick={handleLogout}
             className="w-full flex items-center px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -211,9 +212,9 @@ export function AdminShell({ children }: AdminShellProps) {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-screen">
         {/* Header */}
-        <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+        <header className="bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-4 sticky top-0 z-30 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <button
@@ -222,7 +223,7 @@ export function AdminShell({ children }: AdminShellProps) {
               >
                 <Menu className="h-5 w-5 text-gray-600" />
               </button>
-              <h1 className="text-xl font-semibold text-gray-900">
+              <h1 className="text-lg md:text-xl font-semibold text-gray-900 truncate">
                 {allMenuItems.find(item => item.path === pathname)?.label || 'Tổng quan'}
               </h1>
             </div>
@@ -230,7 +231,7 @@ export function AdminShell({ children }: AdminShellProps) {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-auto p-6 bg-gray-50">
+        <main className="flex-1 p-4 md:p-6 bg-gray-50">
           {children}
         </main>
       </div>
