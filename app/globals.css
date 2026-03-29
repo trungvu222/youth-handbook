@@ -163,6 +163,18 @@
     -moz-osx-font-smoothing: grayscale;
   }
   
+  /* Admin layout exception - allow natural scrolling */
+  body:has(.admin-layout) {
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
+  }
+  
+  html:has(.admin-layout) {
+    height: auto;
+    min-height: 100vh;
+  }
+  
   /* Đông Sơn pattern chỉ cho mobile app - không áp dụng cho admin */
   body.mobile-app {
     background-image: url("/dong-son-pattern.jpg");
