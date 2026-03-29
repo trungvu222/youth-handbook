@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { bookApi, authApi } from "@/lib/api"
 import { X, Camera, CheckCircle, AlertCircle, Calendar } from "lucide-react"
+import { Html5Qrcode } from "html5-qrcode"
 
 interface QRScannerProps {
   onClose: () => void
@@ -23,6 +24,10 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
   const [returnDate, setReturnDate] = useState<string>("")
   const [borrowSuccess, setBorrowSuccess] = useState<any>(null)
   const [toast, setToast] = useState<Toast>({ show: false, message: '', type: 'success' })
+  const [cameraStarted, setCameraStarted] = useState(false)
+  const [cameraError, setCameraError] = useState<string | null>(null)
+  const scannerRef = useRef<Html5Qrcode | null>(null)
+  const qrReaderRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     // Get current user ID
@@ -31,27 +36,71 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
         setCurrentUserId(response.data.id)
       }
     })
+
+    // Start camera
+    startCamera()
+
+    // Cleanup on unmount
+    return () => {
+      stopCamera()
+    }
   }, [])
 
-  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
-    console.log('[QR Scanner] Showing toast:', message, type)
-    setToast({ show: true, message, type })
-    setTimeout(() => {
-      console.log('[QR Scanner] Hiding toast')
-      setToast(prev => ({ ...prev, show: false }))
-    }, 3000)
+  const startCamera = async () => {
+    try {
+      console.log('[QR Scanner] Starting camera...')
+      setCameraError(null)
+      
+      const html5QrCode = new Html5Qrcode("qr-reader")
+      scannerRef.current = html5QrCode
+
+      await html5QrCode.start(
+        { facingMode: "environment" }, // Use back camera
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 }
+        },
+        (decodedText) => {
+          console.log('[QR Scanner] QR Code detected:', decodedText)
+          // Stop camera and process QR code
+          stopCamera()
+          handleQRCodeScanned(decodedText)
+        },
+        (errorMessage) => {
+          // Ignore scanning errors (happens continuously when no QR code is detected)
+        }
+      )
+
+      console.log('[QR Scanner] Camera started successfully')
+      setCameraStarted(true)
+    } catch (err: any) {
+      console.error('[QR Scanner] Camera error:', err)
+      setCameraError(err.message || "Không thể mở camera. Vui lòng kiểm tra quyền truy cập camera.")
+      setCameraStarted(false)
+    }
   }
 
-  // Simulate QR scan for now - will integrate with Capacitor Camera later
-  const handleManualInput = async (qrCode: string) => {
+  const stopCamera = async () => {
+    try {
+      if (scannerRef.current && scannerRef.current.isScanning) {
+        console.log('[QR Scanner] Stopping camera...')
+        await scannerRef.current.stop()
+        console.log('[QR Scanner] Camera stopped')
+      }
+    } catch (err) {
+      console.error('[QR Scanner] Error stopping camera:', err)
+    }
+  }
+
+  const handleQRCodeScanned = async (qrCode: string) => {
     if (!qrCode.trim()) return
 
-    console.log('[QR Scanner] Scanning QR code:', qrCode)
+    console.log('[QR Scanner] Processing QR code:', qrCode)
 
     try {
       setProcessing(true)
       setError(null)
-      setResult(null) // Clear previous result
+      setResult(null)
 
       // Scan QR code
       const response = await bookApi.scanBookQR(qrCode.trim())
@@ -66,14 +115,40 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
         console.error('[QR Scanner] Error:', response.error)
         setError(response.error || "Không tìm thấy sách")
         setResult(null)
+        // Restart camera after error
+        setTimeout(() => {
+          setError(null)
+          startCamera()
+        }, 2000)
       }
     } catch (err: any) {
       console.error('[QR Scanner] Exception:', err)
       setError(err.message || "Có lỗi xảy ra")
       setResult(null)
+      // Restart camera after error
+      setTimeout(() => {
+        setError(null)
+        startCamera()
+      }, 2000)
     } finally {
       setProcessing(false)
     }
+  }
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    console.log('[QR Scanner] Showing toast:', message, type)
+    setToast({ show: true, message, type })
+    setTimeout(() => {
+      console.log('[QR Scanner] Hiding toast')
+      setToast(prev => ({ ...prev, show: false }))
+    }, 3000)
+  }
+
+  // Manual input fallback
+  const handleManualInput = async (qrCode: string) => {
+    if (!qrCode.trim()) return
+    stopCamera()
+    handleQRCodeScanned(qrCode.trim())
   }
 
   const handleBorrow = async () => {
@@ -296,42 +371,86 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
           </div>
         ) : !result ? (
           <>
-            <div style={{
-              width: 'min(250px, 80vw)', height: 'min(250px, 80vw)', border: "3px solid #fff",
-              borderRadius: 20, position: "relative", marginBottom: 24
-            }}>
-              <div style={{
-                position: "absolute", top: -3, left: -3, width: 40, height: 40,
-                borderTop: "6px solid #667eea", borderLeft: "6px solid #667eea",
-                borderRadius: "20px 0 0 0"
-              }} />
-              <div style={{
-                position: "absolute", top: -3, right: -3, width: 40, height: 40,
-                borderTop: "6px solid #667eea", borderRight: "6px solid #667eea",
-                borderRadius: "0 20px 0 0"
-              }} />
-              <div style={{
-                position: "absolute", bottom: -3, left: -3, width: 40, height: 40,
-                borderBottom: "6px solid #667eea", borderLeft: "6px solid #667eea",
-                borderRadius: "0 0 0 20px"
-              }} />
-              <div style={{
-                position: "absolute", bottom: -3, right: -3, width: 40, height: 40,
-                borderBottom: "6px solid #667eea", borderRight: "6px solid #667eea",
-                borderRadius: "0 0 20px 0"
-              }} />
+            {/* Camera View */}
+            <div style={{ width: '100%', maxWidth: 'min(400px, calc(100vw - 40px))', marginBottom: 24 }}>
+              <div 
+                id="qr-reader" 
+                ref={qrReaderRef}
+                style={{ 
+                  width: '100%',
+                  borderRadius: 20,
+                  overflow: 'hidden',
+                  display: cameraStarted ? 'block' : 'none'
+                }}
+              />
+              
+              {!cameraStarted && !cameraError && (
+                <div style={{
+                  width: '100%', 
+                  aspectRatio: '1',
+                  border: "3px solid #fff",
+                  borderRadius: 20, 
+                  position: "relative",
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <div style={{
+                    position: "absolute", top: -3, left: -3, width: 40, height: 40,
+                    borderTop: "6px solid #667eea", borderLeft: "6px solid #667eea",
+                    borderRadius: "20px 0 0 0"
+                  }} />
+                  <div style={{
+                    position: "absolute", top: -3, right: -3, width: 40, height: 40,
+                    borderTop: "6px solid #667eea", borderRight: "6px solid #667eea",
+                    borderRadius: "0 20px 0 0"
+                  }} />
+                  <div style={{
+                    position: "absolute", bottom: -3, left: -3, width: 40, height: 40,
+                    borderBottom: "6px solid #667eea", borderLeft: "6px solid #667eea",
+                    borderRadius: "0 0 0 20px"
+                  }} />
+                  <div style={{
+                    position: "absolute", bottom: -3, right: -3, width: 40, height: 40,
+                    borderBottom: "6px solid #667eea", borderRight: "6px solid #667eea",
+                    borderRadius: "0 0 20px 0"
+                  }} />
 
-              <div style={{
-                position: "absolute", top: "50%", left: "50%",
-                transform: "translate(-50%, -50%)", textAlign: "center"
-              }}>
-                <Camera style={{ width: 48, height: 48, color: "#fff", margin: "0 auto 12px" }} />
-                <p style={{ color: "#fff", fontSize: 14 }}>Đưa mã QR vào khung</p>
-              </div>
+                  <div style={{ textAlign: "center" }}>
+                    <Camera style={{ width: 48, height: 48, color: "#fff", margin: "0 auto 12px" }} />
+                    <p style={{ color: "#fff", fontSize: 14 }}>Đang khởi động camera...</p>
+                  </div>
+                </div>
+              )}
+
+              {cameraError && (
+                <div style={{
+                  width: '100%', 
+                  padding: 24,
+                  border: "2px solid rgba(239, 68, 68, 0.5)",
+                  borderRadius: 20,
+                  background: "rgba(239, 68, 68, 0.1)",
+                  textAlign: 'center'
+                }}>
+                  <AlertCircle style={{ width: 48, height: 48, color: "#ef4444", margin: "0 auto 12px" }} />
+                  <p style={{ color: "#fff", fontSize: 14, marginBottom: 12 }}>{cameraError}</p>
+                  <button
+                    onClick={startCamera}
+                    style={{
+                      padding: "10px 20px", borderRadius: 10,
+                      border: "none", background: "#fff",
+                      color: "#1e293b", fontSize: 14, fontWeight: 600,
+                      cursor: "pointer"
+                    }}
+                  >
+                    Thử lại
+                  </button>
+                </div>
+              )}
             </div>
 
-            {/* Manual Input (temporary) */}
-            <div style={{ width: "100%", maxWidth: '100%' }}>
+            {/* Manual Input (fallback) */}
+            <div style={{ width: "100%", maxWidth: 'min(400px, calc(100vw - 40px))' }}>
               <input
                 type="text"
                 placeholder="Hoặc nhập mã QR thủ công..."
@@ -355,9 +474,10 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
               <div style={{
                 marginTop: 16, padding: "12px 16px", background: "rgba(239, 68, 68, 0.2)",
                 border: "1px solid rgba(239, 68, 68, 0.5)", borderRadius: 12,
-                color: "#fff", fontSize: 14, display: "flex", alignItems: "center", gap: 8
+                color: "#fff", fontSize: 14, display: "flex", alignItems: "center", gap: 8,
+                maxWidth: 'min(400px, calc(100vw - 40px))'
               }}>
-                <AlertCircle style={{ width: 16, height: 16 }} />
+                <AlertCircle style={{ width: 16, height: 16, flexShrink: 0 }} />
                 {error}
               </div>
             )}
