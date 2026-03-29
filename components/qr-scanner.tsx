@@ -287,6 +287,31 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
             transform: translateY(0);
           }
         }
+        
+        /* Hide duplicate video element from html5-qrcode */
+        #qr-reader video {
+          width: 100% !important;
+          height: auto !important;
+          max-height: 400px !important;
+          object-fit: cover !important;
+          border-radius: 20px !important;
+        }
+        
+        #qr-reader canvas {
+          display: none !important;
+        }
+        
+        #qr-reader__dashboard {
+          display: none !important;
+        }
+        
+        #qr-reader__dashboard_section {
+          display: none !important;
+        }
+        
+        #qr-reader__dashboard_section_csr {
+          display: none !important;
+        }
       `}</style>
 
       {/* Header */}
