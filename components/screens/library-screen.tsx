@@ -1,185 +1,228 @@
-'use client'
+"use client";
 
-import { useState, useEffect, useRef } from 'react'
-import { bookApi, Book } from '../../lib/api'
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
-import { Button } from '../ui/button'
-import { Badge } from '../ui/badge'
-import { Input } from '../ui/input'
-import { Label } from '../ui/label'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog'
-import { useToast } from '@/hooks/use-toast'
+import { useState, useEffect, useRef } from "react";
+import { bookApi, Book } from "../../lib/api";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
 import {
-  QrCode, Camera, BookOpen, Clock, Check, X, RefreshCw, Keyboard
-} from 'lucide-react'
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "../ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import {
+  QrCode,
+  Camera,
+  BookOpen,
+  Clock,
+  Check,
+  X,
+  RefreshCw,
+  Keyboard,
+} from "lucide-react";
 
 export function LibraryScreen() {
-  const { toast } = useToast()
+  const { toast } = useToast();
 
   // State
-  const [scanning, setScanning] = useState(false)
-  const [scanMode, setScanMode] = useState<'camera' | 'manual'>('camera')
-  const [manualCode, setManualCode] = useState('')
-  const [scannedBook, setScannedBook] = useState<Book | null>(null)
-  const [borrowingTime, setBorrowingTime] = useState<string>('')
-  const [returnDate, setReturnDate] = useState<string>('')
-  const [loading, setLoading] = useState(false)
-  const [showBorrowDialog, setShowBorrowDialog] = useState(false)
+  const [scanning, setScanning] = useState(false);
+  const [scanMode, setScanMode] = useState<"camera" | "manual">("camera");
+  const [manualCode, setManualCode] = useState("");
+  const [scannedBook, setScannedBook] = useState<Book | null>(null);
+  const [borrowingTime, setBorrowingTime] = useState<string>("");
+  const [returnDate, setReturnDate] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+  const [showBorrowDialog, setShowBorrowDialog] = useState(false);
 
   // QR Scanner ref
-  const qrScannerRef = useRef<any>(null)
+  const qrScannerRef = useRef<any>(null);
 
   // Start scanning
   const startScanning = async () => {
-    setScanning(true)
-    setScannedBook(null)
+    setScanning(true);
+    setScannedBook(null);
 
-    if (scanMode === 'camera') {
+    if (scanMode === "camera") {
       try {
-        const { Html5Qrcode } = await import('html5-qrcode')
-        const scanner = new Html5Qrcode('qr-reader')
-        qrScannerRef.current = scanner
+        const { Html5Qrcode } = await import("html5-qrcode");
+        const scanner = new Html5Qrcode("qr-reader");
+        qrScannerRef.current = scanner;
 
         await scanner.start(
-          { facingMode: 'environment' },
+          { facingMode: "environment" },
           { fps: 10, qrbox: { width: 250, height: 250 } },
           async (decodedText: string) => {
             // Stop scanning
             try {
-              await scanner.stop()
+              await scanner.stop();
             } catch (e) {}
-            qrScannerRef.current = null
+            qrScannerRef.current = null;
 
             // Process scanned QR code
-            await handleQRCodeScanned(decodedText)
+            await handleQRCodeScanned(decodedText);
           },
-          () => {} // Ignore errors during scanning
-        )
+          () => {}, // Ignore errors during scanning
+        );
       } catch (error) {
-        console.error('Scanner error:', error)
+        console.error("Scanner error:", error);
         toast({
-          title: 'Lỗi',
-          description: 'Không thể khởi động camera. Vui lòng thử nhập mã thủ công.',
-          variant: 'destructive'
-        })
-        setScanMode('manual')
+          title: "Lỗi",
+          description:
+            "Không thể khởi động camera. Vui lòng thử nhập mã thủ công.",
+          variant: "destructive",
+        });
+        setScanMode("manual");
       }
     }
-  }
+  };
 
   // Stop scanning
   const stopScanning = async () => {
     if (qrScannerRef.current) {
       try {
-        await qrScannerRef.current.stop()
+        await qrScannerRef.current.stop();
       } catch (e) {}
-      qrScannerRef.current = null
+      qrScannerRef.current = null;
     }
-    setScanning(false)
-  }
+    setScanning(false);
+  };
 
   // Handle QR code scanned
   const handleQRCodeScanned = async (qrCode: string) => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const response = await bookApi.getBookByQR(qrCode)
+      const response = await bookApi.getBookByQR(qrCode);
       if (response.success && response.data) {
-        setScannedBook(response.data)
-        setBorrowingTime(new Date().toLocaleString('vi-VN'))
-        setShowBorrowDialog(true)
+        setScannedBook(response.data);
+        // Khoảng thời gian mượn hiển thị là thời điểm quét / xác nhận gần đúng
+        setBorrowingTime(new Date().toLocaleString("vi-VN"));
+        setShowBorrowDialog(true);
       } else {
         toast({
-          title: 'Không tìm thấy sách',
-          description: response.error || 'Mã QR không hợp lệ',
-          variant: 'destructive'
-        })
+          title: "Không tìm thấy sách",
+          description: response.error || "Mã QR không hợp lệ",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       toast({
-        title: 'Lỗi',
-        description: 'Không thể kết nối server',
-        variant: 'destructive'
-      })
+        title: "Lỗi",
+        description: "Không thể kết nối server",
+        variant: "destructive",
+      });
     } finally {
-      setLoading(false)
-      setScanning(false)
+      setLoading(false);
+      setScanning(false);
     }
-  }
+  };
 
   // Handle manual code submit
   const handleManualSubmit = () => {
     if (!manualCode.trim()) {
       toast({
-        title: 'Lỗi',
-        description: 'Vui lòng nhập mã QR',
-        variant: 'destructive'
-      })
-      return
+        title: "Lỗi",
+        description: "Vui lòng nhập mã QR",
+        variant: "destructive",
+      });
+      return;
     }
-    handleQRCodeScanned(manualCode.trim())
-    setManualCode('')
-  }
+    handleQRCodeScanned(manualCode.trim());
+    setManualCode("");
+  };
 
   // Handle borrow book
   const handleBorrowBook = async () => {
-    if (!scannedBook) return
+    if (!scannedBook) return;
 
     if (!returnDate) {
       toast({
-        title: 'Lỗi',
-        description: 'Vui lòng chọn thời gian trả sách',
-        variant: 'destructive'
-      })
-      return
+        title: "Lỗi",
+        description: "Vui lòng chọn thời gian trả sách",
+        variant: "destructive",
+      });
+      return;
     }
 
-    setLoading(true)
+    if (!isReturnDateWithinLimit(returnDate)) {
+      toast({
+        title: "Lỗi",
+        description:
+          "Thời gian trả sách không được quá 2 tháng kể từ thời điểm mượn",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const confirmedBorrowingTime = new Date().toLocaleString("vi-VN");
+    setBorrowingTime(confirmedBorrowingTime);
+
+    setLoading(true);
     try {
       const response = await bookApi.borrowBook(scannedBook.id, {
-        returnDate
-      })
+        returnDate,
+      });
 
       if (response.success) {
         toast({
-          title: 'Mượn sách thành công!',
-          description: `Đã mượn sách "${scannedBook.title}". Hẹn trả: ${new Date(returnDate).toLocaleDateString('vi-VN')}`
-        })
-        setShowBorrowDialog(false)
-        setScannedBook(null)
-        setReturnDate('')
+          title: "Mượn sách thành công!",
+          description: `Đã mượn sách "${scannedBook.title}". Hẹn trả: ${new Date(returnDate).toLocaleDateString("vi-VN")}`,
+        });
+        setShowBorrowDialog(false);
+        setScannedBook(null);
+        setReturnDate("");
       } else {
         toast({
-          title: 'Không thể mượn sách',
-          description: response.error || 'Có lỗi xảy ra',
-          variant: 'destructive'
-        })
+          title: "Không thể mượn sách",
+          description: response.error || "Có lỗi xảy ra",
+          variant: "destructive",
+        });
       }
     } catch (error) {
       toast({
-        title: 'Lỗi',
-        description: 'Không thể kết nối server',
-        variant: 'destructive'
-      })
+        title: "Lỗi",
+        description: "Không thể kết nối server",
+        variant: "destructive",
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (qrScannerRef.current) {
-        qrScannerRef.current.stop().catch(() => {})
+        qrScannerRef.current.stop().catch(() => {});
       }
-    }
-  }, [])
+    };
+  }, []);
 
   // Get min date for return (tomorrow)
   const getMinReturnDate = () => {
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    return tomorrow.toISOString().split('T')[0]
-  }
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split("T")[0];
+  };
+
+  // Get max return date (2 months from now)
+  const getMaxReturnDate = () => {
+    const maxDate = new Date();
+    maxDate.setMonth(maxDate.getMonth() + 2);
+    return maxDate.toISOString().split("T")[0];
+  };
+
+  const isReturnDateWithinLimit = (dateString: string) => {
+    if (!dateString) return false;
+    const chosen = new Date(dateString);
+    const max = new Date();
+    max.setMonth(max.getMonth() + 2);
+    return chosen <= max;
+  };
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
@@ -223,11 +266,17 @@ export function LibraryScreen() {
                   <Input
                     placeholder="Nhập mã QR sách..."
                     value={manualCode}
-                    onChange={(e) => setManualCode(e.target.value.toUpperCase())}
-                    onKeyDown={(e) => e.key === 'Enter' && handleManualSubmit()}
+                    onChange={(e) =>
+                      setManualCode(e.target.value.toUpperCase())
+                    }
+                    onKeyDown={(e) => e.key === "Enter" && handleManualSubmit()}
                   />
                   <Button onClick={handleManualSubmit} disabled={loading}>
-                    {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                    {loading ? (
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Check className="h-4 w-4" />
+                    )}
                   </Button>
                 </div>
               </div>
@@ -246,26 +295,36 @@ export function LibraryScreen() {
               <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
                 <button
                   className={`flex-1 py-2 px-3 rounded-md flex items-center justify-center gap-2 text-sm font-medium transition-colors ${
-                    scanMode === 'camera' ? 'bg-white shadow text-blue-600' : 'text-gray-600'
+                    scanMode === "camera"
+                      ? "bg-white shadow text-blue-600"
+                      : "text-gray-600"
                   }`}
-                  onClick={() => setScanMode('camera')}
+                  onClick={() => setScanMode("camera")}
                 >
                   <Camera className="h-4 w-4" /> Quét QR
                 </button>
                 <button
                   className={`flex-1 py-2 px-3 rounded-md flex items-center justify-center gap-2 text-sm font-medium transition-colors ${
-                    scanMode === 'manual' ? 'bg-white shadow text-blue-600' : 'text-gray-600'
+                    scanMode === "manual"
+                      ? "bg-white shadow text-blue-600"
+                      : "text-gray-600"
                   }`}
-                  onClick={() => { setScanMode('manual'); stopScanning() }}
+                  onClick={() => {
+                    setScanMode("manual");
+                    stopScanning();
+                  }}
                 >
                   <Keyboard className="h-4 w-4" /> Nhập mã
                 </button>
               </div>
 
               {/* Scanner or Manual Input */}
-              {scanMode === 'camera' ? (
+              {scanMode === "camera" ? (
                 <div className="relative">
-                  <div id="qr-reader" className="w-full rounded-lg overflow-hidden"></div>
+                  <div
+                    id="qr-reader"
+                    className="w-full rounded-lg overflow-hidden"
+                  ></div>
                   <p className="text-center text-sm text-gray-500 mt-2">
                     Hướng camera vào mã QR trên sách
                   </p>
@@ -275,14 +334,21 @@ export function LibraryScreen() {
                   <Input
                     placeholder="Nhập mã QR sách..."
                     value={manualCode}
-                    onChange={(e) => setManualCode(e.target.value.toUpperCase())}
-                    onKeyDown={(e) => e.key === 'Enter' && handleManualSubmit()}
+                    onChange={(e) =>
+                      setManualCode(e.target.value.toUpperCase())
+                    }
+                    onKeyDown={(e) => e.key === "Enter" && handleManualSubmit()}
                     autoFocus
                   />
-                  <Button className="w-full" onClick={handleManualSubmit} disabled={loading}>
+                  <Button
+                    className="w-full"
+                    onClick={handleManualSubmit}
+                    disabled={loading}
+                  >
                     {loading ? (
                       <>
-                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Đang tìm...
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Đang
+                        tìm...
                       </>
                     ) : (
                       <>
@@ -307,25 +373,33 @@ export function LibraryScreen() {
             <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-medium flex-shrink-0">
               1
             </div>
-            <p className="text-sm text-gray-600">Đến kệ sách và chọn quyển sách muốn mượn</p>
+            <p className="text-sm text-gray-600">
+              Đến kệ sách và chọn quyển sách muốn mượn
+            </p>
           </div>
           <div className="flex items-start gap-3">
             <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-medium flex-shrink-0">
               2
             </div>
-            <p className="text-sm text-gray-600">Quét mã QR dán trên bìa sách</p>
+            <p className="text-sm text-gray-600">
+              Quét mã QR dán trên bìa sách
+            </p>
           </div>
           <div className="flex items-start gap-3">
             <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-medium flex-shrink-0">
               3
             </div>
-            <p className="text-sm text-gray-600">Chọn ngày dự kiến trả sách và xác nhận mượn</p>
+            <p className="text-sm text-gray-600">
+              Chọn ngày dự kiến trả sách và xác nhận mượn
+            </p>
           </div>
           <div className="flex items-start gap-3">
             <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-medium flex-shrink-0">
               4
             </div>
-            <p className="text-sm text-gray-600">Mang sách về và trả đúng hẹn</p>
+            <p className="text-sm text-gray-600">
+              Mang sách về và trả đúng hẹn
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -344,12 +418,18 @@ export function LibraryScreen() {
                 <div className="flex items-start gap-3">
                   <BookOpen className="h-10 w-10 text-blue-500 flex-shrink-0" />
                   <div>
-                    <h3 className="font-semibold text-lg">{scannedBook.title}</h3>
+                    <h3 className="font-semibold text-lg">
+                      {scannedBook.title}
+                    </h3>
                     {scannedBook.author && (
-                      <p className="text-sm text-gray-600">Tác giả: {scannedBook.author}</p>
+                      <p className="text-sm text-gray-600">
+                        Tác giả: {scannedBook.author}
+                      </p>
                     )}
                     {scannedBook.publisher && (
-                      <p className="text-sm text-gray-600">NXB: {scannedBook.publisher}</p>
+                      <p className="text-sm text-gray-600">
+                        NXB: {scannedBook.publisher}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -379,13 +459,21 @@ export function LibraryScreen() {
                   value={returnDate}
                   onChange={(e) => setReturnDate(e.target.value)}
                   min={getMinReturnDate()}
+                  max={getMaxReturnDate()}
                 />
+                <p className="text-xs text-gray-500">
+                  Chọn ngày trả trong khoảng {getMinReturnDate()} -{" "}
+                  {getMaxReturnDate()} (tối đa 2 tháng)
+                </p>
               </div>
             </div>
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowBorrowDialog(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowBorrowDialog(false)}
+            >
               Hủy
             </Button>
             <Button
@@ -394,7 +482,8 @@ export function LibraryScreen() {
             >
               {loading ? (
                 <>
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Đang xử lý...
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Đang xử
+                  lý...
                 </>
               ) : (
                 <>
@@ -406,5 +495,5 @@ export function LibraryScreen() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }
