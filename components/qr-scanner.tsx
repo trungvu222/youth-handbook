@@ -53,21 +53,47 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
       console.log('[QR Scanner] Starting camera...')
       setCameraError(null)
       
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
-      })
+      // Try environment camera first (mobile back camera), fallback to any camera (desktop)
+      let stream: MediaStream | null = null
+      
+      try {
+        // Try back camera first (mobile)
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+        })
+      } catch (err) {
+        console.log('[QR Scanner] Back camera not available, trying any camera...')
+        // Fallback to any available camera (desktop)
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 1280 }, height: { ideal: 720 } }
+        })
+      }
+      
+      if (!stream) {
+        throw new Error('Không thể truy cập camera')
+      }
       
       streamRef.current = stream
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream
-        await videoRef.current.play()
-        console.log('[QR Scanner] Camera started successfully')
-        setCameraStarted(true)
         
-        // Start scanning for QR codes
-        scanningRef.current = true
-        requestAnimationFrame(scanQRCode)
+        // Wait for video to be ready
+        videoRef.current.onloadedmetadata = () => {
+          if (videoRef.current) {
+            videoRef.current.play().then(() => {
+              console.log('[QR Scanner] Camera started successfully')
+              setCameraStarted(true)
+              
+              // Start scanning for QR codes
+              scanningRef.current = true
+              requestAnimationFrame(scanQRCode)
+            }).catch((err) => {
+              console.error('[QR Scanner] Play error:', err)
+              setCameraError('Không thể phát video từ camera')
+            })
+          }
+        }
       }
     } catch (err: any) {
       console.error('[QR Scanner] Camera error:', err)

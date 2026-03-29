@@ -42,43 +42,11 @@ export function LibraryScreen() {
   // QR Scanner ref
   const qrScannerRef = useRef<any>(null);
 
-  // Start scanning
+  // Start scanning - Manual input only (camera disabled)
   const startScanning = async () => {
     setScanning(true);
     setScannedBook(null);
-
-    if (scanMode === "camera") {
-      try {
-        const { Html5Qrcode } = await import("html5-qrcode");
-        const scanner = new Html5Qrcode("qr-reader");
-        qrScannerRef.current = scanner;
-
-        await scanner.start(
-          { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 250, height: 250 } },
-          async (decodedText: string) => {
-            // Stop scanning
-            try {
-              await scanner.stop();
-            } catch (e) {}
-            qrScannerRef.current = null;
-
-            // Process scanned QR code
-            await handleQRCodeScanned(decodedText);
-          },
-          () => {}, // Ignore errors during scanning
-        );
-      } catch (error) {
-        console.error("Scanner error:", error);
-        toast({
-          title: "Lỗi",
-          description:
-            "Không thể khởi động camera. Vui lòng thử nhập mã thủ công.",
-          variant: "destructive",
-        });
-        setScanMode("manual");
-      }
-    }
+    setScanMode("manual"); // Force manual mode
   };
 
   // Stop scanning
@@ -291,73 +259,49 @@ export function LibraryScreen() {
                 </Button>
               </div>
 
-              {/* Mode Toggle */}
+              {/* Mode Toggle - Camera disabled */}
               <div className="flex gap-2 p-1 bg-gray-100 rounded-lg">
                 <button
-                  className={`flex-1 py-2 px-3 rounded-md flex items-center justify-center gap-2 text-sm font-medium transition-colors ${
-                    scanMode === "camera"
-                      ? "bg-white shadow text-blue-600"
-                      : "text-gray-600"
-                  }`}
-                  onClick={() => setScanMode("camera")}
+                  className="flex-1 py-2 px-3 rounded-md flex items-center justify-center gap-2 text-sm font-medium text-gray-400 cursor-not-allowed"
+                  disabled
                 >
-                  <Camera className="h-4 w-4" /> Quét QR
+                  <Camera className="h-4 w-4" /> Quét QR (Không khả dụng)
                 </button>
                 <button
-                  className={`flex-1 py-2 px-3 rounded-md flex items-center justify-center gap-2 text-sm font-medium transition-colors ${
-                    scanMode === "manual"
-                      ? "bg-white shadow text-blue-600"
-                      : "text-gray-600"
-                  }`}
-                  onClick={() => {
-                    setScanMode("manual");
-                    stopScanning();
-                  }}
+                  className="flex-1 py-2 px-3 rounded-md flex items-center justify-center gap-2 text-sm font-medium bg-white shadow text-blue-600"
                 >
                   <Keyboard className="h-4 w-4" /> Nhập mã
                 </button>
               </div>
 
-              {/* Scanner or Manual Input */}
-              {scanMode === "camera" ? (
-                <div className="relative">
-                  <div
-                    id="qr-reader"
-                    className="w-full rounded-lg overflow-hidden"
-                  ></div>
-                  <p className="text-center text-sm text-gray-500 mt-2">
-                    Hướng camera vào mã QR trên sách
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <Input
-                    placeholder="Nhập mã QR sách..."
-                    value={manualCode}
-                    onChange={(e) =>
-                      setManualCode(e.target.value.toUpperCase())
-                    }
-                    onKeyDown={(e) => e.key === "Enter" && handleManualSubmit()}
-                    autoFocus
-                  />
-                  <Button
-                    className="w-full"
-                    onClick={handleManualSubmit}
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <>
-                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Đang
-                        tìm...
-                      </>
-                    ) : (
-                      <>
-                        <Check className="h-4 w-4 mr-2" /> Xác nhận
-                      </>
-                    )}
-                  </Button>
-                </div>
-              )}
+              {/* Manual Input Only */}
+              <div className="space-y-3">
+                <Input
+                  placeholder="Nhập mã QR sách..."
+                  value={manualCode}
+                  onChange={(e) =>
+                    setManualCode(e.target.value.toUpperCase())
+                  }
+                  onKeyDown={(e) => e.key === "Enter" && handleManualSubmit()}
+                  autoFocus
+                />
+                <Button
+                  className="w-full"
+                  onClick={handleManualSubmit}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Đang
+                      tìm...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4 mr-2" /> Xác nhận
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
