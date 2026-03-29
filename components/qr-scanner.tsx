@@ -371,51 +371,34 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
           </div>
         ) : !result ? (
           <>
-            {/* Camera View */}
-            <div style={{ width: '100%', maxWidth: 'min(400px, calc(100vw - 40px))', marginBottom: 24 }}>
+            {/* Camera View - Always show the container */}
+            <div style={{ width: '100%', maxWidth: 'min(400px, calc(100vw - 40px))', marginBottom: 24, position: 'relative' }}>
+              {/* QR Reader Container - Always rendered */}
               <div 
                 id="qr-reader" 
                 ref={qrReaderRef}
                 style={{ 
                   width: '100%',
                   borderRadius: 20,
-                  overflow: 'hidden',
-                  display: cameraStarted ? 'block' : 'none'
+                  overflow: 'hidden'
                 }}
               />
               
+              {/* Loading overlay - shown while camera is starting */}
               {!cameraStarted && !cameraError && (
                 <div style={{
-                  width: '100%', 
-                  aspectRatio: '1',
-                  border: "3px solid #fff",
-                  borderRadius: 20, 
-                  position: "relative",
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  background: 'rgba(0,0,0,0.8)',
+                  borderRadius: 20,
+                  zIndex: 10
                 }}>
-                  <div style={{
-                    position: "absolute", top: -3, left: -3, width: 40, height: 40,
-                    borderTop: "6px solid #667eea", borderLeft: "6px solid #667eea",
-                    borderRadius: "20px 0 0 0"
-                  }} />
-                  <div style={{
-                    position: "absolute", top: -3, right: -3, width: 40, height: 40,
-                    borderTop: "6px solid #667eea", borderRight: "6px solid #667eea",
-                    borderRadius: "0 20px 0 0"
-                  }} />
-                  <div style={{
-                    position: "absolute", bottom: -3, left: -3, width: 40, height: 40,
-                    borderBottom: "6px solid #667eea", borderLeft: "6px solid #667eea",
-                    borderRadius: "0 0 0 20px"
-                  }} />
-                  <div style={{
-                    position: "absolute", bottom: -3, right: -3, width: 40, height: 40,
-                    borderBottom: "6px solid #667eea", borderRight: "6px solid #667eea",
-                    borderRadius: "0 0 20px 0"
-                  }} />
-
                   <div style={{ textAlign: "center" }}>
                     <Camera style={{ width: 48, height: 48, color: "#fff", margin: "0 auto 12px" }} />
                     <p style={{ color: "#fff", fontSize: 14 }}>Đang khởi động camera...</p>
@@ -423,28 +406,37 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
                 </div>
               )}
 
+              {/* Error overlay */}
               {cameraError && (
                 <div style={{
-                  width: '100%', 
-                  padding: 24,
-                  border: "2px solid rgba(239, 68, 68, 0.5)",
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'rgba(0,0,0,0.9)',
                   borderRadius: 20,
-                  background: "rgba(239, 68, 68, 0.1)",
-                  textAlign: 'center'
+                  zIndex: 10,
+                  padding: 24
                 }}>
-                  <AlertCircle style={{ width: 48, height: 48, color: "#ef4444", margin: "0 auto 12px" }} />
-                  <p style={{ color: "#fff", fontSize: 14, marginBottom: 12 }}>{cameraError}</p>
-                  <button
-                    onClick={startCamera}
-                    style={{
-                      padding: "10px 20px", borderRadius: 10,
-                      border: "none", background: "#fff",
-                      color: "#1e293b", fontSize: 14, fontWeight: 600,
-                      cursor: "pointer"
-                    }}
-                  >
-                    Thử lại
-                  </button>
+                  <div style={{ textAlign: 'center' }}>
+                    <AlertCircle style={{ width: 48, height: 48, color: "#ef4444", margin: "0 auto 12px" }} />
+                    <p style={{ color: "#fff", fontSize: 14, marginBottom: 12 }}>{cameraError}</p>
+                    <button
+                      onClick={startCamera}
+                      style={{
+                        padding: "10px 20px", borderRadius: 10,
+                        border: "none", background: "#fff",
+                        color: "#1e293b", fontSize: 14, fontWeight: 600,
+                        cursor: "pointer"
+                      }}
+                    >
+                      Thử lại
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -457,6 +449,7 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     handleManualInput((e.target as HTMLInputElement).value)
+                    ;(e.target as HTMLInputElement).value = ''
                   }
                 }}
                 style={{
