@@ -516,25 +516,40 @@ app.post('/api/admin/reset-and-seed', async (req, res) => {
     // 3. Tạo Activities
     console.log('📅 Creating activities...');
     const activityData = [
-      { title: 'Sinh hoạt Chi đoàn định kỳ tháng 12/2025', type: 'MEETING', location: 'Hội trường A', pointsReward: 15, status: 'ACTIVE' },
+      { title: 'Sinh hoạt Chi đoàn định kỳ tháng 4/2026', type: 'MEETING', location: 'Hội trường A', pointsReward: 15, status: 'ACTIVE' },
       { title: 'Chương trình Xuân tình nguyện 2026', type: 'VOLUNTEER', location: 'Phường 10, Quận Gò Vấp', pointsReward: 30, status: 'ACTIVE' },
       { title: 'Hội thảo Kỹ năng lãnh đạo', type: 'STUDY', location: 'Phòng họp B2', pointsReward: 25, status: 'ACTIVE' },
       { title: 'Ngày hội Hiến máu nhân đạo', type: 'VOLUNTEER', location: 'Sân trường', pointsReward: 40, status: 'ACTIVE' },
       { title: 'Cuộc thi Tìm hiểu về Đoàn', type: 'STUDY', location: 'Online', pointsReward: 20, status: 'ACTIVE' },
-      { title: 'Giải bóng đá Đoàn viên 2025', type: 'SOCIAL', location: 'Sân vận động', pointsReward: 15, status: 'COMPLETED' },
+      { title: 'Giải bóng đá Đoàn viên 2026', type: 'SOCIAL', location: 'Sân vận động', pointsReward: 15, status: 'ACTIVE' },
+      // Add some completed activities from the past
+      { title: 'Sinh hoạt Chi đoàn tháng 3/2026', type: 'MEETING', location: 'Hội trường B', pointsReward: 15, status: 'COMPLETED' },
+      { title: 'Hoạt động tình nguyện Xuân 2026', type: 'VOLUNTEER', location: 'Xã A, Huyện B', pointsReward: 30, status: 'COMPLETED' },
     ];
     
     const activities = [];
     for (let i = 0; i < activityData.length; i++) {
       const a = activityData[i];
+      let startDate, endDate;
+      
+      if (a.status === 'COMPLETED') {
+        // Create past activities (March 2026)
+        startDate = new Date(2026, 2, 10 + (i - 6), 14, 0); // March 10-11, 2026
+        endDate = new Date(2026, 2, 10 + (i - 6), 17, 0);
+      } else {
+        // Create future activities (April 2026)
+        startDate = new Date(2026, 3, 5 + i, 14, 0); // April 5-10, 2026
+        endDate = new Date(2026, 3, 5 + i, 17, 0);
+      }
+      
       const activity = await prisma.activity.create({
         data: {
           ...a,
           description: `Mô tả chi tiết về ${a.title}`,
           organizerId: i < 2 ? adminUser.id : leaders[i % 5].id,
           unitId: i < 2 ? null : units[i % 5].id,
-          startTime: new Date(2025, 11, 20 + i, 14, 0),
-          endTime: new Date(2025, 11, 20 + i, 17, 0),
+          startTime: startDate,
+          endTime: endDate,
           qrCode: `activity-${Date.now()}-${i}`,
           maxParticipants: 50 + i * 10
         }
@@ -567,48 +582,114 @@ app.post('/api/admin/reset-and-seed', async (req, res) => {
       });
     }
     
-    // 5. Tạo Exams
+    // 5. Tạo Exams với câu hỏi đầy đủ
     console.log('📝 Creating exams...');
     const examData = [
-      { title: 'Tìm hiểu về Đoàn TNCS Hồ Chí Minh', duration: 30, totalQuestions: 10, passingScore: 60, pointsAwarded: 20 },
-      { title: 'Kiến thức về Điều lệ Đoàn', duration: 20, totalQuestions: 15, passingScore: 70, pointsAwarded: 25 },
-      { title: 'Cuộc thi Tìm hiểu Ngày 26/3', duration: 45, totalQuestions: 20, passingScore: 50, pointsAwarded: 50 },
+      { 
+        title: 'Tìm hiểu về Đoàn TNCS Hồ Chí Minh', 
+        duration: 30, 
+        totalQuestions: 10, 
+        passingScore: 60, 
+        pointsAwarded: 20,
+        questions: [
+          { questionText: 'Đoàn TNCS Hồ Chí Minh được thành lập vào ngày tháng năm nào?', answers: [{ text: '26/3/1931', isCorrect: true }, { text: '19/5/1931', isCorrect: false }, { text: '3/2/1930', isCorrect: false }, { text: '2/9/1945', isCorrect: false }] },
+          { questionText: 'Tuổi đoàn viên từ bao nhiêu đến bao nhiêu?', answers: [{ text: '16-30 tuổi', isCorrect: true }, { text: '15-28 tuổi', isCorrect: false }, { text: '18-35 tuổi', isCorrect: false }] },
+          { questionText: 'Màu cờ Đoàn là màu gì?', answers: [{ text: 'Đỏ', isCorrect: true }, { text: 'Xanh', isCorrect: false }, { text: 'Vàng', isCorrect: false }] },
+          { questionText: 'Biểu tượng trên cờ Đoàn là gì?', answers: [{ text: 'Ngôi sao vàng', isCorrect: true }, { text: 'Búa liềm', isCorrect: false }, { text: 'Hoa sen', isCorrect: false }] },
+          { questionText: 'Đoàn TNCS Hồ Chí Minh là tổ chức của ai?', answers: [{ text: 'Thanh niên Việt Nam', isCorrect: true }, { text: 'Học sinh', isCorrect: false }, { text: 'Sinh viên', isCorrect: false }] },
+          { questionText: 'Ngày truyền thống của Đoàn là ngày nào?', answers: [{ text: '26/3', isCorrect: true }, { text: '19/5', isCorrect: false }, { text: '2/9', isCorrect: false }] },
+          { questionText: 'Đoàn viên phải có phẩm chất gì?', answers: [{ text: 'Trung thành với Tổ quốc', isCorrect: true }, { text: 'Giàu có', isCorrect: false }, { text: 'Nổi tiếng', isCorrect: false }] },
+          { questionText: 'Nhiệm vụ chính của Đoàn viên là gì?', answers: [{ text: 'Học tập và rèn luyện', isCorrect: true }, { text: 'Kiếm tiền', isCorrect: false }, { text: 'Giải trí', isCorrect: false }] },
+          { questionText: 'Đoàn TNCS HCM do ai lãnh đạo?', answers: [{ text: 'Đảng Cộng sản Việt Nam', isCorrect: true }, { text: 'Chính phủ', isCorrect: false }, { text: 'Quốc hội', isCorrect: false }] },
+          { questionText: 'Đoàn viên cần có tinh thần gì?', answers: [{ text: 'Đoàn kết, tương trợ', isCorrect: true }, { text: 'Cạnh tranh', isCorrect: false }, { text: 'Ích kỷ', isCorrect: false }] },
+        ]
+      },
+      { 
+        title: 'Kiến thức về Điều lệ Đoàn', 
+        duration: 20, 
+        totalQuestions: 15, 
+        passingScore: 70, 
+        pointsAwarded: 25,
+        questions: [
+          { questionText: 'Điều lệ Đoàn quy định về điều gì?', answers: [{ text: 'Tổ chức và hoạt động của Đoàn', isCorrect: true }, { text: 'Luật pháp', isCorrect: false }, { text: 'Kinh tế', isCorrect: false }] },
+          { questionText: 'Đoàn viên có quyền gì?', answers: [{ text: 'Tham gia sinh hoạt Đoàn', isCorrect: true }, { text: 'Không tham gia', isCorrect: false }, { text: 'Tự do tuyệt đối', isCorrect: false }] },
+          { questionText: 'Đoàn viên có nghĩa vụ gì?', answers: [{ text: 'Chấp hành Điều lệ', isCorrect: true }, { text: 'Không cần làm gì', isCorrect: false }, { text: 'Chỉ hưởng quyền lợi', isCorrect: false }] },
+          { questionText: 'Đoàn phí được sử dụng vào việc gì?', answers: [{ text: 'Hoạt động Đoàn', isCorrect: true }, { text: 'Cá nhân', isCorrect: false }, { text: 'Không rõ', isCorrect: false }] },
+          { questionText: 'Ai có thể kết nạp vào Đoàn?', answers: [{ text: 'Thanh niên từ 16-30 tuổi', isCorrect: true }, { text: 'Mọi người', isCorrect: false }, { text: 'Chỉ học sinh', isCorrect: false }] },
+          { questionText: 'Đoàn viên bị kỷ luật khi nào?', answers: [{ text: 'Vi phạm Điều lệ', isCorrect: true }, { text: 'Không bao giờ', isCorrect: false }, { text: 'Tùy ý', isCorrect: false }] },
+          { questionText: 'Cấp ủy Đoàn gồm những ai?', answers: [{ text: 'Ban Chấp hành', isCorrect: true }, { text: 'Tất cả đoàn viên', isCorrect: false }, { text: 'Người ngoài', isCorrect: false }] },
+          { questionText: 'Đại hội Đoàn họp bao lâu một lần?', answers: [{ text: '5 năm', isCorrect: true }, { text: '1 năm', isCorrect: false }, { text: '10 năm', isCorrect: false }] },
+          { questionText: 'Đoàn viên được khen thưởng khi nào?', answers: [{ text: 'Có thành tích xuất sắc', isCorrect: true }, { text: 'Không cần điều kiện', isCorrect: false }, { text: 'Có tiền', isCorrect: false }] },
+          { questionText: 'Chi đoàn là gì?', answers: [{ text: 'Tổ chức cơ sở của Đoàn', isCorrect: true }, { text: 'Nhóm bạn', isCorrect: false }, { text: 'Câu lạc bộ', isCorrect: false }] },
+          { questionText: 'Bí thư Chi đoàn do ai bầu?', answers: [{ text: 'Đoàn viên trong Chi đoàn', isCorrect: true }, { text: 'Cấp trên chỉ định', isCorrect: false }, { text: 'Tự ứng cử', isCorrect: false }] },
+          { questionText: 'Đoàn viên có thể ra Đoàn khi nào?', answers: [{ text: 'Hết tuổi hoặc xin ra', isCorrect: true }, { text: 'Bất cứ lúc nào', isCorrect: false }, { text: 'Không được ra', isCorrect: false }] },
+          { questionText: 'Sinh hoạt Chi đoàn diễn ra như thế nào?', answers: [{ text: 'Định kỳ hàng tháng', isCorrect: true }, { text: 'Không cần', isCorrect: false }, { text: 'Tùy hứng', isCorrect: false }] },
+          { questionText: 'Đoàn viên cần đóng đoàn phí không?', answers: [{ text: 'Có, theo quy định', isCorrect: true }, { text: 'Không', isCorrect: false }, { text: 'Tùy ý', isCorrect: false }] },
+          { questionText: 'Mục đích của Điều lệ Đoàn là gì?', answers: [{ text: 'Định hướng hoạt động Đoàn', isCorrect: true }, { text: 'Trang trí', isCorrect: false }, { text: 'Không có mục đích', isCorrect: false }] },
+        ]
+      },
+      { 
+        title: 'Cuộc thi Tìm hiểu Ngày 26/3', 
+        duration: 45, 
+        totalQuestions: 20, 
+        passingScore: 50, 
+        pointsAwarded: 50,
+        questions: [
+          { questionText: 'Ngày 26/3/1931 có ý nghĩa gì?', answers: [{ text: 'Ngày thành lập Đoàn', isCorrect: true }, { text: 'Ngày Quốc khánh', isCorrect: false }, { text: 'Ngày Giải phóng', isCorrect: false }] },
+          { questionText: 'Đoàn TNCS HCM tiền thân là gì?', answers: [{ text: 'Đoàn Thanh niên Cộng sản', isCorrect: true }, { text: 'Hội Liên hiệp Thanh niên', isCorrect: false }, { text: 'Đội Thiếu niên', isCorrect: false }] },
+          { questionText: 'Ai là người sáng lập Đoàn?', answers: [{ text: 'Đảng Cộng sản Việt Nam', isCorrect: true }, { text: 'Chủ tịch Hồ Chí Minh', isCorrect: false }, { text: 'Thanh niên', isCorrect: false }] },
+          { questionText: 'Đoàn được thành lập ở đâu?', answers: [{ text: 'Hà Nội', isCorrect: true }, { text: 'Sài Gòn', isCorrect: false }, { text: 'Huế', isCorrect: false }] },
+          { questionText: 'Tên đầu tiên của Đoàn là gì?', answers: [{ text: 'Đoàn Thanh niên Cộng sản Hồ Chí Minh', isCorrect: true }, { text: 'Đoàn Thanh niên Việt Nam', isCorrect: false }, { text: 'Hội Thanh niên', isCorrect: false }] },
+          { questionText: 'Đoàn đã trải qua bao nhiêu kỳ Đại hội?', answers: [{ text: 'Nhiều kỳ', isCorrect: true }, { text: '1 kỳ', isCorrect: false }, { text: 'Chưa có', isCorrect: false }] },
+          { questionText: 'Đoàn viên đầu tiên là ai?', answers: [{ text: 'Các chiến sĩ cách mạng', isCorrect: true }, { text: 'Học sinh', isCorrect: false }, { text: 'Nông dân', isCorrect: false }] },
+          { questionText: 'Đoàn có vai trò gì trong cách mạng?', answers: [{ text: 'Lực lượng xung kích', isCorrect: true }, { text: 'Không có vai trò', isCorrect: false }, { text: 'Chỉ học tập', isCorrect: false }] },
+          { questionText: 'Đoàn tham gia kháng chiến như thế nào?', answers: [{ text: 'Tích cực, dũng cảm', isCorrect: true }, { text: 'Không tham gia', isCorrect: false }, { text: 'Thụ động', isCorrect: false }] },
+          { questionText: 'Đoàn có đóng góp gì cho đất nước?', answers: [{ text: 'Rất lớn', isCorrect: true }, { text: 'Không có', isCorrect: false }, { text: 'Rất ít', isCorrect: false }] },
+          { questionText: 'Ngày 26/3 được tổ chức như thế nào?', answers: [{ text: 'Nhiều hoạt động kỷ niệm', isCorrect: true }, { text: 'Không tổ chức', isCorrect: false }, { text: 'Chỉ nghỉ', isCorrect: false }] },
+          { questionText: 'Ý nghĩa của ngày 26/3 là gì?', answers: [{ text: 'Nhắc nhở truyền thống Đoàn', isCorrect: true }, { text: 'Không có ý nghĩa', isCorrect: false }, { text: 'Chỉ là ngày lễ', isCorrect: false }] },
+          { questionText: 'Đoàn viên cần làm gì vào ngày 26/3?', answers: [{ text: 'Tham gia hoạt động kỷ niệm', isCorrect: true }, { text: 'Nghỉ ngơi', isCorrect: false }, { text: 'Không cần làm gì', isCorrect: false }] },
+          { questionText: 'Truyền thống Đoàn là gì?', answers: [{ text: 'Trung thành, đoàn kết', isCorrect: true }, { text: 'Ích kỷ', isCorrect: false }, { text: 'Thụ động', isCorrect: false }] },
+          { questionText: 'Đoàn viên cần kế thừa điều gì?', answers: [{ text: 'Truyền thống cách mạng', isCorrect: true }, { text: 'Không cần kế thừa', isCorrect: false }, { text: 'Chỉ học tập', isCorrect: false }] },
+          { questionText: 'Đoàn có mối quan hệ với Đảng như thế nào?', answers: [{ text: 'Đoàn do Đảng lãnh đạo', isCorrect: true }, { text: 'Độc lập', isCorrect: false }, { text: 'Không liên quan', isCorrect: false }] },
+          { questionText: 'Đoàn có vai trò gì trong xây dựng đất nước?', answers: [{ text: 'Lực lượng nòng cốt', isCorrect: true }, { text: 'Không có', isCorrect: false }, { text: 'Rất nhỏ', isCorrect: false }] },
+          { questionText: 'Đoàn viên cần có ý thức gì?', answers: [{ text: 'Trách nhiệm với Tổ quốc', isCorrect: true }, { text: 'Không cần', isCorrect: false }, { text: 'Chỉ lo bản thân', isCorrect: false }] },
+          { questionText: 'Đoàn có hoạt động quốc tế không?', answers: [{ text: 'Có, hợp tác với thanh niên thế giới', isCorrect: true }, { text: 'Không', isCorrect: false }, { text: 'Chỉ trong nước', isCorrect: false }] },
+          { questionText: 'Tương lai của Đoàn như thế nào?', answers: [{ text: 'Phát triển mạnh mẽ', isCorrect: true }, { text: 'Suy yếu', isCorrect: false }, { text: 'Không rõ', isCorrect: false }] },
+        ]
+      },
     ];
     
     for (const e of examData) {
       const exam = await prisma.exam.create({
         data: {
-          ...e,
+          title: e.title,
           description: `Mô tả về ${e.title}`,
           instructions: 'Thời gian làm bài có giới hạn. Chọn đáp án đúng nhất.',
+          duration: e.duration,
+          totalQuestions: e.totalQuestions,
+          passingScore: e.passingScore,
+          pointsAwarded: e.pointsAwarded,
           status: 'ACTIVE',
           showResults: true,
           maxAttempts: 3,
-          startTime: new Date(2025, 11, 1),
-          endTime: new Date(2025, 11, 31),
+          startTime: new Date(2026, 3, 1), // April 1, 2026
+          endTime: new Date(2026, 4, 31), // May 31, 2026
           creatorId: adminUser.id
         }
       });
       
-      // Tạo câu hỏi cho exam đầu
-      if (exam.title.includes('Tìm hiểu')) {
-        const questions = [
-          { questionText: 'Đoàn TNCS Hồ Chí Minh được thành lập vào ngày tháng năm nào?', answers: [{ text: '26/3/1931', isCorrect: true }, { text: '19/5/1931', isCorrect: false }, { text: '3/2/1930', isCorrect: false }, { text: '2/9/1945', isCorrect: false }] },
-          { questionText: 'Tuổi đoàn viên từ bao nhiêu đến bao nhiêu?', answers: [{ text: '16-30 tuổi', isCorrect: true }, { text: '15-28 tuổi', isCorrect: false }, { text: '18-35 tuổi', isCorrect: false }] },
-          { questionText: 'Màu cờ Đoàn là màu gì?', answers: [{ text: 'Đỏ', isCorrect: true }, { text: 'Xanh', isCorrect: false }, { text: 'Vàng', isCorrect: false }] },
-        ];
-        for (let i = 0; i < questions.length; i++) {
-          await prisma.examQuestion.create({
-            data: {
-              examId: exam.id,
-              questionText: questions[i].questionText,
-              questionType: 'SINGLE_CHOICE',
-              answers: questions[i].answers,
-              points: 1,
-              orderIndex: i + 1
-            }
-          });
-        }
+      // Tạo câu hỏi cho exam
+      for (let i = 0; i < e.questions.length; i++) {
+        await prisma.examQuestion.create({
+          data: {
+            examId: exam.id,
+            questionText: e.questions[i].questionText,
+            questionType: 'SINGLE_CHOICE',
+            answers: e.questions[i].answers,
+            points: 1,
+            orderIndex: i + 1
+          }
+        });
       }
     }
     

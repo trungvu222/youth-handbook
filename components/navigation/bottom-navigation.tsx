@@ -1,16 +1,18 @@
 "use client"
 
-import { Home, Calendar, FileText, User, MessageSquare } from "lucide-react"
+import { Home, Calendar, FileText, User, MessageSquare, Book, QrCode } from "lucide-react"
 import type { TabType } from "@/components/main-app"
 
 interface BottomNavigationProps {
   activeTab: TabType
   onTabChange: (tab: TabType) => void
+  onQRScan?: () => void
 }
 
 const tabs = [
   { id: "home" as TabType, label: "Bảng tin", icon: Home },
   { id: "activities" as TabType, label: "Sổ tay", icon: Calendar },
+  { id: "books" as TabType, label: "Sách", icon: Book },
   { id: "docs" as TabType, label: "Tài liệu", icon: FileText },
   { id: "study" as TabType, label: "Học tập", icon: MessageSquare },
   { id: "me" as TabType, label: "Cá nhân", icon: User },
@@ -20,6 +22,7 @@ const tabs = [
 const TAB_COLOR: Record<string, string> = {
   home:       '#dc2626',
   activities: '#16a34a',
+  books:      '#f59e0b',
   docs:       '#2563eb',
   study:      '#7c3aed',
   me:         '#0891b2',
@@ -28,12 +31,13 @@ const TAB_COLOR: Record<string, string> = {
 const TAB_BG: Record<string, string> = {
   home:       '#fef2f2',
   activities: '#f0fdf4',
+  books:      '#fef3c7',
   docs:       '#eff6ff',
   study:      '#f5f3ff',
   me:         '#ecfeff',
 }
 
-export function BottomNavigation({ activeTab, onTabChange }: BottomNavigationProps) {
+export function BottomNavigation({ activeTab, onTabChange, onQRScan }: BottomNavigationProps) {
   const navStyle: React.CSSProperties = {
     backgroundColor: 'rgba(255,255,255,0.94)',
     backdropFilter: 'blur(16px)',
@@ -115,7 +119,61 @@ export function BottomNavigation({ activeTab, onTabChange }: BottomNavigationPro
   return (
     <nav style={navStyle}>
       <div style={navContainerStyle}>
-        {tabs.map((tab) => {
+        {tabs.slice(0, 3).map((tab) => {
+          const Icon = tab.icon
+          const isActive = activeTab === tab.id
+
+          return (
+            <button
+              key={tab.id}
+              onClick={() => onTabChange(tab.id)}
+              style={getTabStyle(tab, isActive)}
+            >
+              {/* Top accent indicator */}
+              <div style={getIndicatorStyle(tab, isActive)} />
+
+              <div style={getIconWrapStyle(tab, isActive)}>
+                <Icon style={getIconStyle(tab, isActive)} />
+              </div>
+              <span style={getLabelStyle(tab, isActive)}>{tab.label}</span>
+            </button>
+          )
+        })}
+
+        {/* QR Scan Button */}
+        {onQRScan && (
+          <button
+            onClick={onQRScan}
+            style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              border: '4px solid #fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              boxShadow: '0 4px 20px rgba(102, 126, 234, 0.4)',
+              transition: 'all 0.2s ease',
+              position: 'relative',
+              marginTop: '-20px'
+            }}
+            onMouseDown={(e) => {
+              e.currentTarget.style.transform = 'scale(0.95)'
+            }}
+            onMouseUp={(e) => {
+              e.currentTarget.style.transform = 'scale(1)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)'
+            }}
+          >
+            <QrCode style={{ width: 28, height: 28, color: '#fff', strokeWidth: 2.5 }} />
+          </button>
+        )}
+
+        {tabs.slice(3).map((tab) => {
           const Icon = tab.icon
           const isActive = activeTab === tab.id
 

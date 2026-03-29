@@ -523,19 +523,38 @@ const submitSurveyResponse = async (req, res, next) => {
     const userId = req.user.id;
     const { answers } = req.body;
 
+    console.log('[Survey Submit] User:', userId, 'Survey:', id);
+
     // Check survey exists
     const survey = await prisma.survey.findUnique({ where: { id } });
     if (!survey) {
       return res.status(404).json({ success: false, error: 'Không tìm thấy khảo sát' });
     }
 
-    // Auto-expire if past endDate
+    console.log('[Survey Submit] Survey status:', survey.status);
+    console.log('[Survey Submit] Survey dates:', {
+      startDate: survey.startDate,
+      endDate: survey.endDate,
+      now: new Date()
+    });
+
+    // Check if survey is within time range
     const now = new Date();
-    if (survey.status === 'ACTIVE' && survey.endDate && new Date(survey.endDate) < now) {
-      await prisma.survey.update({
-        where: { id },
-        data: { status: 'CLOSED' }
-      });
+    const startDate = new Date(survey.startDate);
+    const endDate = new Date(survey.endDate);
+
+    if (now < startDate) {
+      return res.status(400).json({ success: false, error: 'Khảo sát chưa bắt đầu' });
+    }
+
+    if (now > endDate) {
+      // Auto-expire if past endDate
+      if (survey.status === 'ACTIVE') {
+        await prisma.survey.update({
+          where: { id },
+          data: { status: 'CLOSED' }
+        });
+      }
       return res.status(400).json({ success: false, error: 'Khảo sát đã hết hạn' });
     }
 

@@ -41,7 +41,7 @@ interface Suggestion {
     fullName: string
     unitName?: string
   }
-  responses?: any[]
+  responses?: number | any[]  // Can be count (number) or array of responses
   viewCount: number
 }
 
@@ -125,7 +125,7 @@ function EmptyState({ icon, title, description, actionLabel, onAction }: {
 export default function SuggestionsScreen() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [mySuggestions, setMySuggestions] = useState<Suggestion[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [activeTab, setActiveTab] = useState<'all' | 'my'>('all')
   const [searchTerm, setSearchTerm] = useState('')
@@ -133,25 +133,48 @@ export default function SuggestionsScreen() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedSuggestion, setSelectedSuggestion] = useState<Suggestion | null>(null)
   const [showCreateForm, setShowCreateForm] = useState(false)
+  const [initialLoadDone, setInitialLoadDone] = useState(false)
 
-  useEffect(() => { loadData() }, [])
-
+  // Initial load
   useEffect(() => {
+    loadData(false, false)
+  }, [])
+
+  // Reload when filters change
+  useEffect(() => {
+    if (!initialLoadDone) return
+    
     const timeoutId = setTimeout(() => {
-      if (!loading && !refreshing) loadData()
+      loadData(false, false)
     }, 300)
     return () => clearTimeout(timeoutId)
-  }, [activeTab, searchTerm, categoryFilter, statusFilter])
+  }, [activeTab, searchTerm, categoryFilter, statusFilter, initialLoadDone])
 
-  const loadData = async (isRefresh = false) => {
+  const loadData = async (isRefresh = false, silent = false) => {
     try {
-      if (isRefresh) setRefreshing(true)
-      else setLoading(true)
+      if (isRefresh) {
+        setRefreshing(true)
+      } else {
+        setLoading(true)
+      }
+
+      console.log('[Suggestions] Loading data, tab:', activeTab)
 
       if (activeTab === 'my') {
         const response = await suggestionApi.getMySuggestions()
+        console.log('[Suggestions] My suggestions response:', response)
         if (response.success && response.data) {
+          console.log('[Suggestions] Setting my suggestions:', response.data.length, 'items')
           setMySuggestions(response.data)
+        } else {
+          console.error('[Suggestions] Failed to load my suggestions:', response.error)
+          if (!silent) {
+            toast({
+              title: 'Lỗi',
+              description: response.error || 'Không thể tải kiến nghị của bạn',
+              variant: 'destructive'
+            })
+          }
         }
       } else {
         const params: any = {}
@@ -161,26 +184,45 @@ export default function SuggestionsScreen() {
         params.limit = 50
 
         const response = await suggestionApi.getSuggestions(params)
+        console.log('[Suggestions] All suggestions response:', response)
         if (response.success && response.data) {
-          setSuggestions(response.data.data || response.data)
+          const suggestions = response.data.data || response.data
+          console.log('[Suggestions] Setting all suggestions:', suggestions.length, 'items')
+          setSuggestions(suggestions)
+        } else {
+          console.error('[Suggestions] Failed to load suggestions:', response.error)
+          if (!silent) {
+            toast({
+              title: 'Lỗi',
+              description: response.error || 'Không thể tải danh sách kiến nghị',
+              variant: 'destructive'
+            })
+          }
         }
       }
+      
+      setInitialLoadDone(true)
     } catch (error) {
       console.error('Error loading suggestions:', error)
-      toast({
-        title: 'Lỗi',
-        description: 'Không thể tải danh sách kiến nghị',
-        variant: 'destructive'
-      })
+      if (!silent) {
+        toast({
+          title: 'Lỗi',
+          description: 'Không thể tải danh sách kiến nghị',
+          variant: 'destructive'
+        })
+      }
     } finally {
       setLoading(false)
       setRefreshing(false)
     }
   }
 
-  const handleSuggestionCreated = () => {
+  const handleSuggestionCreated = async () => {
     setShowCreateForm(false)
-    loadData(true)
+    // Switch to "My" tab to show the newly created suggestion
+    setActiveTab('my')
+    // Reload data immediately
+    await loadData(true, false)
     toast({
       title: 'Thành công',
       description: 'Đã gửi kiến nghị thành công'
@@ -189,6 +231,12 @@ export default function SuggestionsScreen() {
 
   const handleViewSuggestion = (suggestion: Suggestion) => {
     setSelectedSuggestion(suggestion)
+  }
+
+  const handleBackFromDetail = () => {
+    setSelectedSuggestion(null)
+    // Reload data when coming back from detail view
+    loadData(true, true)
   }
 
   const formatDate = (dateString: string) => {
@@ -219,8 +267,8 @@ export default function SuggestionsScreen() {
     return (
       <SuggestionDetail
         suggestion={selectedSuggestion}
-        onBack={() => setSelectedSuggestion(null)}
-        onUpdate={() => loadData(true)}
+        onBack={handleBackFromDetail}
+        onUpdate={() => loadData(true, false)}
       />
     )
   }
@@ -554,30 +602,19 @@ export default function SuggestionsScreen() {
                         {suggestion.content}
                       </p>
 
-                      {/* Meta info */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 11, color: '#94a3b8' }}>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <Clock style={{ width: 12, height: 12 }} />
-                            {formatDate(suggestion.submittedAt)}
-                          </span>
-                          {!suggestion.isAnonymous && suggestion.user && (
-                            <span>· {suggestion.user.fullName}</span>
-                          )}
-                          {suggestion.responses && suggestion.responses.length > 0 && (
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 3, color: '#2563eb' }}>
-                              <MessageSquare style={{ width: 12, height: 12 }} />
-                              {suggestion.responses.length}
-                            </span>
-                          )}
-                          {suggestion.viewCount > 0 && (
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                              <Eye style={{ width: 12, height: 12 }} />
-                              {suggestion.viewCount}
-                            </span>
-                          )}
+                      {/* Meta info - Simple text display */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 13, color: '#64748b', marginTop: 8 }}>
+                        {/* Response count */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <MessageSquare style={{ width: 16, height: 16 }} />
+                          <span>{typeof suggestion.responses === 'number' ? suggestion.responses : (Array.isArray(suggestion.responses) ? suggestion.responses.length : 0)} phản hồi</span>
                         </div>
-                        <ChevronRight style={{ width: 16, height: 16, color: '#cbd5e1' }} />
+
+                        {/* Created date */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <Clock style={{ width: 16, height: 16 }} />
+                          <span>{new Date(suggestion.submittedAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                        </div>
                       </div>
 
                       {/* Tags */}

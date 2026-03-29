@@ -24,6 +24,7 @@ interface BorrowingRecord {
   author: string
   publisher: string
   borrowedAt: string
+  expectedReturnDate: string | null
   returnedAt: string | null
   status: string
 }
@@ -64,7 +65,28 @@ export function BookManagement() {
   useEffect(() => {
     loadBooks()
     loadStats()
-  }, [])
+    
+    // Auto-polling for real-time updates when users borrow/return books
+    const intervalId = setInterval(() => {
+      // Silent refresh - no loading spinner
+      if (activeTab === 'books') {
+        bookApi.getBooks().then(response => {
+          if (response.success && response.data) {
+            setBooks(response.data)
+          }
+        }).catch(err => console.error('[Admin] Polling error:', err))
+      } else if (activeTab === 'stats') {
+        bookApi.getBorrowingStats(statusFilter === 'all' ? undefined : statusFilter as any).then(response => {
+          if (response.success && response.data) {
+            setStats(response.data.stats)
+            setBorrowings(response.data.borrowings)
+          }
+        }).catch(err => console.error('[Admin] Polling error:', err))
+      }
+    }, 5000) // Poll every 5 seconds (reduced frequency)
+    
+    return () => clearInterval(intervalId)
+  }, [activeTab, statusFilter])
 
   const loadBooks = async () => {
     try {
@@ -267,6 +289,11 @@ export function BookManagement() {
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '-'
     return new Date(dateString).toLocaleString('vi-VN')
+  }
+
+  const isOverdue = (expectedReturnDate: string | null, returnedAt: string | null) => {
+    if (!expectedReturnDate || returnedAt) return false
+    return new Date(expectedReturnDate) < new Date()
   }
 
   if (loading && books.length === 0) {
@@ -494,6 +521,7 @@ export function BookManagement() {
                       <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Tác giả</th>
                       <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Nhà xuất bản</th>
                       <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Thời gian mượn</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Dự kiến trả</th>
                       <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Thời gian trả</th>
                     </tr>
                   </thead>
@@ -510,6 +538,20 @@ export function BookManagement() {
                         <td className="px-4 py-3 text-sm text-gray-600">{b.publisher || '-'}</td>
                         <td className="px-4 py-3 text-sm">{formatDate(b.borrowedAt)}</td>
                         <td className="px-4 py-3 text-sm">
+                          {b.expectedReturnDate ? (
+                            <div className="flex items-center gap-2">
+                              <span className={isOverdue(b.expectedReturnDate, b.returnedAt) ? "text-red-600 font-semibold" : "text-blue-600"}>
+                                {formatDate(b.expectedReturnDate)}
+                              </span>
+                              {isOverdue(b.expectedReturnDate, b.returnedAt) && (
+                                <Badge variant="destructive" className="text-xs">Quá hạn</Badge>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
                           {b.returnedAt ? (
                             formatDate(b.returnedAt)
                           ) : (
@@ -520,7 +562,7 @@ export function BookManagement() {
                     ))}
                     {filteredBorrowings.length === 0 && (
                       <tr>
-                        <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                        <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
                           Không có dữ liệu
                         </td>
                       </tr>

@@ -88,6 +88,7 @@ export function SurveyManagement() {
   const [surveyToDelete, setSurveyToDelete] = useState<Survey | null>(null)
   const [showQuestionsDialog, setShowQuestionsDialog] = useState(false)
   const [selectedSurveyForView, setSelectedSurveyForView] = useState<Survey | null>(null)
+  const [showResponsesDialog, setShowResponsesDialog] = useState(false)
   const { toast } = useToast()
 
   // Statistics state
@@ -95,12 +96,13 @@ export function SurveyManagement() {
   const [surveyResponsesData, setSurveyResponsesData] = useState<{[key: string]: any[]}>({})
   const [loadingResponses, setLoadingResponses] = useState<{[key: string]: boolean}>({})
   const [viewQuestionsData, setViewQuestionsData] = useState<SurveyQuestion[]>([])
+  const [viewResponsesData, setViewResponsesData] = useState<any[]>([])
 
   // Form state
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    status: 'DRAFT' as 'DRAFT' | 'ACTIVE' | 'CLOSED',
+    status: 'ACTIVE' as 'DRAFT' | 'ACTIVE' | 'CLOSED',
     startDate: '',
     endDate: '',
     pointsReward: 10,
@@ -458,7 +460,7 @@ export function SurveyManagement() {
     setFormData({
       title: '',
       description: '',
-      status: 'DRAFT',
+      status: 'ACTIVE',
       startDate: '',
       endDate: '',
       pointsReward: 10,
@@ -578,22 +580,26 @@ export function SurveyManagement() {
   }
 
   const viewSurveyResponses = async (surveyId: string) => {
-    // Expand the survey in stats tab
-    const newExpanded = new Set(expandedSurveys)
-    if (!newExpanded.has(surveyId)) {
-      newExpanded.add(surveyId)
-      setExpandedSurveys(newExpanded)
-
-      // Load responses if not already loaded
-      if (!surveyResponsesData[surveyId]) {
-        await loadSurveyResponses(surveyId)
-      }
+    const survey = surveys.find(s => s.id === surveyId)
+    if (survey) {
+      setSelectedSurveyForView(survey)
     }
-
-    // Switch to stats tab
-    const statsTab = document.querySelector('[value="stats"]') as HTMLElement
-    if (statsTab) {
-      statsTab.click()
+    
+    try {
+      const response = await surveyApi.getSurveyResponses(surveyId)
+      if (response.success && response.data) {
+        setViewResponsesData(response.data)
+      } else {
+        setViewResponsesData([])
+      }
+      setShowResponsesDialog(true)
+    } catch (error) {
+      console.error('Error loading survey responses:', error)
+      toast({
+        title: 'Lỗi',
+        description: 'Không thể tải phản hồi khảo sát',
+        variant: 'destructive'
+      })
     }
   }
 
@@ -948,13 +954,14 @@ export function SurveyManagement() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
+                        e.preventDefault()
                         viewSurveyResponses(survey.id)
                       }}
                       className="text-center hover:bg-blue-50 rounded-lg transition-colors p-2 cursor-pointer"
                       title="Xem phản hồi"
                     >
-                      <div className="flex items-center justify-center w-8 h-8 mx-auto mb-1 rounded-full bg-blue-100">
-                        <MessageSquare className="h-4 w-4 text-blue-600" />
+                      <div className="flex items-center justify-center w-12 h-12 mx-auto mb-1.5 rounded-full bg-gradient-to-br from-blue-100 to-blue-200">
+                        <MessageSquare className="h-5 w-5 text-blue-600" />
                       </div>
                       <p className="text-lg font-bold text-gray-900">{survey._count?.responses || 0}</p>
                       <p className="text-xs text-muted-foreground">Phản hồi</p>
@@ -962,22 +969,23 @@ export function SurveyManagement() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
+                        e.preventDefault()
                         viewSurveyQuestions(survey)
                       }}
                       className="text-center hover:bg-purple-50 rounded-lg transition-colors p-2 cursor-pointer"
                       title="Xem câu hỏi"
                     >
-                      <div className="flex items-center justify-center w-8 h-8 mx-auto mb-1 rounded-full bg-purple-100">
-                        <ListChecks className="h-4 w-4 text-purple-600" />
+                      <div className="flex items-center justify-center w-12 h-12 mx-auto mb-1.5 rounded-full bg-gradient-to-br from-purple-100 to-purple-200">
+                        <ListChecks className="h-5 w-5 text-purple-600" />
                       </div>
                       <p className="text-lg font-bold text-gray-900">{survey._count?.questions || 0}</p>
                       <p className="text-xs text-muted-foreground">Câu hỏi</p>
                     </button>
-                    <div className="text-center">
-                      <div className="flex items-center justify-center w-8 h-8 mx-auto mb-1 rounded-full bg-orange-100">
-                        <Calendar className="h-4 w-4 text-orange-600" />
+                    <div className="text-center p-2">
+                      <div className="flex items-center justify-center w-12 h-12 mx-auto mb-1.5 rounded-full bg-gradient-to-br from-orange-100 to-orange-200">
+                        <Calendar className="h-5 w-5 text-orange-600" />
                       </div>
-                      <p className="text-sm font-bold text-gray-900">
+                      <p className="text-lg font-bold text-gray-900">
                         {new Date(survey.createdAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
                       </p>
                       <p className="text-xs text-muted-foreground">Tạo lúc</p>
@@ -1690,6 +1698,101 @@ export function SurveyManagement() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowQuestionsDialog(false)}>
+              Đóng
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Responses Dialog */}
+      <Dialog open={showResponsesDialog} onOpenChange={setShowResponsesDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-blue-600" />
+              Danh sách phản hồi khảo sát
+            </DialogTitle>
+            <DialogDescription>
+              Khảo sát: <strong>{selectedSurveyForView?.title}</strong>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {viewResponsesData.length === 0 ? (
+              <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed">
+                <MessageSquare className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                <p className="text-gray-500 font-medium">Chưa có phản hồi nào</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {viewResponsesData.map((response, index) => {
+                  let answers = []
+                  try {
+                    answers = typeof response.answers === 'string' ? JSON.parse(response.answers) : response.answers
+                  } catch (e) {
+                    console.error('Error parsing answers:', e)
+                  }
+
+                  return (
+                    <div
+                      key={response.id}
+                      className="border-2 rounded-lg p-4 bg-gradient-to-br from-white to-blue-50 hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold text-sm shrink-0">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-semibold text-gray-900">
+                              {response.fullName || 'Ẩn danh'}
+                            </p>
+                            {response.militaryRank && (
+                              <Badge variant="outline" className="text-xs">
+                                {response.militaryRank}
+                              </Badge>
+                            )}
+                            {response.youthPosition && (
+                              <Badge variant="secondary" className="text-xs">
+                                {response.youthPosition}
+                              </Badge>
+                            )}
+                          </div>
+                          {response.unitName && (
+                            <p className="text-xs text-gray-600">Đơn vị: {response.unitName}</p>
+                          )}
+                          <p className="text-xs text-gray-500 mt-1">
+                            Gửi lúc: {new Date(response.submittedAt).toLocaleString('vi-VN')}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Answers */}
+                      <div className="pl-11 space-y-2">
+                        {Array.isArray(answers) && answers.length > 0 ? (
+                          answers.map((ans: any, ansIndex: number) => (
+                            <div key={ansIndex} className="bg-white rounded-lg p-3 border">
+                              <p className="text-xs font-semibold text-gray-600 mb-1">
+                                Câu {ansIndex + 1}:
+                              </p>
+                              <p className="text-sm text-gray-800">
+                                {typeof ans.answer === 'object' ? JSON.stringify(ans.answer) : ans.answer || '(Không có câu trả lời)'}
+                              </p>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-sm text-gray-500 italic">Không có câu trả lời</p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowResponsesDialog(false)}>
               Đóng
             </Button>
           </DialogFooter>

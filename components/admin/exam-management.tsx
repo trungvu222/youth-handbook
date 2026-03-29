@@ -173,8 +173,12 @@ export function ExamManagement() {
       const response = await examApi.gradeExamAttempt(attemptId)
       if (response.success) {
         toast({ title: 'Đã chấm điểm', description: response.message || 'Kết quả đã được gửi đến học viên' })
-        // Reload pending list
-        await loadPendingGrading()
+        // Reload all data after grading
+        await Promise.all([
+          loadPendingGrading(),
+          loadExams(),
+          loadStats()
+        ])
       } else {
         toast({ title: 'Lỗi', description: response.error || 'Không thể chấm điểm', variant: 'destructive' })
       }
@@ -714,17 +718,29 @@ export function ExamManagement() {
             </div>
           </div>
           
-          <Button 
-            onClick={() => {
-              resetForm()
-              setShowCreateDialog(true)
-            }}
-            className="bg-white text-indigo-600 hover:bg-indigo-50 hover:scale-105 transition-all duration-300 shadow-lg"
-            size="lg"
-          >
-            <Plus className="h-5 w-5 mr-2" />
-            Tạo kỳ thi mới
-          </Button>
+          <div className="flex gap-3">
+            <Button 
+              onClick={loadExams}
+              variant="outline"
+              className="bg-white/90 text-indigo-600 hover:bg-white hover:scale-105 transition-all duration-300 shadow-lg border-2 border-indigo-200"
+              size="lg"
+            >
+              <RefreshCw className="h-5 w-5 mr-2" />
+              Làm mới
+            </Button>
+            
+            <Button 
+              onClick={() => {
+                resetForm()
+                setShowCreateDialog(true)
+              }}
+              className="bg-white text-indigo-600 hover:bg-indigo-50 hover:scale-105 transition-all duration-300 shadow-lg"
+              size="lg"
+            >
+              <Plus className="h-5 w-5 mr-2" />
+              Tạo kỳ thi mới
+            </Button>
+          </div>
         </div>
       </div>
 

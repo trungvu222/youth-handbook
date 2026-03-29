@@ -238,7 +238,10 @@ export default function ActivityDetailMobile({ activityId, onBack }: ActivityDet
   // ===== INLINE STYLES =====
   const containerStyle: React.CSSProperties = {
     backgroundColor: '#f8fafc',
-    minHeight: '100%',
+    minHeight: '100vh',
+    paddingBottom: '80px', // Space for bottom navigation
+    overflowY: 'auto',
+    overflowX: 'hidden',
   }
 
   const headerStyle: React.CSSProperties = {
@@ -250,6 +253,7 @@ export default function ActivityDetailMobile({ activityId, onBack }: ActivityDet
     position: 'sticky',
     top: 0,
     zIndex: 10,
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
   }
 
   const backButtonStyle: React.CSSProperties = {

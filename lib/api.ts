@@ -3028,6 +3028,11 @@ export const bookApi = {
     });
   },
 
+  // Alias for getBookByQR
+  async scanBookQR(qrCode: string): Promise<ApiResponse<Book>> {
+    return this.getBookByQR(qrCode);
+  },
+
   // Create book (Admin)
   async createBook(data: { title: string; author?: string; publisher?: string }): Promise<ApiResponse<Book>> {
     const token = getAuthToken();
@@ -3120,6 +3125,20 @@ export const bookApi = {
     if (status) params.append('status', status);
 
     return apiCall(`/books/admin/stats?${params.toString()}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+
+  // Get my borrowing history
+  async getMyBorrowings(): Promise<ApiResponse<any[]>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: 'Không có token' };
+    }
+
+    return apiCall('/books/my-borrows', {
       headers: {
         'Authorization': `Bearer ${token}`,
       },

@@ -8,7 +8,8 @@ const {
   borrowBook,
   returnBook,
   getBorrowingStats,
-  getBookByQR
+  getBookByQR,
+  getMyBorrowings
 } = require('../controllers/bookController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -19,6 +20,9 @@ router.use(protect);
 
 // Admin stats route (must be before /:id to avoid conflict)
 router.get('/admin/stats', authorize('ADMIN', 'LEADER'), getBorrowingStats);
+
+// My borrowings route
+router.get('/my-borrows', getMyBorrowings);
 
 // Scan QR route
 router.get('/scan/:qrCode', getBookByQR);

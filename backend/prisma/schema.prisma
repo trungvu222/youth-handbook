@@ -963,12 +963,13 @@ model Book {
 }
 
 model BookBorrowing {
-  id          String    @id @default(cuid())
-  bookId      String    @map("book_id")
-  userId      String    @map("user_id")
-  borrowedAt  DateTime  @default(now()) @map("borrowed_at") // Thời gian mượn (auto)
-  returnedAt  DateTime? @map("returned_at") // Thời gian trả (user nhập)
-  createdAt   DateTime  @default(now()) @map("created_at")
+  id                 String    @id @default(cuid())
+  bookId             String    @map("book_id")
+  userId             String    @map("user_id")
+  borrowedAt         DateTime  @default(now()) @map("borrowed_at") // Thời gian mượn (auto)
+  expectedReturnDate DateTime? @map("expected_return_date") // Ngày dự kiến trả
+  returnedAt         DateTime? @map("returned_at") // Thời gian trả thực tế
+  createdAt          DateTime  @default(now()) @map("created_at")
 
   // Relations
   book Book @relation(fields: [bookId], references: [id])

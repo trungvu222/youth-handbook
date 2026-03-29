@@ -21,7 +21,8 @@ import {
   Send,
   FileText,
   Image as ImageIcon,
-  ExternalLink
+  ExternalLink,
+  CheckCircle
 } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 
@@ -29,22 +30,29 @@ interface Suggestion {
   id: string;
   title: string;
   content: string;
-  category: 'IMPROVEMENT' | 'COMPLAINT' | 'IDEA' | 'QUESTION' | 'OTHER';
+  category: 'IMPROVEMENT' | 'COMPLAINT' | 'IDEA' | 'QUESTION' | 'OTHER' | 'POLICY' | 'PROCESS' | 'FACILITY' | 'SERVICE';
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-  status: 'SUBMITTED' | 'UNDER_REVIEW' | 'IN_PROGRESS' | 'RESOLVED' | 'REJECTED';
+  status: 'SUBMITTED' | 'UNDER_REVIEW' | 'IN_PROGRESS' | 'RESOLVED' | 'REJECTED' | 'PENDING' | 'APPROVED' | 'IMPLEMENTED' | 'ARCHIVED';
   isAnonymous: boolean;
   userId?: string;
   fileUrls?: string[];
   tags?: string;
-  submittedAt: string;
+  submittedAt?: string;
+  createdAt?: string;
   resolvedAt?: string;
+  updatedAt?: string;
   user?: {
     id: string;
-    fullName: string;
+    fullName?: string;
+    name?: string;
+    email?: string;
     unitName?: string;
   };
-  responses?: SuggestionResponse[];
-  viewCount: number;
+  responses?: SuggestionResponse[] | number;
+  viewCount?: number;
+  _count?: {
+    responses: number;
+  };
 }
 
 interface SuggestionResponse {
@@ -56,7 +64,8 @@ interface SuggestionResponse {
   createdAt: string;
   responder: {
     id: string;
-    fullName: string;
+    fullName?: string;
+    name?: string;
     role: string;
   };
 }
@@ -83,7 +92,15 @@ export function SuggestionDetail({ suggestion: initialSuggestion, onBack, onUpda
       const response = await suggestionApi.getSuggestion(suggestion.id)
       
       if (response.success && response.data) {
-        setSuggestion(response.data)
+        // Ensure responses is always an array and normalize the data
+        const data: any = response.data
+        const updatedSuggestion: Suggestion = {
+          ...data,
+          responses: Array.isArray(data.responses) ? data.responses : [],
+          viewCount: data.viewCount || 0,
+          submittedAt: data.submittedAt || data.createdAt
+        }
+        setSuggestion(updatedSuggestion)
       }
     } catch (error) {
       console.error('Error loading suggestion detail:', error)
@@ -156,7 +173,8 @@ export function SuggestionDetail({ suggestion: initialSuggestion, onBack, onUpda
     }
   }
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A'
     return new Date(dateString).toLocaleDateString('vi-VN', {
       year: 'numeric',
       month: 'long',
@@ -167,6 +185,7 @@ export function SuggestionDetail({ suggestion: initialSuggestion, onBack, onUpda
   }
 
   const getFileIcon = (url: string) => {
+    if (!url) return <Paperclip className="h-4 w-4" />
     const extension = url.split('.').pop()?.toLowerCase()
     if (['jpg', 'jpeg', 'png', 'gif'].includes(extension || '')) {
       return <ImageIcon className="h-4 w-4" />
@@ -178,6 +197,7 @@ export function SuggestionDetail({ suggestion: initialSuggestion, onBack, onUpda
   }
 
   const getFileName = (url: string) => {
+    if (!url) return 'file'
     return url.split('/').pop()?.split('?')[0] || 'file'
   }
 
@@ -186,322 +206,465 @@ export function SuggestionDetail({ suggestion: initialSuggestion, onBack, onUpda
   }
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-4xl space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          Quay lại
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold">Chi tiết kiến nghị</h1>
-          <p className="text-muted-foreground">
-            ID: {suggestion.id}
-          </p>
+    <div style={{ 
+      minHeight: '100vh', 
+      backgroundColor: '#f8f9fa',
+      paddingBottom: 80,
+      overflowY: 'auto',
+      overflowX: 'hidden'
+    }}>
+      {/* Sticky Header */}
+      <div style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 50,
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)',
+        paddingBottom: 16,
+        paddingLeft: 20,
+        paddingRight: 20,
+        boxShadow: '0 4px 20px rgba(102, 126, 234, 0.25)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button
+            onClick={onBack}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 12,
+              border: 'none',
+              background: 'rgba(255,255,255,0.2)',
+              backdropFilter: 'blur(10px)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <ArrowLeft style={{ width: 20, height: 20, color: '#fff' }} />
+          </button>
+          <div style={{ flex: 1 }}>
+            <div style={{ color: '#fff', fontSize: 17, fontWeight: 700, letterSpacing: '-0.3px' }}>Chi tiết kiến nghị</div>
+            <div style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 2 }}>ID: {suggestion.id.slice(0, 8)}...</div>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Suggestion Content */}
-          <Card>
-            <CardHeader>
-              <div className="flex flex-wrap items-center gap-2 mb-2">
-                <Badge className={getCategoryColor(suggestion.category)}>
-                  {getCategoryLabel(suggestion.category)}
-                </Badge>
-                
-                <Badge className={getStatusColor(suggestion.status)}>
-                  {getStatusLabel(suggestion.status)}
-                </Badge>
-                
-                <Badge variant="outline" className={getPriorityColor(suggestion.priority)}>
-                  {getPriorityLabel(suggestion.priority)}
-                </Badge>
+      {/* Main Content */}
+      <div style={{ padding: '16px 20px' }}>
+        {/* Suggestion Card */}
+        <div style={{
+          background: '#fff',
+          borderRadius: 16,
+          boxShadow: '0 2px 16px rgba(0,0,0,0.08)',
+          overflow: 'hidden',
+          marginBottom: 16
+        }}>
+          {/* Header Section */}
+          <div style={{ padding: '20px 20px 16px' }}>
+            {/* Badges Row */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+              <Badge className={getCategoryColor(suggestion.category)} style={{ fontSize: 11, padding: '4px 10px' }}>
+                {getCategoryLabel(suggestion.category)}
+              </Badge>
+              
+              <Badge className={getStatusColor(suggestion.status)} style={{ fontSize: 11, padding: '4px 10px' }}>
+                {getStatusLabel(suggestion.status)}
+              </Badge>
+              
+              <Badge variant="outline" className={getPriorityColor(suggestion.priority)} style={{ fontSize: 11, padding: '4px 10px' }}>
+                {getPriorityLabel(suggestion.priority)}
+              </Badge>
 
-                {suggestion.isAnonymous && (
-                  <Badge variant="secondary" className="text-xs">
-                    Ẩn danh
-                  </Badge>
-                )}
-              </div>
+              {suggestion.isAnonymous && (
+                <Badge variant="secondary" style={{ fontSize: 11, padding: '4px 10px' }}>
+                  🔒 Ẩn danh
+                </Badge>
+              )}
+            </div>
 
-              <CardTitle className="text-xl">
-                {suggestion.title}
-              </CardTitle>
+            {/* Title */}
+            <h1 style={{ 
+              color: '#1a202c', 
+              fontWeight: 700, 
+              fontSize: 20, 
+              lineHeight: 1.4,
+              marginBottom: 12,
+              letterSpacing: '-0.3px'
+            }}>
+              {suggestion.title}
+            </h1>
 
-              <CardDescription className="flex items-center gap-4">
-                <span className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  {formatDate(suggestion.submittedAt)}
+            {/* Meta Info - Compact inline style */}
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 20, 
+              paddingBottom: 16,
+              borderBottom: '1px solid #e2e8f0',
+              fontSize: 13,
+              color: '#64748b'
+            }}>
+              {/* Response Count */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <MessageSquare style={{ width: 16, height: 16, color: '#2563eb' }} />
+                <span style={{ fontWeight: 600, color: '#1e293b' }}>
+                  {Array.isArray(suggestion.responses) ? suggestion.responses.length : 0}
                 </span>
-
-                {suggestion.viewCount > 0 && (
-                  <span className="flex items-center gap-1">
-                    <Eye className="h-3 w-3" />
-                    {suggestion.viewCount} lượt xem
-                  </span>
-                )}
-
-                {!suggestion.isAnonymous && suggestion.user && (
-                  <span className="flex items-center gap-1">
-                    <User className="h-3 w-3" />
-                    {suggestion.user.fullName}
-                    {suggestion.user.unitName && ` (${suggestion.user.unitName})`}
-                  </span>
-                )}
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent className="space-y-4">
-              <div className="prose prose-sm max-w-none">
-                <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                  {suggestion.content}
-                </div>
+                <span>Phản hồi</span>
               </div>
 
-              {/* Tags */}
-              {suggestion.tags && (
-                <div>
-                  <div className="flex items-center gap-1 mb-2">
-                    <Tag className="h-3 w-3" />
-                    <span className="text-xs font-medium text-muted-foreground">Tags:</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {suggestion.tags.split(',').map((tag, index) => (
-                      <Badge key={index} variant="secondary" className="text-xs">
-                        #{tag.trim()}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* Created Date */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Calendar style={{ width: 16, height: 16, color: '#ea580c' }} />
+                <span style={{ fontWeight: 600, color: '#1e293b' }}>
+                  {new Date(suggestion.submittedAt || suggestion.createdAt || Date.now()).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })}
+                </span>
+              </div>
+            </div>
 
-              {/* Attachments */}
-              {suggestion.fileUrls && suggestion.fileUrls.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-1 mb-2">
-                    <Paperclip className="h-3 w-3" />
-                    <span className="text-xs font-medium text-muted-foreground">
-                      File đính kèm ({suggestion.fileUrls.length}):
-                    </span>
-                  </div>
-                  <div className="space-y-2">
-                    {suggestion.fileUrls.map((url, index) => (
-                      <div 
-                        key={index}
-                        className="flex items-center justify-between bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors"
-                      >
-                        <div className="flex items-center gap-2">
-                          {getFileIcon(url)}
-                          <span className="text-sm font-medium">
-                            {getFileName(url)}
-                          </span>
-                        </div>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDownloadFile(url)}
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDownloadFile(url)}
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+            {/* User Info - if not anonymous */}
+            {!suggestion.isAnonymous && suggestion.user && (
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 8,
+                paddingTop: 12,
+                fontSize: 13,
+                color: '#64748b'
+              }}>
+                <User style={{ width: 16, height: 16 }} />
+                <span>
+                  {suggestion.user.fullName || suggestion.user.name}
+                  {suggestion.user.unitName && ` • ${suggestion.user.unitName}`}
+                </span>
+              </div>
+            )}
+          </div>
 
-              {suggestion.resolvedAt && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                  <div className="text-sm font-medium text-green-800 mb-1">
+          {/* Content Section */}
+          <div style={{ padding: '0 20px 20px' }}>
+            <div style={{ 
+              color: '#4a5568', 
+              fontSize: 15, 
+              lineHeight: 1.7,
+              whiteSpace: 'pre-wrap'
+            }}>
+              {suggestion.content}
+            </div>
+          </div>
+
+          {/* Tags Section */}
+          {suggestion.tags && (
+            <div style={{ padding: '16px 20px', background: '#f7fafc', borderTop: '1px solid #e2e8f0' }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 8, 
+                marginBottom: 10,
+                color: '#4a5568',
+                fontSize: 13,
+                fontWeight: 600
+              }}>
+                <Tag style={{ width: 16, height: 16 }} />
+                Thẻ tag
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {suggestion.tags.split(',').map((tag, index) => (
+                  <span key={index} style={{
+                    background: '#edf2f7',
+                    color: '#4a5568',
+                    borderRadius: 8,
+                    padding: '4px 12px',
+                    fontSize: 12,
+                    fontWeight: 500
+                  }}>
+                    #{tag.trim()}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Attachments Section */}
+          {suggestion.fileUrls && suggestion.fileUrls.length > 0 && (
+            <div style={{ padding: '16px 20px', background: '#f7fafc', borderTop: '1px solid #e2e8f0' }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 8, 
+                marginBottom: 12,
+                color: '#4a5568',
+                fontSize: 13,
+                fontWeight: 600
+              }}>
+                <Paperclip style={{ width: 16, height: 16 }} />
+                File đính kèm ({suggestion.fileUrls.length})
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {suggestion.fileUrls.map((url, index) => (
+                  <div 
+                    key={index}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      background: '#fff',
+                      borderRadius: 10,
+                      padding: 12,
+                      border: '1px solid #e2e8f0'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+                      {getFileIcon(url)}
+                      <span style={{ 
+                        fontSize: 14, 
+                        fontWeight: 500,
+                        color: '#2d3748',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {getFileName(url)}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => handleDownloadFile(url)}
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 8,
+                        border: 'none',
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)'
+                      }}
+                    >
+                      <Download style={{ width: 18, height: 18, color: '#fff' }} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Resolved Badge */}
+          {suggestion.resolvedAt && (
+            <div style={{ padding: '16px 20px', background: '#f0fdf4', borderTop: '1px solid #bbf7d0' }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8
+              }}>
+                <div style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: '50%',
+                  background: '#22c55e',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}>
+                  <CheckCircle style={{ width: 18, height: 18, color: '#fff' }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ 
+                    fontSize: 14, 
+                    fontWeight: 700, 
+                    color: '#166534',
+                    marginBottom: 2
+                  }}>
                     Đã giải quyết
                   </div>
-                  <div className="text-xs text-green-700">
+                  <div style={{ fontSize: 12, color: '#15803d' }}>
                     {formatDate(suggestion.resolvedAt)}
                   </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </div>
+            </div>
+          )}
+        </div>
 
-          {/* Responses */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="h-5 w-5" />
-                Phản hồi ({suggestion.responses?.length || 0})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="flex justify-center py-4">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+        {/* Responses Section */}
+        <div style={{
+          background: '#fff',
+          borderRadius: 16,
+          boxShadow: '0 2px 16px rgba(0,0,0,0.08)',
+          overflow: 'hidden'
+        }}>
+          {/* Header */}
+          <div style={{ 
+            padding: '16px 20px', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 10,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+          }}>
+            <MessageSquare style={{ width: 20, height: 20, color: '#fff' }} />
+            <span style={{ 
+              fontSize: 16, 
+              fontWeight: 700, 
+              color: '#fff',
+              flex: 1
+            }}>
+              Phản hồi
+            </span>
+            <span style={{
+              background: 'rgba(255,255,255,0.25)',
+              color: '#fff',
+              borderRadius: 12,
+              padding: '4px 12px',
+              fontSize: 13,
+              fontWeight: 700
+            }}>
+              {Array.isArray(suggestion.responses) ? suggestion.responses.length : 0}
+            </span>
+          </div>
+
+          {/* Content */}
+          <div style={{ padding: 20 }}>
+            {loading ? (
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                padding: '32px 0' 
+              }}>
+                <div style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: '50%',
+                  border: '3px solid #e2e8f0',
+                  borderTopColor: '#667eea',
+                  animation: 'spin 0.8s linear infinite'
+                }} />
+              </div>
+            ) : !suggestion.responses || !Array.isArray(suggestion.responses) || suggestion.responses.length === 0 ? (
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '40px 20px',
+                color: '#a0aec0'
+              }}>
+                <div style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: '50%',
+                  background: '#f7fafc',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 16px'
+                }}>
+                  <MessageSquare style={{ 
+                    width: 32, 
+                    height: 32,
+                    color: '#cbd5e0'
+                  }} />
                 </div>
-              ) : !suggestion.responses || suggestion.responses.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>Chưa có phản hồi nào</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {suggestion.responses.map((response) => (
-                    <div key={response.id} className="border rounded-lg p-4">
-                      <div className="flex items-start gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="text-xs">
-                            {response.responder.fullName.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                        
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-sm font-medium">
-                              {response.responder.fullName}
-                            </span>
-                            <Badge variant="outline" className="text-xs">
-                              {response.responder.role}
+                <p style={{ fontSize: 15, fontWeight: 600, color: '#718096' }}>Chưa có phản hồi nào</p>
+                <p style={{ fontSize: 13, color: '#a0aec0', marginTop: 4 }}>Phản hồi sẽ được hiển thị tại đây</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {(suggestion.responses || []).map((response, index) => (
+                  <div key={response.id} style={{
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 12,
+                    padding: 16,
+                    background: index % 2 === 0 ? '#fafafa' : '#fff'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'start', gap: 12 }}>
+                      <Avatar className="h-10 w-10" style={{ flexShrink: 0 }}>
+                        <AvatarFallback style={{ 
+                          fontSize: 14,
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          color: '#fff',
+                          fontWeight: 700
+                        }}>
+                          {(response.responder.fullName || response.responder.name || 'A').charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        {/* Responder Info */}
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: 8, 
+                          marginBottom: 6,
+                          flexWrap: 'wrap'
+                        }}>
+                          <span style={{ 
+                            fontSize: 14, 
+                            fontWeight: 700,
+                            color: '#2d3748'
+                          }}>
+                            {response.responder.fullName || response.responder.name}
+                          </span>
+                          <Badge variant="outline" style={{ 
+                            fontSize: 10, 
+                            padding: '2px 8px',
+                            background: '#edf2f7',
+                            border: 'none',
+                            color: '#4a5568'
+                          }}>
+                            {response.responder.role}
+                          </Badge>
+                          {!response.isPublic && (
+                            <Badge variant="secondary" style={{ 
+                              fontSize: 10, 
+                              padding: '2px 8px',
+                              background: '#fed7d7',
+                              color: '#c53030',
+                              border: 'none'
+                            }}>
+                              🔒 Riêng tư
                             </Badge>
-                            {!response.isPublic && (
-                              <Badge variant="secondary" className="text-xs">
-                                Riêng tư
-                              </Badge>
-                            )}
-                          </div>
-                          
-                          <div className="text-xs text-muted-foreground mb-2">
-                            {formatDate(response.createdAt)}
-                          </div>
-                          
-                          <div className="text-sm leading-relaxed whitespace-pre-wrap">
-                            {response.content}
-                          </div>
+                          )}
+                        </div>
+                        
+                        {/* Date */}
+                        <div style={{ 
+                          fontSize: 12, 
+                          color: '#a0aec0',
+                          marginBottom: 10
+                        }}>
+                          {formatDate(response.createdAt)}
+                        </div>
+                        
+                        {/* Response Content */}
+                        <div style={{ 
+                          fontSize: 14, 
+                          lineHeight: 1.6,
+                          color: '#4a5568',
+                          whiteSpace: 'pre-wrap',
+                          background: '#fff',
+                          padding: 12,
+                          borderRadius: 8,
+                          border: '1px solid #e2e8f0'
+                        }}>
+                          {response.content}
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Status Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Thông tin</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Trạng thái:</span>
-                  <Badge className={getStatusColor(suggestion.status)}>
-                    {getStatusLabel(suggestion.status)}
-                  </Badge>
-                </div>
-                
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Ưu tiên:</span>
-                  <Badge variant="outline" className={getPriorityColor(suggestion.priority)}>
-                    {getPriorityLabel(suggestion.priority)}
-                  </Badge>
-                </div>
-                
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Danh mục:</span>
-                  <span>{getCategoryLabel(suggestion.category)}</span>
-                </div>
-                
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Gửi lúc:</span>
-                  <span>{formatDate(suggestion.submittedAt)}</span>
-                </div>
-                
-                {suggestion.resolvedAt && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Giải quyết:</span>
-                    <span>{formatDate(suggestion.resolvedAt)}</span>
                   </div>
-                )}
-                
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Lượt xem:</span>
-                  <span>{suggestion.viewCount}</span>
-                </div>
+                ))}
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Author Info (if not anonymous) */}
-          {!suggestion.isAnonymous && suggestion.user && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Người gửi</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback>
-                      {suggestion.user.fullName.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div className="font-medium text-sm">
-                      {suggestion.user.fullName}
-                    </div>
-                    {suggestion.user.unitName && (
-                      <div className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Building className="h-3 w-3" />
-                        {suggestion.user.unitName}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Quick Stats */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Thống kê nhanh</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Phản hồi:</span>
-                  <span className="font-medium">{suggestion.responses?.length || 0}</span>
-                </div>
-                
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">File đính kèm:</span>
-                  <span className="font-medium">{suggestion.fileUrls?.length || 0}</span>
-                </div>
-                
-                {suggestion.tags && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Tags:</span>
-                    <span className="font-medium">
-                      {suggestion.tags.split(',').length}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+            )}
+          </div>
         </div>
       </div>
+
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   )
 }

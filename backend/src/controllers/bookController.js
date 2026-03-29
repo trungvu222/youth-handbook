@@ -50,6 +50,7 @@ const getBooks = async (req, res, next) => {
       isBorrowed: book.borrowings.length > 0,
       currentBorrower: book.borrowings[0]?.user || null,
       borrowedAt: book.borrowings[0]?.borrowedAt || null,
+      expectedReturnDate: book.borrowings[0]?.expectedReturnDate || null,
       totalBorrowings: book._count?.borrowings || 0,
       borrowings: undefined,
       _count: undefined
@@ -310,7 +311,8 @@ const borrowBook = async (req, res, next) => {
         bookId: book.id,
         userId,
         borrowedAt: new Date(),
-        returnedAt: returnDate ? new Date(returnDate) : null
+        expectedReturnDate: returnDate ? new Date(returnDate) : null,
+        returnedAt: null
       },
       include: {
         book: true,
@@ -323,7 +325,8 @@ const borrowBook = async (req, res, next) => {
     console.log('📖 Book borrowed:', {
       bookTitle: book.title,
       borrower: borrowing.user.fullName,
-      borrowedAt: borrowing.borrowedAt
+      borrowedAt: borrowing.borrowedAt,
+      expectedReturnDate: borrowing.expectedReturnDate
     });
 
     res.status(201).json({
@@ -455,6 +458,7 @@ const getBorrowingStats = async (req, res, next) => {
       author: b.book.author || '',
       publisher: b.book.publisher || '',
       borrowedAt: b.borrowedAt,
+      expectedReturnDate: b.expectedReturnDate,
       returnedAt: b.returnedAt,
       status: b.returnedAt ? 'Đã trả' : 'Đang mượn'
     }));
@@ -518,12 +522,53 @@ const getBookByQR = async (req, res, next) => {
         qrCode: book.qrCode,
         isBorrowed: !!currentBorrowing,
         currentBorrower: currentBorrowing?.user || null,
-        currentBorrowedAt: currentBorrowing?.borrowedAt || null
+        currentBorrowedAt: currentBorrowing?.borrowedAt || null,
+        currentBorrowingId: currentBorrowing?.id || null
       }
     });
 
   } catch (error) {
     console.error('Get book by QR error:', error);
+    next(error);
+  }
+};
+
+// @desc    Get my borrowing history
+// @route   GET /api/books/my-borrows
+// @access  Private
+const getMyBorrowings = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+
+    const borrowings = await prisma.bookBorrowing.findMany({
+      where: { userId },
+      include: {
+        book: {
+          select: { id: true, title: true, author: true, publisher: true }
+        }
+      },
+      orderBy: { borrowedAt: 'desc' }
+    });
+
+    const formattedBorrowings = borrowings.map(b => ({
+      id: b.id,
+      bookId: b.book.id,
+      bookTitle: b.book.title,
+      author: b.book.author,
+      publisher: b.book.publisher,
+      borrowedAt: b.borrowedAt,
+      expectedReturnDate: b.expectedReturnDate,
+      returnedAt: b.returnedAt,
+      status: b.returnedAt ? 'Đã trả' : 'Đang mượn'
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: formattedBorrowings
+    });
+
+  } catch (error) {
+    console.error('Get my borrowings error:', error);
     next(error);
   }
 };
@@ -537,5 +582,6 @@ module.exports = {
   borrowBook,
   returnBook,
   getBorrowingStats,
-  getBookByQR
+  getBookByQR,
+  getMyBorrowings
 };

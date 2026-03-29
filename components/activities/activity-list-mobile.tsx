@@ -59,10 +59,13 @@ export default function ActivityListMobile({ onActivitySelect }: ActivityListMob
 
   const loadActivities = async (silent = false) => {
     if (!silent) setLoading(true)
-    setError(null)
+    if (!silent) setError(null)
     try {
       const { activityApi } = await import('@/lib/api')
-      const result = await activityApi.getActivities({ status: 'ACTIVE', limit: 20 })
+      console.log('[ActivityList] Loading activities... (silent:', silent, ')')
+      // Load ALL activities (not just ACTIVE) to show expired ones too
+      const result = await activityApi.getActivities({ limit: 50 })
+      console.log('[ActivityList] API result:', result)
 
       if (result.success && result.data) {
         let activitiesData = [];
@@ -71,15 +74,29 @@ export default function ActivityListMobile({ onActivitySelect }: ActivityListMob
         } else if (result.data.data && Array.isArray(result.data.data)) {
           activitiesData = result.data.data;
         }
+        console.log('[ActivityList] Activities data:', activitiesData.length, 'items')
         setActivities(activitiesData)
+        // Clear error on success
+        if (!silent) setError(null)
       } else {
-        setActivities([])
-        if (result.error) setError(result.error)
+        console.log('[ActivityList] No data or error:', result.error)
+        // Only clear activities and show error if NOT silent refresh
+        if (!silent) {
+          setActivities([])
+          if (result.error) setError(result.error)
+        } else {
+          console.log('[ActivityList] Silent refresh failed, keeping existing data')
+        }
       }
     } catch (err) {
-      console.error('Error loading activities:', err)
-      setError('Không thể tải danh sách. Vui lòng thử lại.')
-      setActivities([])
+      console.error('[ActivityList] Error loading activities:', err)
+      // Only clear activities and show error if NOT silent refresh
+      if (!silent) {
+        setError('Không thể tải danh sách. Vui lòng thử lại.')
+        setActivities([])
+      } else {
+        console.log('[ActivityList] Silent refresh error, keeping existing data')
+      }
     } finally {
       setLoading(false)
     }
@@ -312,14 +329,19 @@ export default function ActivityListMobile({ onActivitySelect }: ActivityListMob
         const dateTime = formatDateTime(activity.startTime)
         const isRegistered = !!activity.userParticipation
         const isFull = activity.maxParticipants && activity._count.participants >= activity.maxParticipants
-        const canJoin = activity.status === 'ACTIVE' && !isRegistered && !isFull
+        const isExpired = activity.status === 'COMPLETED' || (activity.endTime && new Date(activity.endTime) < new Date())
+        const canJoin = !isExpired && !isRegistered && !isFull
 
         return (
           <div key={activity.id} style={cardStyle}>
             <div style={cardHeaderStyle}>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
                 <span style={badgeStyle(typeInfo.bg, typeInfo.color)}>{typeInfo.text}</span>
-                <span style={badgeStyle('#dcfce7', '#166534')}>Đang mở</span>
+                {isExpired ? (
+                  <span style={badgeStyle('#fee2e2', '#dc2626')}>Đã kết thúc</span>
+                ) : (
+                  <span style={badgeStyle('#dcfce7', '#166534')}>Đang mở</span>
+                )}
               </div>
               <h3 style={titleStyle}>{activity.title}</h3>
               {activity.description && (
@@ -374,6 +396,11 @@ export default function ActivityListMobile({ onActivitySelect }: ActivityListMob
                     </>
                   )}
                 </button>
+              ) : isExpired ? (
+                <div style={{ ...registeredBadgeStyle, backgroundColor: '#fef3c7', color: '#92400e' }}>
+                  <Clock style={{ width: '16px', height: '16px' }} />
+                  Hoạt động đã kết thúc
+                </div>
               ) : isFull ? (
                 <div style={{ ...registeredBadgeStyle, backgroundColor: '#fee2e2', color: '#dc2626' }}>
                   <AlertCircle style={{ width: '16px', height: '16px' }} />

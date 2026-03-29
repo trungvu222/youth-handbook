@@ -21,17 +21,30 @@ const getActivities = async (req, res, next) => {
     let whereClause = {};
 
     // Filter by user permissions
+    // SIMPLIFIED: All authenticated users can see all activities
+    // This is more suitable for a youth organization where everyone should see all activities
+    // If you need stricter permissions, uncomment the code below
+    
+    /*
     if (currentUser.role === 'MEMBER') {
-      // Members can only see activities in their unit or public activities
-      whereClause.OR = [
-        { unitId: currentUser.unitId },
-        { unitId: null } // Public activities
-      ];
+      // Members can see activities in their unit or public activities
+      if (currentUser.unitId) {
+        whereClause.OR = [
+          { unitId: currentUser.unitId },
+          { unitId: null } // Public activities
+        ];
+      } else {
+        // Member without unit can see all public activities
+        whereClause.unitId = null;
+      }
     } else if (currentUser.role === 'LEADER') {
       // Leaders can see activities in their unit
-      whereClause.unitId = currentUser.unitId;
+      if (currentUser.unitId) {
+        whereClause.unitId = currentUser.unitId;
+      }
     }
-    // Admin can see all activities
+    */
+    // Admin can see all activities (no filter needed)
 
     // Apply additional filters
     if (unitId && currentUser.role === 'ADMIN') {

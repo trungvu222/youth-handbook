@@ -22,6 +22,7 @@ export default function ActivitiesScreen() {
 
   async function loadStats() {
     try {
+      // Load all activities (not just ACTIVE) to count total
       const result = await activityApi.getActivities({ limit: 100 })
       const user = getStoredUser()
       if (result.success && result.data) {
@@ -31,10 +32,13 @@ export default function ActivitiesScreen() {
           a.participants?.some((p: any) => p.userId === user?.id || p.id === user?.id)
         ).length
         setStats({ total, joined, points: user?.points || 0 })
+      } else {
+        // Don't clear stats on error, just keep existing values
+        console.log('[ActivitiesScreen] Failed to load stats, keeping existing:', result.error)
       }
     } catch (err) {
-      const user = getStoredUser()
-      setStats({ total: 0, joined: 0, points: user?.points || 0 })
+      console.error('[ActivitiesScreen] Error loading stats:', err)
+      // Don't clear stats on error, just keep existing values
     }
   }
 
@@ -48,9 +52,11 @@ export default function ActivitiesScreen() {
 
   // Inline styles for mobile
   const containerStyle: React.CSSProperties = {
-    minHeight: '100%',
+    minHeight: '100vh',
     backgroundColor: '#f0fdf4',
     paddingBottom: '100px',
+    overflowY: 'auto',
+    overflowX: 'hidden',
   }
 
   const headerStyle: React.CSSProperties = {
@@ -203,7 +209,7 @@ export default function ActivitiesScreen() {
       <div style={contentStyle}>
         <div style={sectionTitleStyle}>
           <Calendar style={{ width: '18px', height: '18px', color: '#16a34a' }} />
-          Hoạt động sắp tới
+          Danh sách hoạt động
         </div>
         <ActivityListMobile onActivitySelect={handleActivitySelect} />
       </div>

@@ -31,7 +31,8 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { Toaster } from '../ui/toaster'
 
-interface Suggestion {
+// Local interface for admin view
+interface AdminSuggestion {
   id: string;
   title: string;
   content: string;
@@ -47,13 +48,15 @@ interface Suggestion {
     fullName: string;
     unitName?: string;
   };
-  responses?: any[];
+  responses?: any;
   viewCount: number;
+  fileUrls?: string;
+  tags?: string;
 }
 
 export default function SuggestionManagement() {
   const { toast } = useToast()
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [suggestions, setSuggestions] = useState<AdminSuggestion[]>([])
   const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [sendingResponse, setSendingResponse] = useState(false)
@@ -63,8 +66,10 @@ export default function SuggestionManagement() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [priorityFilter, setPriorityFilter] = useState('all')
   const [dateFilter, setDateFilter] = useState('all')
-  const [selectedSuggestion, setSelectedSuggestion] = useState<Suggestion | null>(null)
+  const [selectedSuggestion, setSelectedSuggestion] = useState<AdminSuggestion | null>(null)
   const [showResponseDialog, setShowResponseDialog] = useState(false)
+  const [suggestionDetail, setSuggestionDetail] = useState<any>(null)
+  const [loadingDetail, setLoadingDetail] = useState(false)
   
   // Response form state
   const [responseData, setResponseData] = useState({
@@ -109,7 +114,7 @@ export default function SuggestionManagement() {
       // Load suggestions
       const suggestionsResponse = await suggestionApi.getAllSuggestions(params)
       if (suggestionsResponse.success && suggestionsResponse.data) {
-        setSuggestions(suggestionsResponse.data.data || suggestionsResponse.data)
+        setSuggestions((suggestionsResponse.data.data || suggestionsResponse.data) as any)
       }
 
       // Load stats
@@ -127,6 +132,39 @@ export default function SuggestionManagement() {
       })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadSuggestionDetail = async (suggestionId: string) => {
+    setLoadingDetail(true)
+    try {
+      const response = await suggestionApi.getSuggestion(suggestionId)
+      if (response.success && response.data) {
+        setSuggestionDetail(response.data)
+        
+        // Pre-fill form with current status and last response
+        const suggestion = response.data
+        const responses = suggestion.responses
+        const lastResponse = responses && Array.isArray(responses) && responses.length > 0 
+          ? responses[responses.length - 1] 
+          : null
+        
+        setResponseData({
+          content: lastResponse?.content || '',
+          isPublic: (lastResponse as any)?.isPublic !== false,
+          newStatus: suggestion.status as any,
+          sendNotification: true
+        })
+      }
+    } catch (error) {
+      console.error('Error loading suggestion detail:', error)
+      toast({
+        title: 'Lỗi',
+        description: 'Không thể tải chi tiết kiến nghị',
+        variant: 'destructive'
+      })
+    } finally {
+      setLoadingDetail(false)
     }
   }
 
@@ -158,7 +196,7 @@ export default function SuggestionManagement() {
           'REJECTED': 'Bị từ chối'
         }
         const statusLabel = statusLabels[responseData.newStatus] || responseData.newStatus
-        const notifSent = response.notificationSent || 0
+        const notifSent = (response as any).notificationSent || 0
         
         // Show success toast
         toast({
@@ -173,6 +211,7 @@ export default function SuggestionManagement() {
         // Close dialog and reload
         setShowResponseDialog(false)
         setSelectedSuggestion(null)
+        setSuggestionDetail(null)
         resetResponseForm()
         loadData()
       } else {
@@ -658,6 +697,7 @@ export default function SuggestionManagement() {
                           className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:text-blue-800 transition-all"
                           onClick={() => {
                             setSelectedSuggestion(suggestion)
+                            loadSuggestionDetail(suggestion.id)
                             setShowResponseDialog(true)
                           }}
                         >
@@ -737,7 +777,7 @@ export default function SuggestionManagement() {
                             <SelectItem value="REJECTED">Bị từ chối</SelectItem>
                           </SelectContent>
                         </Select>
-                        <Button variant="outline" size="sm" className="bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 hover:text-amber-800 transition-all" onClick={() => { setSelectedSuggestion(suggestion); setShowResponseDialog(true); }}>
+                        <Button variant="outline" size="sm" className="bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 hover:text-amber-800 transition-all" onClick={() => { setSelectedSuggestion(suggestion); loadSuggestionDetail(suggestion.id); setShowResponseDialog(true); }}>
                           <MessageSquare className="h-4 w-4 mr-1" />Phản hồi
                         </Button>
                       </div>
@@ -813,7 +853,7 @@ export default function SuggestionManagement() {
                             <SelectItem value="REJECTED">Bị từ chối</SelectItem>
                           </SelectContent>
                         </Select>
-                        <Button variant="outline" size="sm" className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:text-blue-800 transition-all" onClick={() => { setSelectedSuggestion(suggestion); setShowResponseDialog(true); }}>
+                        <Button variant="outline" size="sm" className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100 hover:text-blue-800 transition-all" onClick={() => { setSelectedSuggestion(suggestion); loadSuggestionDetail(suggestion.id); setShowResponseDialog(true); }}>
                           <MessageSquare className="h-4 w-4 mr-1" />Phản hồi
                         </Button>
                       </div>
@@ -885,7 +925,7 @@ export default function SuggestionManagement() {
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-3">
-                        <Button variant="outline" size="sm" className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:text-green-800 transition-all" onClick={() => { setSelectedSuggestion(suggestion); setShowResponseDialog(true); }}>
+                        <Button variant="outline" size="sm" className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:text-green-800 transition-all" onClick={() => { setSelectedSuggestion(suggestion); loadSuggestionDetail(suggestion.id); setShowResponseDialog(true); }}>
                           <Eye className="h-4 w-4 mr-1" />Xem chi tiết
                         </Button>
                       </div>
@@ -899,8 +939,15 @@ export default function SuggestionManagement() {
       </Tabs>
 
       {/* Response Dialog */}
-      <Dialog open={showResponseDialog} onOpenChange={setShowResponseDialog}>
-        <DialogContent className="max-w-2xl">
+      <Dialog open={showResponseDialog} onOpenChange={(open) => {
+        setShowResponseDialog(open)
+        if (!open) {
+          setSelectedSuggestion(null)
+          setSuggestionDetail(null)
+          resetResponseForm()
+        }
+      }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Phản hồi kiến nghị</DialogTitle>
             <DialogDescription>
@@ -908,44 +955,97 @@ export default function SuggestionManagement() {
             </DialogDescription>
           </DialogHeader>
 
-          {selectedSuggestion && (
+          {loadingDetail ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : selectedSuggestion && suggestionDetail && (
             <div className="space-y-4">
               {/* Suggestion Preview */}
               <Card>
                 <CardContent className="p-4">
                   <div className="text-sm space-y-2">
-                    <div><strong>Người gửi:</strong> {selectedSuggestion.isAnonymous ? 'Ẩn danh' : selectedSuggestion.user?.fullName}</div>
-                    <div><strong>Danh mục:</strong> {getCategoryLabel(selectedSuggestion.category)}</div>
-                    <div><strong>Ưu tiên:</strong> {getPriorityLabel(selectedSuggestion.priority)}</div>
+                    <div className="flex items-center gap-2">
+                      <strong>Trạng thái hiện tại:</strong>
+                      <Badge className={getStatusColor(suggestionDetail.status)}>
+                        {getStatusIcon(suggestionDetail.status)}
+                        <span className="ml-1">{getStatusLabel(suggestionDetail.status)}</span>
+                      </Badge>
+                    </div>
+                    <div><strong>Người gửi:</strong> {suggestionDetail.isAnonymous ? 'Ẩn danh' : suggestionDetail.user?.fullName}</div>
+                    <div><strong>Danh mục:</strong> {getCategoryLabel(suggestionDetail.category)}</div>
+                    <div><strong>Ưu tiên:</strong> {getPriorityLabel(suggestionDetail.priority)}</div>
                     <div><strong>Nội dung:</strong></div>
-                    <div className="bg-gray-50 p-2 rounded text-xs line-clamp-3">
-                      {selectedSuggestion.content}
+                    <div className="bg-gray-50 p-3 rounded text-sm">
+                      {suggestionDetail.content}
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Response Form */}
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="responseContent">Nội dung phản hồi *</Label>
-                  <Textarea
-                    id="responseContent"
-                    value={responseData.content}
-                    onChange={(e) => setResponseData(prev => ({ ...prev, content: e.target.value }))}
-                    placeholder="Nhập phản hồi chi tiết về kiến nghị này..."
-                    rows={4}
-                  />
-                </div>
+              {/* Previous Responses */}
+              {suggestionDetail.responses && Array.isArray(suggestionDetail.responses) && suggestionDetail.responses.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Lịch sử phản hồi ({suggestionDetail.responses.length})</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {suggestionDetail.responses.map((response: any, index: number) => (
+                      <div key={response.id} className="border-l-4 border-blue-500 bg-blue-50 p-3 rounded">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              Phản hồi #{index + 1}
+                            </Badge>
+                            {response.isPublic && (
+                              <Badge variant="secondary" className="text-xs">Công khai</Badge>
+                            )}
+                          </div>
+                          <span className="text-xs text-gray-500">
+                            {formatDate(response.createdAt)}
+                          </span>
+                        </div>
+                        <div className="text-sm mb-2">
+                          <strong>Người phản hồi:</strong> {response.responder?.fullName || 'N/A'}
+                        </div>
+                        <div className="text-sm bg-white p-2 rounded">
+                          {response.content}
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
 
-                <div className="grid grid-cols-2 gap-4">
+              {/* Response Form */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">
+                    {suggestionDetail.responses && Array.isArray(suggestionDetail.responses) && suggestionDetail.responses.length > 0 
+                      ? 'Gửi phản hồi mới' 
+                      : 'Phản hồi kiến nghị'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor="responseContent">Nội dung phản hồi *</Label>
+                    <Textarea
+                      id="responseContent"
+                      value={responseData.content}
+                      onChange={(e) => setResponseData(prev => ({ ...prev, content: e.target.value }))}
+                      placeholder="Nhập phản hồi chi tiết về kiến nghị này..."
+                      rows={4}
+                      className="mt-1"
+                    />
+                  </div>
+
                   <div>
                     <Label htmlFor="newStatus">Cập nhật trạng thái</Label>
                     <Select 
                       value={responseData.newStatus} 
                       onValueChange={(value) => setResponseData(prev => ({ ...prev, newStatus: value as any }))}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="mt-1">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -956,50 +1056,51 @@ export default function SuggestionManagement() {
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
 
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="isPublic"
-                      checked={responseData.isPublic}
-                      onCheckedChange={(checked) => setResponseData(prev => ({ ...prev, isPublic: checked as boolean }))}
-                    />
-                    <Label htmlFor="isPublic" className="text-sm">
-                      Phản hồi công khai (hiển thị cho tất cả)
-                    </Label>
-                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="isPublic"
+                        checked={responseData.isPublic}
+                        onCheckedChange={(checked) => setResponseData(prev => ({ ...prev, isPublic: checked as boolean }))}
+                      />
+                      <Label htmlFor="isPublic" className="text-sm">
+                        Phản hồi công khai (hiển thị cho tất cả)
+                      </Label>
+                    </div>
 
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="sendNotification"
-                      checked={responseData.sendNotification}
-                      onCheckedChange={(checked) => setResponseData(prev => ({ ...prev, sendNotification: checked as boolean }))}
-                    />
-                    <Label htmlFor="sendNotification" className="text-sm">
-                      Gửi thông báo cho người gửi kiến nghị
-                    </Label>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="sendNotification"
+                        checked={responseData.sendNotification}
+                        onCheckedChange={(checked) => setResponseData(prev => ({ ...prev, sendNotification: checked as boolean }))}
+                      />
+                      <Label htmlFor="sendNotification" className="text-sm">
+                        Gửi thông báo cho người gửi kiến nghị
+                      </Label>
+                    </div>
                   </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             </div>
           )}
 
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 pt-4 border-t">
             <Button
               variant="outline"
               onClick={() => {
                 setShowResponseDialog(false)
                 setSelectedSuggestion(null)
+                setSuggestionDetail(null)
                 resetResponseForm()
               }}
               disabled={sendingResponse}
             >
-              Hủy
+              Đóng
             </Button>
             <Button
               onClick={handleRespond}
-              disabled={!responseData.content.trim() || sendingResponse}
+              disabled={!responseData.content.trim() || sendingResponse || loadingDetail}
             >
               {sendingResponse ? (
                 <>

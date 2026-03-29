@@ -7,10 +7,12 @@ import DocumentsScreenMobile from "@/components/screens/documents-screen-mobile"
 import MeScreenMobile from "@/components/screens/me-screen-mobile"
 import ActivitiesScreen from "@/components/screens/activities-screen"
 import NewsScreenMobile from "@/components/screens/news-screen-mobile"
+import BooksScreenMobile from "@/components/screens/books-screen-mobile"
 import PointsDashboard from "@/components/points/points-dashboard"
 import UserManagementEnhanced from "@/components/admin/user-management-enhanced"
+import QRScanner from "@/components/qr-scanner"
 
-export type TabType = "home" | "activities" | "study" | "docs" | "me"
+export type TabType = "home" | "activities" | "books" | "study" | "docs" | "me"
 
 interface MainAppProps {
   onLogout?: () => void
@@ -20,7 +22,9 @@ export function MainApp({ onLogout }: MainAppProps) {
   const [activeTab, setActiveTab] = useState<TabType>("home")
   const [showPoints, setShowPoints] = useState(false)
   const [showAdmin, setShowAdmin] = useState(false)
+  const [showQRScanner, setShowQRScanner] = useState(false)
   const [openDocumentId, setOpenDocumentId] = useState<string | undefined>()
+  const [booksKey, setBooksKey] = useState(0) // Key to force reload books screen
 
   // Called from notifications: switch to docs tab and auto-open the document
   const handleOpenDocument = (docId: string) => {
@@ -89,6 +93,8 @@ export function MainApp({ onLogout }: MainAppProps) {
         return <NewsScreenMobile onShowPoints={() => setShowPoints(true)} />
       case "activities":
         return <ActivitiesScreen />
+      case "books":
+        return <BooksScreenMobile key={booksKey} />
       case "study":
         return <EnhancedStudyScreen />
       case "docs":
@@ -109,8 +115,27 @@ export function MainApp({ onLogout }: MainAppProps) {
       
       {/* Bottom Navigation - ALWAYS visible and fixed */}
       <div style={navWrapperStyle}>
-        <BottomNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+        <BottomNavigation 
+          activeTab={activeTab} 
+          onTabChange={setActiveTab}
+          onQRScan={() => setShowQRScanner(true)}
+        />
       </div>
+
+      {/* QR Scanner Modal */}
+      {showQRScanner && (
+        <QRScanner 
+          onClose={() => setShowQRScanner(false)}
+          onSuccess={() => {
+            // Force reload books screen
+            setBooksKey(prev => prev + 1)
+            // Switch to books tab if not already there
+            if (activeTab !== "books") {
+              setActiveTab("books")
+            }
+          }}
+        />
+      )}
     </div>
   )
 }

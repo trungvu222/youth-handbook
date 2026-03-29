@@ -127,6 +127,41 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
+// Get my suggestions - MUST be before /:id route
+router.get('/my-suggestions', auth, async (req, res) => {
+  try {
+    const suggestions = await prisma.suggestion.findMany({
+      where: { userId: req.user.id },
+      include: {
+        _count: {
+          select: {
+            responses: true
+          }
+        }
+      },
+      orderBy: { submittedAt: 'desc' }
+    });
+
+    const transformedSuggestions = suggestions.map(suggestion => ({
+      ...suggestion,
+      responses: suggestion._count.responses
+    }));
+
+    console.log('[Backend] My suggestions for user', req.user.id, ':', transformedSuggestions.length);
+
+    res.json({
+      success: true,
+      data: transformedSuggestions
+    });
+  } catch (error) {
+    console.error('Get my suggestions error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Không thể tải kiến nghị của bạn'
+    });
+  }
+});
+
 // Get specific suggestion
 router.get('/:id', auth, async (req, res) => {
   try {
@@ -358,39 +393,6 @@ router.delete('/:id', auth, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Không thể xóa kiến nghị'
-    });
-  }
-});
-
-// Get my suggestions
-router.get('/my-suggestions', auth, async (req, res) => {
-  try {
-    const suggestions = await prisma.suggestion.findMany({
-      where: { userId: req.user.id },
-      include: {
-        _count: {
-          select: {
-            responses: true
-          }
-        }
-      },
-      orderBy: { submittedAt: 'desc' }
-    });
-
-    const transformedSuggestions = suggestions.map(suggestion => ({
-      ...suggestion,
-      responses: suggestion._count.responses
-    }));
-
-    res.json({
-      success: true,
-      data: transformedSuggestions
-    });
-  } catch (error) {
-    console.error('Get my suggestions error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Không thể tải kiến nghị của bạn'
     });
   }
 });
