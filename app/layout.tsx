@@ -53,54 +53,16 @@ const capacitorDetectionScript = `
   })();
 `;
 
-// Critical CSS cho mobile app - CHỈ áp dụng cho .mobile-app class
+// Critical CSS cho mobile app
 const criticalCSS = `
   * { box-sizing: border-box; }
 
-  /* Default styles for all pages */
-  html {
+  html, body {
     width: 100%;
     margin: 0; padding: 0;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
-  }
-
-  body {
-    width: 100%;
-    margin: 0; padding: 0;
-    -webkit-text-size-adjust: 100%;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  /* Mobile app specific styles - ONLY apply with .mobile-app class */
-  body.mobile-app {
-    height: 100%;
-    height: 100dvh;
-    overscroll-behavior: none;
-    overscroll-behavior-y: none;
-    background: linear-gradient(135deg, #fef7f0 0%, #fff5eb 50%, #fef7f0 100%);
-  }
-
-  html:has(body.mobile-app) {
-    height: 100%;
-    height: 100dvh;
-    overscroll-behavior: none;
-    overscroll-behavior-y: none;
-  }
-
-  /* Khi chạy PWA standalone (đã cài về màn hình) - khoá cứng - CHỈ cho mobile app */
-  @media all and (display-mode: standalone) {
-    body.mobile-app {
-      position: fixed;
-      width: 100%;
-      overflow: hidden;
-    }
-    
-    html:has(body.mobile-app) {
-      position: fixed;
-      overflow: hidden;
-    }
   }
   
   /* Animation */

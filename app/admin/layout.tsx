@@ -25,7 +25,17 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="admin-layout">
+    <div className="admin-layout" style={{ minHeight: '100vh', height: 'auto' }}>
+      <style dangerouslySetInnerHTML={{ __html: `
+        /* Override global styles for admin layout */
+        body:has(.admin-layout),
+        html:has(.admin-layout) {
+          height: auto !important;
+          min-height: 100vh !important;
+          overflow-y: auto !important;
+          position: static !important;
+        }
+      `}} />
       <AdminLayoutClient>
         {children}
       </AdminLayoutClient>
