@@ -621,29 +621,23 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
                     <Calendar style={{ width: 16, height: 16 }} />
                     Ngày giờ trả dự kiến (tùy chọn)
                   </label>
-                  <div style={{
-                    padding: 12,
-                    background: "#dcfce7",
-                    borderRadius: 12
-                  }}>
-                    <input
-                      type="datetime-local"
-                      value={returnDate}
-                      onChange={(e) => setReturnDate(e.target.value)}
-                      min={new Date().toISOString().slice(0, 16)}
-                      style={{
-                        width: "100%",
-                        padding: "8px", 
-                        borderRadius: 8,
-                        border: "1px solid #bbf7d0", 
-                        background: "#fff",
-                        fontSize: 14, 
-                        outline: "none",
-                        boxSizing: "border-box",
-                        display: "block"
-                      }}
-                    />
-                  </div>
+                  <input
+                    type="datetime-local"
+                    value={returnDate}
+                    onChange={(e) => setReturnDate(e.target.value)}
+                    min={new Date().toISOString().slice(0, 16)}
+                    style={{
+                      width: "100%",
+                      padding: "12px", 
+                      borderRadius: 12,
+                      border: "1px solid #e2e8f0", 
+                      background: "#fff",
+                      fontSize: 14, 
+                      outline: "none",
+                      boxSizing: "border-box",
+                      display: "block"
+                    }}
+                  />
                 </div>
               </>
             )}
