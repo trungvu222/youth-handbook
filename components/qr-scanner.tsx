@@ -629,8 +629,8 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
                     style={{
                       width: "100%",
                       maxWidth: "100%",
-                      padding: "10px 12px", 
-                      borderRadius: 10,
+                      padding: "12px", 
+                      borderRadius: 12,
                       border: "2px solid #e2e8f0", 
                       fontSize: 14, 
                       outline: "none",
