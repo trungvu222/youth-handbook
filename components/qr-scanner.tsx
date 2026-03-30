@@ -628,6 +628,7 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
                     min={new Date().toISOString().slice(0, 16)}
                     style={{
                       width: "100%",
+                      margin: 0,
                       padding: "12px", 
                       borderRadius: 12,
                       border: "none", 
@@ -635,7 +636,10 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
                       fontSize: 14, 
                       outline: "none",
                       boxSizing: "border-box",
-                      display: "block"
+                      display: "block",
+                      WebkitAppearance: "none",
+                      MozAppearance: "none",
+                      appearance: "none"
                     }}
                   />
                 </div>
