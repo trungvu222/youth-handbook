@@ -106,40 +106,40 @@ export default function DashboardContent() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-red-600 via-red-500 to-orange-500 p-6 text-white shadow-2xl">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-red-600 via-red-500 to-orange-500 p-4 md:p-6 text-white shadow-2xl">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yIDItNCAyLTRzMiAyIDIgNC0yIDQtMiA0LTItMi0yLTR6bTAtMjBjMC0yIDItNCAyLTRzMiAyIDIgNC0yIDQtMiA0LTItMi0yLTR6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-30"></div>
         
-        <div className="relative flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+        <div className="relative flex flex-col gap-4">
           <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-                <svg className="h-8 w-8" viewBox="0 0 100 100" fill="currentColor">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="p-2 md:p-3 bg-white/20 rounded-xl backdrop-blur-sm flex-shrink-0">
+                <svg className="h-6 w-6 md:h-8 md:w-8" viewBox="0 0 100 100" fill="currentColor">
                   <polygon points="50,5 61,35 95,35 68,57 79,90 50,70 21,90 32,57 5,35 39,35" fill="currentColor"/>
                 </svg>
               </div>
-              <div>
-                <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">HỆ THỐNG QUẢN LÝ TRUNG ĐOÀN 196</h1>
-                <p className="text-red-100 text-sm lg:text-base">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-base md:text-2xl lg:text-3xl font-bold tracking-tight truncate">HỆ THỐNG QUẢN LÝ ĐOÀN VIÊN TRUNG ĐOÀN 196</h1>
+                <p className="text-red-100 text-xs md:text-sm lg:text-base truncate">
                   Chào mừng, <span className="font-semibold text-white">{currentUser?.fullName}</span>
                 </p>
               </div>
             </div>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
             <button 
               onClick={fetchStats}
-              className="group bg-white/20 hover:bg-white/30 px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all duration-300 hover:scale-105 backdrop-blur-sm border border-white/20"
+              className="group bg-white/20 hover:bg-white/30 px-3 md:px-4 py-2 md:py-2.5 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 hover:scale-105 backdrop-blur-sm border border-white/20 text-sm md:text-base"
             >
-              <RefreshCw className="h-4 w-4 group-hover:rotate-180 transition-transform" />
+              <RefreshCw className="h-4 w-4 group-hover:rotate-180 transition-transform flex-shrink-0" />
               <span className="font-medium">Làm mới</span>
             </button>
-            <div className="text-right bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/20">
-              <div className="text-2xl font-bold tabular-nums">
+            <div className="text-center sm:text-right bg-white/10 backdrop-blur-sm rounded-xl px-3 md:px-4 py-2 border border-white/20">
+              <div className="text-lg md:text-2xl font-bold tabular-nums">
                 {currentTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
               </div>
-              <div className="text-red-100 text-sm">
-                {currentTime.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })}
+              <div className="text-red-100 text-xs md:text-sm truncate">
+                {currentTime.toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })}
               </div>
             </div>
           </div>
