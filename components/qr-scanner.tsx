@@ -613,10 +613,10 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
                 </div>
 
                 {/* Return Date Input */}
-                <div style={{ marginBottom: 16, paddingLeft: 4, paddingRight: 4 }}>
+                <div style={{ marginBottom: 16 }}>
                   <label style={{
                     display: "flex", alignItems: "center", gap: 8,
-    fontSize: 13, color: "#64748b", marginBottom: 8
+                    fontSize: 13, color: "#64748b", marginBottom: 8
                   }}>
                     <Calendar style={{ width: 16, height: 16 }} />
                     Ngày giờ trả dự kiến (tùy chọn)
@@ -627,7 +627,7 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
                     onChange={(e) => setReturnDate(e.target.value)}
                     min={new Date().toISOString().slice(0, 16)}
                     style={{
-                      width: "calc(100% - 8px)",
+                      width: "100%",
                       maxWidth: "100%",
                       padding: "10px 12px", 
                       borderRadius: 10,
