@@ -57,30 +57,50 @@ const capacitorDetectionScript = `
 const criticalCSS = `
   * { box-sizing: border-box; }
 
-  html, body {
+  /* Default styles for all pages */
+  html {
     width: 100%;
-    height: 100%;
-    height: 100dvh;
     margin: 0; padding: 0;
-    overscroll-behavior: none;
-    overscroll-behavior-y: none;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Khi chạy PWA standalone (đã cài về màn hình) - khoá cứng */
+  body {
+    width: 100%;
+    margin: 0; padding: 0;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Mobile app specific styles - ONLY apply with .mobile-app class */
+  body.mobile-app {
+    height: 100%;
+    height: 100dvh;
+    overscroll-behavior: none;
+    overscroll-behavior-y: none;
+    background: linear-gradient(135deg, #fef7f0 0%, #fff5eb 50%, #fef7f0 100%);
+  }
+
+  html:has(body.mobile-app) {
+    height: 100%;
+    height: 100dvh;
+    overscroll-behavior: none;
+    overscroll-behavior-y: none;
+  }
+
+  /* Khi chạy PWA standalone (đã cài về màn hình) - khoá cứng - CHỈ cho mobile app */
   @media all and (display-mode: standalone) {
-    html, body {
+    body.mobile-app {
       position: fixed;
       width: 100%;
       overflow: hidden;
     }
-  }
-
-  /* Mobile app specific styles - only apply with .mobile-app class */
-  body.mobile-app {
-    background: linear-gradient(135deg, #fef7f0 0%, #fff5eb 50%, #fef7f0 100%);
+    
+    html:has(body.mobile-app) {
+      position: fixed;
+      overflow: hidden;
+    }
   }
   
   /* Animation */
