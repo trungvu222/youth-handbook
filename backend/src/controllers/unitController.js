@@ -16,6 +16,9 @@ const getUnits = async (req, res, next) => {
           }
         },
         members: {
+          where: {
+            isActive: true
+          },
           select: {
             id: true,
             fullName: true,
@@ -27,7 +30,11 @@ const getUnits = async (req, res, next) => {
         },
         _count: {
           select: {
-            members: true,
+            members: {
+              where: {
+                isActive: true
+              }
+            },
             activities: true,
             childUnits: true
           }
@@ -71,6 +78,9 @@ const getUnit = async (req, res, next) => {
           }
         },
         members: {
+          where: {
+            isActive: true
+          },
           select: {
             id: true,
             fullName: true,
@@ -86,11 +96,24 @@ const getUnit = async (req, res, next) => {
         },
         childUnits: {
           select: { id: true, name: true, isActive: true,
-            _count: { select: { members: true } } }
+            _count: { 
+              select: { 
+                members: {
+                  where: {
+                    isActive: true
+                  }
+                }
+              } 
+            } 
+          }
         },
         _count: {
           select: {
-            members: true,
+            members: {
+              where: {
+                isActive: true
+              }
+            },
             activities: true,
             childUnits: true
           }
@@ -265,7 +288,11 @@ const updateUnit = async (req, res, next) => {
         },
         _count: {
           select: {
-            members: true,
+            members: {
+              where: {
+                isActive: true
+              }
+            },
             activities: true
           }
         }
