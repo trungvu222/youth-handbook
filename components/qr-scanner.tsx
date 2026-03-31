@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { bookApi, authApi } from "@/lib/api"
+import { bookApi, authApi, activityApi } from "@/lib/api"
 import { X, Camera, CheckCircle, AlertCircle, Calendar } from "lucide-react"
 import jsQR from "jsqr"
 
@@ -169,25 +169,52 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
       setError(null)
       setResult(null)
 
-      // Scan QR code
-      const response = await bookApi.scanBookQR(qrCode.trim())
+      // Try book QR first
+      const bookResponse = await bookApi.scanBookQR(qrCode.trim())
       
-      console.log('[QR Scanner] API response:', response)
+      console.log('[QR Scanner] Book API response:', bookResponse)
       
-      if (response.success && response.data) {
-        console.log('[QR Scanner] Book found:', response.data)
-        setResult(response.data)
+      if (bookResponse.success && bookResponse.data) {
+        console.log('[QR Scanner] Book found:', bookResponse.data)
+        setResult(bookResponse.data)
         setError(null)
-      } else {
-        console.error('[QR Scanner] Error:', response.error)
-        setError(response.error || "Không tìm thấy sách")
-        setResult(null)
-        // Restart camera after error
-        setTimeout(() => {
-          setError(null)
-          startCamera()
-        }, 2000)
+        return
       }
+
+      // If not a book, try activity check-in
+      console.log('[QR Scanner] Not a book, trying activity check-in...')
+      
+      // Parse QR code - format: activityId|timestamp or just activityId
+      const parts = qrCode.trim().split('|')
+      const activityId = parts[0]
+      
+      if (activityId) {
+        const checkInResponse = await activityApi.checkInActivity(activityId, {
+          qrData: qrCode.trim()
+        })
+        
+        console.log('[QR Scanner] Check-in response:', checkInResponse)
+        
+        if (checkInResponse.success) {
+          // Show success toast and close
+          showToast(checkInResponse.message || "Điểm danh thành công!", 'success')
+          onSuccess?.()
+          setTimeout(() => {
+            onClose()
+          }, 1500)
+          return
+        }
+      }
+
+      // If both failed, show error
+      console.error('[QR Scanner] Both attempts failed')
+      setError("Mã QR không hợp lệ hoặc đã hết hạn")
+      setResult(null)
+      // Restart camera after error
+      setTimeout(() => {
+        setError(null)
+        startCamera()
+      }, 2000)
     } catch (err: any) {
       console.error('[QR Scanner] Exception:', err)
       setError(err.message || "Có lỗi xảy ra")
