@@ -1699,6 +1699,153 @@ const batchCheckIn = async (req, res, next) => {
   }
 };
 
+// @desc    Check in to activity using QR code directly
+// @route   POST /api/activities/checkin-by-qr
+// @access  Private
+const checkInByQRCode = async (req, res, next) => {
+  try {
+    const { qrCode } = req.body;
+    const currentUser = req.user;
+
+    if (!qrCode) {
+      return res.status(400).json({
+        success: false,
+        error: 'QR code is required'
+      });
+    }
+
+    // Find activity by qrCode or id
+    const activity = await prisma.activity.findFirst({
+      where: {
+        OR: [
+          { qrCode: qrCode.trim() },
+          { id: qrCode.trim() }
+        ]
+      }
+    });
+
+    if (!activity) {
+      return res.status(404).json({
+        success: false,
+        error: 'Không tìm thấy hoạt động với mã QR này'
+      });
+    }
+
+    // Check if user is registered
+    const participation = await prisma.activityParticipant.findUnique({
+      where: {
+        activityId_userId: {
+          activityId: activity.id,
+          userId: currentUser.id
+        }
+      }
+    });
+
+    if (!participation) {
+      return res.status(400).json({
+        success: false,
+        error: 'Bạn chưa đăng ký tham gia hoạt động này'
+      });
+    }
+
+    if (participation.status === 'CHECKED_IN') {
+      return res.status(400).json({
+        success: false,
+        error: 'Bạn đã điểm danh rồi'
+      });
+    }
+
+    // Check check-in time window
+    const now = new Date();
+    const checkInStart = activity.checkInStartTime || activity.startTime;
+    const checkInEnd = activity.checkInEndTime;
+
+    if (now < checkInStart) {
+      return res.status(400).json({
+        success: false,
+        error: 'Chưa đến giờ điểm danh'
+      });
+    }
+
+    if (checkInEnd && now > checkInEnd) {
+      return res.status(400).json({
+        success: false,
+        error: 'Đã hết giờ điểm danh'
+      });
+    }
+
+    // Block check-in if activity endTime has passed
+    if (activity.endTime && now > activity.endTime) {
+      return res.status(400).json({
+        success: false,
+        error: 'Hoạt động đã kết thúc, không thể điểm danh'
+      });
+    }
+
+    // Calculate points based on timing
+    let pointsEarned = activity.onTimePoints; // Default on-time points
+    const activityStart = new Date(activity.startTime);
+    const thresholdMinutes = activity.lateThresholdMinutes || 15;
+    const lateThreshold = new Date(activityStart.getTime() + thresholdMinutes * 60000);
+
+    if (now > lateThreshold) {
+      pointsEarned = activity.latePoints; // Late points
+    }
+
+    // Update participation
+    await prisma.activityParticipant.update({
+      where: {
+        activityId_userId: {
+          activityId: activity.id,
+          userId: currentUser.id
+        }
+      },
+      data: {
+        status: 'CHECKED_IN',
+        checkInTime: now,
+        qrData: qrCode,
+        pointsEarned
+      }
+    });
+
+    // Update user points
+    await prisma.user.update({
+      where: { id: currentUser.id },
+      data: {
+        points: {
+          increment: pointsEarned
+        }
+      }
+    });
+
+    // Create points history
+    await prisma.pointsHistory.create({
+      data: {
+        userId: currentUser.id,
+        points: pointsEarned,
+        reason: `Điểm danh hoạt động: ${activity.title}`,
+        type: 'ACTIVITY_CHECKIN',
+        relatedId: activity.id
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Điểm danh thành công! +${pointsEarned} điểm`,
+      data: {
+        pointsEarned,
+        checkInTime: now,
+        activity: {
+          id: activity.id,
+          title: activity.title
+        }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getActivities,
   getActivity,
@@ -1707,6 +1854,7 @@ module.exports = {
   deleteActivity,
   joinActivity,
   checkInActivity,
+  checkInByQRCode,
   getActivityStats,
   submitFeedback,
   respondToFeedback,

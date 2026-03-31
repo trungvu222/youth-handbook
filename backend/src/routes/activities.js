@@ -10,6 +10,7 @@ const {
   deleteActivity,
   joinActivity,
   checkInActivity,
+  checkInByQRCode,
   getActivityStats,
   submitFeedback,
   respondToFeedback,
@@ -73,6 +74,7 @@ router.route('/:id')
 // Activity participation
 router.post('/:id/join', joinActivity);
 router.post('/:id/checkin', checkInActivity);
+router.post('/checkin-by-qr', checkInByQRCode); // New endpoint for QR code check-in
 
 // Attendance management
 router.get('/:id/attendance', authorize('ADMIN', 'LEADER'), getAttendanceList);

@@ -1065,6 +1065,23 @@ export const activityApi = {
     });
   },
 
+  // Check in to activity using QR code directly
+  async checkInByQRCode(qrCode: string): Promise<ApiResponse<any>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: "Không có token" };
+    }
+
+    return apiCall(`/activities/checkin-by-qr`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ qrCode }),
+    });
+  },
+
   // Get activity statistics (Admin/Leader)
   async getActivityStats(id: string): Promise<ApiResponse<any>> {
     const token = getAuthToken();
