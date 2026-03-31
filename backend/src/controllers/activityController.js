@@ -1822,10 +1822,10 @@ const checkInByQRCode = async (req, res, next) => {
     await prisma.pointsHistory.create({
       data: {
         userId: currentUser.id,
+        activityId: activity.id,
         points: pointsEarned,
         reason: `Điểm danh hoạt động: ${activity.title}`,
-        type: 'ACTIVITY_CHECKIN',
-        relatedId: activity.id
+        type: 'EARN'
       }
     });
 

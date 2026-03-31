@@ -25,6 +25,8 @@ export function MainApp({ onLogout }: MainAppProps) {
   const [showQRScanner, setShowQRScanner] = useState(false)
   const [openDocumentId, setOpenDocumentId] = useState<string | undefined>()
   const [booksKey, setBooksKey] = useState(0) // Key to force reload books screen
+  const [activitiesKey, setActivitiesKey] = useState(0) // Key to force reload activities screen
+  const [qrScanType, setQrScanType] = useState<'book' | 'activity' | null>(null) // Track what was scanned
 
   // Called from notifications: switch to docs tab and auto-open the document
   const handleOpenDocument = (docId: string) => {
@@ -92,7 +94,7 @@ export function MainApp({ onLogout }: MainAppProps) {
       case "home":
         return <NewsScreenMobile onShowPoints={() => setShowPoints(true)} />
       case "activities":
-        return <ActivitiesScreen />
+        return <ActivitiesScreen key={activitiesKey} />
       case "books":
         return <BooksScreenMobile key={booksKey} />
       case "study":
@@ -126,12 +128,21 @@ export function MainApp({ onLogout }: MainAppProps) {
       {showQRScanner && (
         <QRScanner 
           onClose={() => setShowQRScanner(false)}
-          onSuccess={() => {
-            // Force reload books screen
-            setBooksKey(prev => prev + 1)
-            // Switch to books tab if not already there
-            if (activeTab !== "books") {
-              setActiveTab("books")
+          onSuccess={(type) => {
+            if (type === 'book') {
+              // Force reload books screen
+              setBooksKey(prev => prev + 1)
+              // Switch to books tab if not already there
+              if (activeTab !== "books") {
+                setActiveTab("books")
+              }
+            } else if (type === 'activity') {
+              // Force reload activities screen
+              setActivitiesKey(prev => prev + 1)
+              // Switch to activities tab if not already there
+              if (activeTab !== "activities") {
+                setActiveTab("activities")
+              }
             }
           }}
         />

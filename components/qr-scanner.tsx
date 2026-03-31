@@ -7,7 +7,7 @@ import jsQR from "jsqr"
 
 interface QRScannerProps {
   onClose: () => void
-  onSuccess?: () => void
+  onSuccess?: (type: 'book' | 'activity') => void
 }
 
 interface Toast {
@@ -194,7 +194,7 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
       if (checkInResponse.success) {
         // Show success toast and close
         showToast(checkInResponse.message || "Điểm danh thành công!", 'success')
-        onSuccess?.()
+        onSuccess?.('activity') // Notify parent that activity was checked in
         setTimeout(() => {
           onClose()
         }, 1500)
@@ -266,7 +266,7 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
           returnDate: returnDate || null,
           message: response.message || "Mượn sách thành công!"
         })
-        onSuccess?.()
+        onSuccess?.('book') // Notify parent that book was borrowed
       } else {
         setError(response.error || "Không thể mượn sách")
       }
@@ -291,7 +291,7 @@ export default function QRScanner({ onClose, onSuccess }: QRScannerProps) {
       if (response.success) {
         console.log('[QR Scanner] Return successful, showing toast')
         showToast(response.message || "Trả sách thành công!", 'success')
-        onSuccess?.()
+        onSuccess?.('book') // Notify parent that book was returned
         // Close after showing toast
         setTimeout(() => {
           console.log('[QR Scanner] Closing scanner')
