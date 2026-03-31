@@ -228,7 +228,10 @@ const getPointsHistory = async (req, res, next) => {
     // Leader can only see history of users in their unit
     if (currentUser.role === 'LEADER') {
       const unitUsers = await prisma.user.findMany({
-        where: { unitId: currentUser.unitId },
+        where: { 
+          unitId: currentUser.unitId,
+          isActive: true
+        },
         select: { id: true }
       });
       whereClause.userId = { in: unitUsers.map(u => u.id) };

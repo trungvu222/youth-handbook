@@ -320,8 +320,9 @@ const createActivity = async (req, res, next) => {
       let usersToNotify = [];
       
       if (notifyAll) {
-        // Get all users
+        // Get all active users
         usersToNotify = await prisma.user.findMany({
+          where: { isActive: true },
           select: { id: true }
         });
       } else if (notifyUserIds && notifyUserIds.length > 0) {
@@ -647,11 +648,14 @@ const getActivityStats = async (req, res, next) => {
     const absent = totalRegistered - checkedIn;
     const feedbackCount = activity.feedbacks.length;
 
-    // Get unit members who haven't registered
+    // Get unit members who haven't registered (only active members)
     let nonParticipants = [];
     if (activity.unitId) {
       const unitMembers = await prisma.user.findMany({
-        where: { unitId: activity.unitId },
+        where: { 
+          unitId: activity.unitId,
+          isActive: true
+        },
         select: { id: true, fullName: true, email: true }
       });
       

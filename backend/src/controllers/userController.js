@@ -85,7 +85,9 @@ const getUsers = async (req, res, next) => {
       });
     }
 
-    let whereClause = {};
+    let whereClause = {
+      isActive: true  // Only return active users
+    };
 
     // Leader can only see users in their unit
     if (currentUser.role === 'LEADER') {
