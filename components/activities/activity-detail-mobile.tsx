@@ -732,36 +732,10 @@ export default function ActivityDetailMobile({ activityId, onBack }: ActivityDet
               </button>
             </div>
             <div style={{ padding: '16px' }}>
-              {/* Mode toggle - Camera mode disabled */}
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-                <button
-                  style={{
-                    flex: 1, padding: '10px', borderRadius: '8px', border: 'none',
-                    cursor: 'not-allowed', fontWeight: 600, fontSize: '14px',
-                    backgroundColor: '#f3f4f6',
-                    color: '#9ca3af',
-                  }}
-                  disabled
-                >
-                  📷 Quét QR (Không khả dụng)
-                </button>
-                <button
-                  style={{
-                    flex: 1, padding: '10px', borderRadius: '8px', border: 'none',
-                    cursor: 'pointer', fontWeight: 600, fontSize: '14px',
-                    backgroundColor: '#10b981',
-                    color: '#ffffff',
-                  }}
-                  onClick={() => setScanMode('manual')}
-                >
-                  ⌨️ Nhập mã
-                </button>
-              </div>
-
               {/* Manual input only */}
               <div>
                 <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '12px' }}>
-                  Nhập mã QR để điểm danh
+                  Nhập mã QR để điểm danh hoặc sử dụng nút QR ở giữa màn hình
                 </p>
                 <input
                   type="text"
