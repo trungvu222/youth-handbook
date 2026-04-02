@@ -161,7 +161,16 @@ const getActivity = async (req, res, next) => {
         participants: {
           include: {
             user: {
-              select: { id: true, fullName: true, email: true, youthPosition: true }
+              select: { 
+                id: true, 
+                fullName: true, 
+                email: true, 
+                role: true,
+                youthPosition: true,
+                unit: {
+                  select: { id: true, name: true }
+                }
+              }
             }
           },
           orderBy: { checkInTime: 'asc' }

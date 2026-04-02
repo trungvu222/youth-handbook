@@ -672,7 +672,9 @@ export default function ActivityDetailMobile({ activityId, onBack }: ActivityDet
                     {participant.user?.fullName || 'Người dùng'}
                   </div>
                   <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                    {participant.user?.youthPosition || 'Đoàn viên'}
+                    {participant.user?.role === 'LEADER' && participant.user?.unit
+                      ? `Bí thư ${participant.user.unit.name}`
+                      : participant.user?.youthPosition || 'Đoàn viên'}
                   </div>
                 </div>
                 {participant.status === 'CHECKED_IN' && (

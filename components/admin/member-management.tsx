@@ -1846,17 +1846,21 @@ export function MemberManagement({ initialUnitFilter }: MemberManagementProps = 
               </div>
 
               {/* Chức vụ - Position Section */}
-              {(selectedMember.youthPosition || selectedMember.governmentPosition || selectedMember.militaryRank) && (
+              {(selectedMember.youthPosition || selectedMember.governmentPosition || selectedMember.militaryRank || selectedMember.role === 'LEADER') && (
                 <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg border border-amber-200">
                   <h4 className="font-semibold text-amber-800 mb-3 flex items-center gap-2">
                     <Award className="h-4 w-4" />
                     Chức vụ & Cấp bậc
                   </h4>
                   <div className="grid grid-cols-3 gap-4">
-                    {selectedMember.youthPosition && (
+                    {(selectedMember.youthPosition || selectedMember.role === 'LEADER') && (
                       <div>
                         <p className="text-xs text-amber-700">Chức vụ Đoàn</p>
-                        <p className="font-semibold text-amber-900">{selectedMember.youthPosition}</p>
+                        <p className="font-semibold text-amber-900">
+                          {selectedMember.role === 'LEADER' && selectedMember.unit 
+                            ? `Bí thư ${selectedMember.unit.name}`
+                            : selectedMember.youthPosition || 'Đoàn viên'}
+                        </p>
                       </div>
                     )}
                     {selectedMember.governmentPosition && (

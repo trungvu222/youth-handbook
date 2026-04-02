@@ -499,7 +499,11 @@ export default function ActivityDetail({ activityId, onBack }: ActivityDetailPro
                   </Avatar>
                   <div className="flex-1">
                     <p className="font-medium text-sm">{participant.user.fullName}</p>
-                    <p className="text-xs text-gray-600">{participant.user.youthPosition || 'Đoàn viên'}</p>
+                    <p className="text-xs text-gray-600">
+                      {participant.user.role === 'LEADER' && participant.user.unit
+                        ? `Bí thư ${participant.user.unit.name}`
+                        : participant.user.youthPosition || 'Đoàn viên'}
+                    </p>
                   </div>
                   {participant.status === 'CHECKED_IN' && (
                     <CheckCircle className="w-4 h-4 text-green-600" />
