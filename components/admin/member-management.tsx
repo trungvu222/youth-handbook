@@ -1891,7 +1891,7 @@ export function MemberManagement({ initialUnitFilter }: MemberManagementProps = 
                     </div>
                     <div className="flex items-start gap-2">
                       <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                      <span className="text-sm">{selectedMember.address || "Chưa cập nhật"}</span>
+                      <span className="text-sm">{selectedMember.permanentAddress || "Chưa cập nhật"}</span>
                     </div>
                   </div>
                 </div>
