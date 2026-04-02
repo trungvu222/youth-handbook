@@ -60,6 +60,7 @@ interface MemberManagementProps {
 export function MemberManagement({ initialUnitFilter }: MemberManagementProps = {}) {
   const { toast } = useToast()
   const [members, setMembers] = useState<Member[]>([])
+  const [allMembersStats, setAllMembersStats] = useState({ total: 0, active: 0, inactive: 0 })
   const [units, setUnits] = useState<Unit[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -157,6 +158,24 @@ export function MemberManagement({ initialUnitFilter }: MemberManagementProps = 
         console.error("[MemberManagement] Fetch users failed:", membersRes.status, errorData)
       }
 
+      // Fetch stats from both active and inactive to get accurate counts
+      const [activeRes, inactiveRes] = await Promise.all([
+        fetch(`${API_URL}/api/users?limit=1&isActive=true`, { headers }),
+        fetch(`${API_URL}/api/users?limit=1&isActive=false`, { headers })
+      ])
+      
+      if (activeRes.ok && inactiveRes.ok) {
+        const activeData = await activeRes.json()
+        const inactiveData = await inactiveRes.json()
+        const activeCount = activeData.pagination?.total || 0
+        const inactiveCount = inactiveData.pagination?.total || 0
+        setAllMembersStats({
+          total: activeCount + inactiveCount,
+          active: activeCount,
+          inactive: inactiveCount
+        })
+      }
+
       // Fetch units
       const unitsRes = await fetch(`${API_URL}/api/units`, { headers })
       if (unitsRes.ok) {
@@ -245,10 +264,10 @@ export function MemberManagement({ initialUnitFilter }: MemberManagementProps = 
     setCurrentPage(1)
   }, [searchTerm, filterUnit, filterStatus])
 
-  // Stats
-  const totalMembers = members.length
-  const activeMembers = members.filter(m => m.isActive).length
-  const inactiveMembers = members.filter(m => !m.isActive).length
+  // Stats - use allMembersStats instead of filtering members array
+  const totalMembers = allMembersStats.total
+  const activeMembers = allMembersStats.active
+  const inactiveMembers = allMembersStats.inactive
 
   // Handle add member
   const handleAddMember = async () => {
