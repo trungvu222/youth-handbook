@@ -74,7 +74,8 @@ const getUsers = async (req, res, next) => {
       page = 1, 
       limit = 20,
       sortBy = 'fullName',
-      sortOrder = 'asc'
+      sortOrder = 'asc',
+      isActive  // Add isActive filter from query
     } = req.query;
 
     // Check permissions
@@ -85,9 +86,14 @@ const getUsers = async (req, res, next) => {
       });
     }
 
-    let whereClause = {
-      isActive: true  // Only return active users
-    };
+    let whereClause = {};
+    
+    // Filter by isActive if provided, otherwise show only active users
+    if (isActive !== undefined) {
+      whereClause.isActive = isActive === 'true' || isActive === true;
+    } else {
+      whereClause.isActive = true;  // Default: only active users
+    }
 
     // Leader can only see users in their unit
     if (currentUser.role === 'LEADER') {

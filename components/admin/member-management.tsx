@@ -142,9 +142,10 @@ export function MemberManagement({ initialUnitFilter }: MemberManagementProps = 
         "Authorization": `Bearer ${token}`
       }
 
-      // Fetch members - get all users sorted by newest first
-      console.log("[MemberManagement] Fetching users from:", `${API_URL}/api/users`)
-      const membersRes = await fetch(`${API_URL}/api/users?limit=1000&sortBy=createdAt&sortOrder=desc`, { headers })
+      // Fetch members based on viewMode
+      const isActiveParam = viewMode === "active" ? "true" : "false"
+      console.log("[MemberManagement] Fetching users from:", `${API_URL}/api/users`, "isActive:", isActiveParam)
+      const membersRes = await fetch(`${API_URL}/api/users?limit=1000&sortBy=createdAt&sortOrder=desc&isActive=${isActiveParam}`, { headers })
       console.log("[MemberManagement] Response status:", membersRes.status, membersRes.ok)
       
       if (membersRes.ok) {
@@ -186,7 +187,7 @@ export function MemberManagement({ initialUnitFilter }: MemberManagementProps = 
 
   useEffect(() => {
     fetchData()
-  }, [])
+  }, [viewMode])  // Re-fetch when viewMode changes
 
   // Sync filter when prop changes
   useEffect(() => {
