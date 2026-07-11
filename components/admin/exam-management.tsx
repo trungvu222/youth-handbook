@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Switch } from '../ui/switch'
 import { Separator } from '../ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs'
-import { 
+import {
   Plus,
   Search,
   Brain,
@@ -97,11 +97,11 @@ export function ExamManagement() {
   const [showNotificationDialog, setShowNotificationDialog] = useState(false)
   const [newExamId, setNewExamId] = useState<string | null>(null)
   const [newExamTitle, setNewExamTitle] = useState('')
-  
+
   // Statistics state
   const [expandedExams, setExpandedExams] = useState<Set<string>>(new Set())
-  const [examAttemptsData, setExamAttemptsData] = useState<{[key: string]: any[]}>({})
-  const [loadingAttempts, setLoadingAttempts] = useState<{[key: string]: boolean}>({})
+  const [examAttemptsData, setExamAttemptsData] = useState<{ [key: string]: any[] }>({})
+  const [loadingAttempts, setLoadingAttempts] = useState<{ [key: string]: boolean }>({})
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [examToDelete, setExamToDelete] = useState<Exam | null>(null)
 
@@ -128,7 +128,7 @@ export function ExamManagement() {
 
   const categories = [
     'Lý luận chính trị',
-    'Kỹ năng lãnh đạo', 
+    'Kỹ năng lãnh đạo',
     'Kiến thức chuyên môn',
     'Pháp luật',
     'Văn hóa - Xã hội',
@@ -298,7 +298,7 @@ export function ExamManagement() {
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = '.json'
-    
+
     input.onchange = (e: any) => {
       const file = e.target.files[0]
       if (!file) return
@@ -307,7 +307,7 @@ export function ExamManagement() {
       reader.onload = (event) => {
         try {
           const questions = JSON.parse(event.target?.result as string)
-          
+
           // Validate format
           if (!Array.isArray(questions)) {
             throw new Error('File phải chứa một mảng câu hỏi')
@@ -317,8 +317,8 @@ export function ExamManagement() {
           const transformedQuestions = questions.map((q: any) => ({
             question: q.question || q.questionText || '',
             options: q.options || q.answers?.map((a: any) => a.text || a) || ['', '', '', ''],
-            correctAnswer: q.correctAnswer !== undefined 
-              ? q.correctAnswer 
+            correctAnswer: q.correctAnswer !== undefined
+              ? q.correctAnswer
               : q.answers?.findIndex((a: any) => a.isCorrect) || 0,
             explanation: q.explanation || '',
             difficulty: q.difficulty || 'MEDIUM',
@@ -344,10 +344,10 @@ export function ExamManagement() {
           })
         }
       }
-      
+
       reader.readAsText(file)
     }
-    
+
     input.click()
   }
 
@@ -405,7 +405,7 @@ export function ExamManagement() {
     setFormData(prev => ({
       ...prev,
       questions: prev.questions.map((q, i) =>
-        i === questionIndex 
+        i === questionIndex
           ? { ...q, options: q.options.map((opt, oi) => oi === optionIndex ? value : opt) }
           : q
       )
@@ -435,7 +435,7 @@ export function ExamManagement() {
     // Validate each question
     for (let i = 0; i < formData.questions.length; i++) {
       const q = formData.questions[i]
-      
+
       if (!q.question.trim()) {
         toast({
           title: 'Lỗi',
@@ -470,6 +470,7 @@ export function ExamManagement() {
         questionText: q.question,
         questionType: 'SINGLE_CHOICE',
         answers: q.options.map((option, optIndex) => ({
+          id: String(optIndex), // khi tạo đề, đáp án không có id
           text: option,
           isCorrect: optIndex === q.correctAnswer
         })),
@@ -503,21 +504,21 @@ export function ExamManagement() {
       if (response.success) {
         toast({
           title: 'Thành công',
-          description: selectedExam 
+          description: selectedExam
             ? 'Đã cập nhật kỳ thi'
             : 'Đã tạo kỳ thi mới'
         })
-        
+
         setShowCreateDialog(false)
         setShowEditDialog(false)
-        
+
         // Show notification dialog for new exams
         if (!selectedExam && response.data?.id) {
           setNewExamId(response.data.id)
           setNewExamTitle(formData.title)
           setShowNotificationDialog(true)
         }
-        
+
         resetForm()
         loadExams()
         loadStats()
@@ -574,23 +575,88 @@ export function ExamManagement() {
     }
   }
 
-  const handleEdit = (exam: Exam) => {
+  const handleEdit = async (exam: Exam) => {
     setSelectedExam(exam)
+    setShowEditDialog(true)
+
+    // Prefill metadata; questions load from detail API
     setFormData({
       title: exam.title,
       description: exam.description || '',
-      category: exam.category,
+      category: exam.category || 'Lý luận chính trị',
       duration: exam.duration,
       passingScore: exam.passingScore,
       maxAttempts: exam.maxAttempts,
-      pointsReward: exam.pointsReward,
+      pointsReward: exam.pointsReward ?? 10,
       startDate: exam.startDate || '',
       endDate: exam.endDate || '',
       isRandomOrder: exam.isRandomOrder,
       allowReview: exam.allowReview,
-      questions: exam.questions || [createEmptyQuestion()]
+      questions: [createEmptyQuestion()]
     })
-    setShowEditDialog(true)
+
+    try {
+      const response = await examApi.getExam(exam.id)
+      if (!response.success || !response.data) {
+        toast({
+          title: 'Lỗi',
+          description: response.error || 'Không tải được câu hỏi của kỳ thi',
+          variant: 'destructive'
+        })
+        return
+      }
+
+      const detail = response.data as any
+      const mappedQuestions =
+        Array.isArray(detail.questions) && detail.questions.length > 0
+          ? detail.questions.map((q: any) => {
+              const answers = Array.isArray(q.answers) ? q.answers : []
+              const correctIndex = answers.findIndex((a: any) => a.isCorrect)
+              return {
+                id: q.id,
+                question: q.questionText || q.question || '',
+                options: answers.length > 0
+                  ? answers.map((a: any) => a.text || '')
+                  : ['', '', '', ''],
+                correctAnswer: correctIndex >= 0 ? correctIndex : 0,
+                explanation: q.explanation || '',
+                difficulty: 'MEDIUM' as const,
+                category: '',
+                points: q.points || 1
+              }
+            })
+          : [createEmptyQuestion()]
+
+      setFormData({
+        title: detail.title ?? exam.title,
+        description: detail.description || '',
+        category: detail.category || exam.category || 'Lý luận chính trị',
+        duration: detail.duration ?? exam.duration,
+        passingScore: detail.passingScore ?? exam.passingScore,
+        maxAttempts: detail.maxAttempts ?? exam.maxAttempts,
+        pointsReward:
+          detail.pointsAwarded ??
+          detail.pointsReward ??
+          exam.pointsReward ??
+          10,
+        startDate: detail.startTime
+          ? String(detail.startTime).slice(0, 10)
+          : exam.startDate || '',
+        endDate: detail.endTime
+          ? String(detail.endTime).slice(0, 10)
+          : exam.endDate || '',
+        isRandomOrder: detail.shuffleQuestions ?? exam.isRandomOrder,
+        allowReview: detail.showResults ?? exam.allowReview,
+        questions: mappedQuestions
+      })
+    } catch (error) {
+      console.error('Error loading exam detail:', error)
+      toast({
+        title: 'Lỗi',
+        description: 'Không tải được chi tiết kỳ thi',
+        variant: 'destructive'
+      })
+    }
   }
 
   const openDeleteDialog = (exam: Exam) => {
@@ -662,7 +728,7 @@ export function ExamManagement() {
   }
 
   const filteredExams = exams.filter(exam => {
-    const matchSearch = !searchTerm || 
+    const matchSearch = !searchTerm ||
       exam.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       exam.description?.toLowerCase().includes(searchTerm.toLowerCase())
 
@@ -702,7 +768,7 @@ export function ExamManagement() {
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yIDItNCAyLTRzMiAyIDIgNC0yIDQtMiA0LTItMi0yLTR6bTAtMjBjMC0yIDItNCAyLTRzMiAyIDIgNC0yIDQtMiA0LTItMi0yLTR6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-30"></div>
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32"></div>
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-24 -translate-x-24"></div>
-        
+
         <div className="relative flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <div className="space-y-2">
             <div className="flex items-center gap-3">
@@ -717,9 +783,9 @@ export function ExamManagement() {
               </div>
             </div>
           </div>
-          
+
           <div className="flex gap-3">
-            <Button 
+            <Button
               onClick={loadExams}
               variant="outline"
               className="bg-white/90 text-indigo-600 hover:bg-white hover:scale-105 transition-all duration-300 shadow-lg border-2 border-indigo-200"
@@ -728,8 +794,8 @@ export function ExamManagement() {
               <RefreshCw className="h-5 w-5 mr-2" />
               Làm mới
             </Button>
-            
-            <Button 
+
+            <Button
               onClick={() => {
                 resetForm()
                 setShowCreateDialog(true)
@@ -746,14 +812,14 @@ export function ExamManagement() {
 
       <Tabs defaultValue="exams" className="space-y-6">
         <TabsList className="grid w-full grid-cols-3 bg-white shadow-md rounded-xl p-1.5 h-auto">
-          <TabsTrigger 
-            value="exams" 
+          <TabsTrigger
+            value="exams"
             className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-purple-600 data-[state=active]:text-white py-3 font-semibold transition-all duration-300"
           >
             <Brain className="h-4 w-4 mr-2" />
             Danh sách kỳ thi
           </TabsTrigger>
-          <TabsTrigger 
+          <TabsTrigger
             value="grading"
             className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-amber-500 data-[state=active]:text-white py-3 font-semibold transition-all duration-300 relative"
           >
@@ -765,7 +831,7 @@ export function ExamManagement() {
               </span>
             )}
           </TabsTrigger>
-          <TabsTrigger 
+          <TabsTrigger
             value="stats"
             className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-purple-600 data-[state=active]:text-white py-3 font-semibold transition-all duration-300"
           >
@@ -832,7 +898,7 @@ export function ExamManagement() {
                       : 'Bắt đầu bằng cách tạo kỳ thi đầu tiên'}
                   </p>
                   {!searchTerm && statusFilter === 'all' && (
-                    <Button 
+                    <Button
                       onClick={() => {
                         resetForm()
                         setShowCreateDialog(true)
@@ -847,13 +913,13 @@ export function ExamManagement() {
               </Card>
             ) : (
               filteredExams.map((exam, index) => (
-                <Card 
-                  key={exam.id} 
+                <Card
+                  key={exam.id}
                   className="group border-0 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 overflow-hidden"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
                   <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
-                  
+
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
@@ -894,7 +960,7 @@ export function ExamManagement() {
                               <div className="text-sm font-bold text-gray-900">{formatDuration(exam.duration)}</div>
                             </div>
                           </div>
-                          
+
                           <div className="flex items-center gap-2 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg px-3 py-2">
                             <Trophy className="h-4 w-4 text-green-600 flex-shrink-0" />
                             <div>
@@ -902,7 +968,7 @@ export function ExamManagement() {
                               <div className="text-sm font-bold text-gray-900">{exam.passingScore}%</div>
                             </div>
                           </div>
-                          
+
                           <div className="flex items-center gap-2 bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg px-3 py-2">
                             <Star className="h-4 w-4 text-amber-600 flex-shrink-0" />
                             <div>
@@ -910,7 +976,7 @@ export function ExamManagement() {
                               <div className="text-sm font-bold text-gray-900">+{exam.pointsReward} điểm</div>
                             </div>
                           </div>
-                          
+
                           <div className="flex items-center gap-2 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg px-3 py-2">
                             <RefreshCw className="h-4 w-4 text-purple-600 flex-shrink-0" />
                             <div>
@@ -1296,16 +1362,15 @@ export function ExamManagement() {
                         </div>
                         <div className="flex items-center gap-3">
                           <Badge
-                            className={`font-semibold shadow-sm ${
-                              exam.status === 'PUBLISHED' 
-                                ? 'bg-green-100 text-green-800 border-2 border-green-300' :
-                              exam.status === 'DRAFT' 
-                                ? 'bg-yellow-100 text-yellow-800 border-2 border-yellow-300' 
+                            className={`font-semibold shadow-sm ${exam.status === 'PUBLISHED'
+                              ? 'bg-green-100 text-green-800 border-2 border-green-300' :
+                              exam.status === 'DRAFT'
+                                ? 'bg-yellow-100 text-yellow-800 border-2 border-yellow-300'
                                 : 'bg-gray-100 text-gray-800 border-2 border-gray-300'
-                            }`}
+                              }`}
                           >
                             {exam.status === 'PUBLISHED' ? 'Đã xuất bản' :
-                             exam.status === 'DRAFT' ? 'Dự thảo' : 'Lưu trữ'}
+                              exam.status === 'DRAFT' ? 'Dự thảo' : 'Lưu trữ'}
                           </Badge>
                           <Button
                             variant="ghost"
@@ -1349,11 +1414,10 @@ export function ExamManagement() {
                                   </thead>
                                   <tbody>
                                     {examAttemptsData[exam.id].map((attempt, idx) => (
-                                      <tr 
-                                        key={attempt.id} 
-                                        className={`border-b border-gray-200 hover:bg-blue-50 transition-colors ${
-                                          idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                                        }`}
+                                      <tr
+                                        key={attempt.id}
+                                        className={`border-b border-gray-200 hover:bg-blue-50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                                          }`}
                                       >
                                         <td className="py-4 px-4 text-gray-700 font-medium">{idx + 1}</td>
                                         <td className="py-4 px-4 font-semibold text-gray-900">{attempt.fullName}</td>
@@ -1363,12 +1427,11 @@ export function ExamManagement() {
                                         <td className="py-4 px-4 text-gray-700">{exam.title}</td>
                                         <td className="py-4 px-4 text-center">
                                           <div className="flex flex-col items-center gap-1">
-                                            <span className={`inline-flex items-center gap-1 px-4 py-1.5 rounded-full text-sm font-bold border-2 shadow-sm ${
-                                              attempt.isPassed 
-                                                ? 'bg-green-100 text-green-800 border-green-400' 
-                                                : 'bg-red-100 text-red-800 border-red-400'
-                                            }`}>
-                                              {Math.round(attempt.score)} 
+                                            <span className={`inline-flex items-center gap-1 px-4 py-1.5 rounded-full text-sm font-bold border-2 shadow-sm ${attempt.isPassed
+                                              ? 'bg-green-100 text-green-800 border-green-400'
+                                              : 'bg-red-100 text-red-800 border-red-400'
+                                              }`}>
+                                              {Math.round(attempt.score)}
                                               <span className="text-lg">{attempt.isPassed ? '✓' : '✗'}</span>
                                             </span>
                                           </div>
@@ -1387,7 +1450,7 @@ export function ExamManagement() {
                                   </tbody>
                                 </table>
                               </div>
-                              
+
                               {/* Table Footer with Statistics */}
                               <div className="px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 border-t-2 border-gray-300">
                                 <div className="flex flex-wrap gap-6 items-center justify-between">
@@ -1491,8 +1554,8 @@ export function ExamManagement() {
 
                 <div>
                   <Label htmlFor="category">Danh mục</Label>
-                  <Select 
-                    value={formData.category} 
+                  <Select
+                    value={formData.category}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
                   >
                     <SelectTrigger>
@@ -1663,8 +1726,8 @@ export function ExamManagement() {
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                           <Label>Độ khó</Label>
-                          <Select 
-                            value={question.difficulty} 
+                          <Select
+                            value={question.difficulty}
                             onValueChange={(value) => updateQuestion(questionIndex, 'difficulty', value)}
                           >
                             <SelectTrigger>

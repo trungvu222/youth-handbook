@@ -90,7 +90,7 @@ const getExams = async (req, res, next) => {
       const userAttempts = exam.attempts || [];
       const lastAttempt = userAttempts[0] || null;
       const canTakeExam = userAttempts.length < exam.maxAttempts;
-      
+
       return {
         ...exam,
         totalAttempts: exam._count?.attempts || 0,
@@ -139,6 +139,19 @@ const getExam = async (req, res, next) => {
             name: true
           }
         },
+        questions: {
+          where: { isActive: true },
+          orderBy: { orderIndex: 'asc' },
+          select: {
+            id: true,
+            questionText: true,
+            questionType: true,
+            answers: true,
+            explanation: true,
+            points: true,
+            orderIndex: true,
+          },
+        },
         attempts: {
           where: { userId },
           select: {
@@ -170,10 +183,10 @@ const getExam = async (req, res, next) => {
     }
 
     // Check if user can view this exam
-    if (exam.status === 'DRAFT' && 
-        exam.creatorId !== userId && 
-        req.user.role !== 'ADMIN' && 
-        req.user.role !== 'LEADER') {
+    if (exam.status === 'DRAFT' &&
+      exam.creatorId !== userId &&
+      req.user.role !== 'ADMIN' &&
+      req.user.role !== 'LEADER') {
       return res.status(403).json({
         success: false,
         error: 'You do not have permission to view this exam'
@@ -302,27 +315,27 @@ const startExamAttempt = async (req, res, next) => {
     }
 
     // Calculate next attempt number based on ALL attempts (including IN_PROGRESS)
-    const maxAttemptNumber = exam.attempts.length > 0 
+    const maxAttemptNumber = exam.attempts.length > 0
       ? Math.max(...exam.attempts.map(a => a.attemptNumber))
       : 0;
     const nextAttemptNumber = maxAttemptNumber + 1;
 
     // Prepare questions (remove correct answers from client response)
     let questions = exam.questions;
-    
+
     if (exam.shuffleQuestions) {
       questions = questions.sort(() => Math.random() - 0.5);
     }
 
     const clientQuestions = questions.map(q => {
       let answers = q.answers;
-      
+
       if (exam.shuffleAnswers && Array.isArray(answers)) {
         answers = answers.sort(() => Math.random() - 0.5);
       }
-      
+
       // Remove isCorrect flags from answers for client
-      const clientAnswers = Array.isArray(answers) 
+      const clientAnswers = Array.isArray(answers)
         ? answers.map(a => ({ id: a.id, text: a.text }))
         : answers;
 
@@ -465,22 +478,29 @@ const submitExamAttempt = async (req, res, next) => {
 
     for (const question of attempt.exam.questions) {
       totalPoints += question.points;
-      
+
       const userAnswer = answers.find(a => a.questionId === question.id);
       if (!userAnswer) continue;
 
-      const correctAnswers = Array.isArray(question.answers) 
-        ? question.answers.filter(a => a.isCorrect).map(a => a.id)
+      const correctAnswers = Array.isArray(question.answers)
+        ? question.answers.filter(a => a.isCorrect && a.id != null).map(a => a.id)
         : [];
 
       let isCorrect = false;
-      
+
       if (question.questionType === 'SINGLE_CHOICE' || question.questionType === 'TRUE_FALSE') {
-        isCorrect = correctAnswers.includes(userAnswer.answerId);
+        if (userAnswer.answerId == null) {
+          isCorrect = false;
+        } else {
+          isCorrect = correctAnswers.includes(userAnswer.answerId);
+        }
       } else if (question.questionType === 'MULTIPLE_CHOICE') {
-        const userAnswerIds = Array.isArray(userAnswer.answerIds) ? userAnswer.answerIds : [];
-        isCorrect = userAnswerIds.length === correctAnswers.length && 
-                   userAnswerIds.every(id => correctAnswers.includes(id));
+        const userAnswerIds = Array.isArray(userAnswer.answerIds)
+          ? userAnswer.answerIds.filter(id => id != null)
+          : [];
+        isCorrect = userAnswerIds.length > 0 &&
+          userAnswerIds.length === correctAnswers.length &&
+          userAnswerIds.every(id => correctAnswers.includes(id));
       }
 
       if (isCorrect) {
@@ -712,17 +732,17 @@ const getExamStats = async (req, res, next) => {
       examResults
     ] = await Promise.all([
       prisma.exam.count({ where: dateFilter }),
-      prisma.exam.count({ 
-        where: { ...dateFilter, status: 'PUBLISHED' } 
+      prisma.exam.count({
+        where: { ...dateFilter, status: 'PUBLISHED' }
       }),
-      prisma.exam.count({ 
-        where: { ...dateFilter, status: 'DRAFT' } 
+      prisma.exam.count({
+        where: { ...dateFilter, status: 'DRAFT' }
       }),
-      prisma.examAttempt.count({ 
-        where: { ...examFilter, status: 'SUBMITTED' } 
+      prisma.examAttempt.count({
+        where: { ...examFilter, status: 'SUBMITTED' }
       }),
-      prisma.examAttempt.count({ 
-        where: { ...examFilter, status: 'SUBMITTED', isPassed: true } 
+      prisma.examAttempt.count({
+        where: { ...examFilter, status: 'SUBMITTED', isPassed: true }
       }),
       prisma.examAttempt.aggregate({
         where: { ...examFilter, status: 'SUBMITTED' },
