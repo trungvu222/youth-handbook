@@ -1,45 +1,60 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { authApi } from '@/lib/api';
-import { 
-  Lock, User, AlertCircle, Eye, EyeOff, 
-  ArrowLeft, Mail, Phone, KeyRound, CheckCircle2,
-  Sparkles
-} from 'lucide-react';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { authApi } from "@/lib/api";
+import {
+  Lock,
+  User,
+  AlertCircle,
+  Eye,
+  EyeOff,
+  ArrowLeft,
+  Mail,
+  Phone,
+  KeyRound,
+  CheckCircle2,
+  Sparkles,
+} from "lucide-react";
 
-type ViewMode = 'login' | 'forgot-choose' | 'forgot-email' | 'forgot-phone' | 'verify-otp' | 'reset-password' | 'success';
+type ViewMode =
+  | "login"
+  | "forgot-choose"
+  | "forgot-email"
+  | "forgot-phone"
+  | "verify-otp"
+  | "reset-password"
+  | "success";
 
 export default function AdminLogin() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
-  const [view, setView] = useState<ViewMode>('login');
-  
+  const [view, setView] = useState<ViewMode>("login");
+
   // Login state
-  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   // Forgot password state
-  const [forgotEmail, setForgotEmail] = useState('');
-  const [forgotPhone, setForgotPhone] = useState('');
-  const [forgotIdentifier, setForgotIdentifier] = useState(''); // username/email for phone method
-  const [otpCode, setOtpCode] = useState(['', '', '', '', '', '']);
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotPhone, setForgotPhone] = useState("");
+  const [forgotIdentifier, setForgotIdentifier] = useState(""); // username/email for phone method
+  const [otpCode, setOtpCode] = useState(["", "", "", "", "", ""]);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [forgotLoading, setForgotLoading] = useState(false);
-  const [forgotError, setForgotError] = useState('');
-  const [forgotSuccess, setForgotSuccess] = useState('');
-  const [resetToken, setResetToken] = useState('');
-  const [devOtp, setDevOtp] = useState(''); // Dev mode: show OTP on screen
+  const [forgotError, setForgotError] = useState("");
+  const [forgotSuccess, setForgotSuccess] = useState("");
+  const [resetToken, setResetToken] = useState("");
+  const [devOtp, setDevOtp] = useState(""); // Dev mode: show OTP on screen
   const [countdown, setCountdown] = useState(0);
 
   useEffect(() => {
@@ -48,24 +63,29 @@ export default function AdminLogin() {
 
   const autoResendOtp = async () => {
     try {
-      const method = forgotEmail ? 'email' : 'phone';
-      const contact = method === 'email' ? forgotEmail : forgotPhone;
+      const method = forgotEmail ? "email" : "phone";
+      const contact = method === "email" ? forgotEmail : forgotPhone;
       const requestBody: any = { method, contact };
-      if (method === 'phone') requestBody.identifier = forgotIdentifier;
-      const response = await fetch('http://localhost:3001/api/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
-      });
+      if (method === "phone") requestBody.identifier = forgotIdentifier;
+      const response = await fetch(
+        "http://localhost:3001/api/auth/forgot-password",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestBody),
+        },
+      );
       const data = await response.json();
       if (data.success) {
-        setResetToken(data.resetToken || '');
+        setResetToken(data.resetToken || "");
         if (data.devOtp) setDevOtp(data.devOtp);
-        setOtpCode(['', '', '', '', '', '']);
+        setOtpCode(["", "", "", "", "", ""]);
         setCountdown(60);
-        setForgotSuccess('Mã OTP mới đã được gửi');
+        setForgotSuccess("Mã OTP mới đã được gửi");
       }
-    } catch (err) { /* silent */ }
+    } catch (err) {
+      /* silent */
+    }
   };
 
   // Countdown timer for resend OTP
@@ -73,152 +93,172 @@ export default function AdminLogin() {
     if (countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
       return () => clearTimeout(timer);
-    } else if (countdown === 0 && view === 'verify-otp' && (forgotEmail || forgotPhone)) {
+    } else if (
+      countdown === 0 &&
+      view === "verify-otp" &&
+      (forgotEmail || forgotPhone)
+    ) {
       autoResendOtp();
     }
   }, [countdown]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     try {
       const response = await authApi.adminLogin({
         username: formData.email,
-        password: formData.password
+        password: formData.password,
       });
 
       if (response.success && response.user) {
         const searchParams = new URLSearchParams(window.location.search);
-        const redirect = searchParams.get('redirect') || '/admin';
+        const redirect = searchParams.get("redirect") || "/admin";
         router.push(redirect);
       } else {
-        setError(response.error || 'Email hoặc mật khẩu không đúng hoặc bạn không có quyền admin');
+        setError(
+          response.error ||
+            "Email hoặc mật khẩu không đúng hoặc bạn không có quyền admin",
+        );
       }
     } catch (error) {
-      console.error('Login error:', error);
-      setError('Có lỗi xảy ra khi đăng nhập');
+      console.error("Login error:", error);
+      setError("Có lỗi xảy ra khi đăng nhập");
     } finally {
       setLoading(false);
     }
   };
 
   const handleForgotSubmit = async () => {
-    setForgotError('');
-    setForgotSuccess('');
+    setForgotError("");
+    setForgotSuccess("");
     setForgotLoading(true);
 
     try {
-      const method = view === 'forgot-email' ? 'email' : 'phone';
-      const contact = method === 'email' ? forgotEmail : forgotPhone;
+      const method = view === "forgot-email" ? "email" : "phone";
+      const contact = method === "email" ? forgotEmail : forgotPhone;
 
       if (!contact) {
-        setForgotError(method === 'email' ? 'Vui lòng nhập email' : 'Vui lòng nhập số điện thoại');
+        setForgotError(
+          method === "email"
+            ? "Vui lòng nhập email"
+            : "Vui lòng nhập số điện thoại",
+        );
         setForgotLoading(false);
         return;
       }
 
       // For phone method, also need identifier (username/email) to find account
-      if (method === 'phone' && !forgotIdentifier) {
-        setForgotError('Vui lòng nhập tên đăng nhập hoặc email');
+      if (method === "phone" && !forgotIdentifier) {
+        setForgotError("Vui lòng nhập tên đăng nhập hoặc email");
         setForgotLoading(false);
         return;
       }
 
       const requestBody: any = { method, contact };
-      if (method === 'phone') {
+      if (method === "phone") {
         requestBody.identifier = forgotIdentifier;
       }
 
-      const response = await fetch('http://localhost:3001/api/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
-      });
+      const response = await fetch(
+        "http://localhost:3001/api/auth/forgot-password",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestBody),
+        },
+      );
 
       const data = await response.json();
 
       if (data.success) {
-        setResetToken(data.resetToken || '');
+        setResetToken(data.resetToken || "");
         if (data.devOtp) setDevOtp(data.devOtp); // Capture dev OTP
-        setForgotSuccess(data.message || 'Mã OTP đã được gửi');
+        setForgotSuccess(data.message || "Mã OTP đã được gửi");
         setCountdown(60);
-        setView('verify-otp');
+        setView("verify-otp");
       } else {
-        setForgotError(data.error || 'Không tìm thấy tài khoản');
+        setForgotError(data.error || "Không tìm thấy tài khoản");
       }
     } catch (err) {
-      setForgotError('Có lỗi xảy ra. Vui lòng thử lại');
+      setForgotError("Có lỗi xảy ra. Vui lòng thử lại");
     } finally {
       setForgotLoading(false);
     }
   };
 
   const handleVerifyOtp = async () => {
-    setForgotError('');
+    setForgotError("");
     setForgotLoading(true);
 
-    const code = otpCode.join('');
+    const code = otpCode.join("");
     if (code.length !== 6) {
-      setForgotError('Vui lòng nhập đủ 6 số OTP');
+      setForgotError("Vui lòng nhập đủ 6 số OTP");
       setForgotLoading(false);
       return;
     }
 
     try {
-      const response = await fetch('http://localhost:3001/api/auth/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ otp: code, resetToken })
-      });
+      const response = await fetch(
+        "http://localhost:3001/api/auth/verify-otp",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ otp: code, resetToken }),
+        },
+      );
 
       const data = await response.json();
 
       if (data.success) {
         setResetToken(data.resetToken || resetToken);
-        setView('reset-password');
+        setView("reset-password");
       } else {
-        setForgotError(data.error || 'Mã OTP không đúng');
+        setForgotError(data.error || "Mã OTP không đúng");
       }
     } catch (err) {
-      setForgotError('Có lỗi xảy ra. Vui lòng thử lại');
+      setForgotError("Có lỗi xảy ra. Vui lòng thử lại");
     } finally {
       setForgotLoading(false);
     }
   };
 
   const handleResetPassword = async () => {
-    setForgotError('');
+    setForgotError("");
 
     if (newPassword.length < 6) {
-      setForgotError('Mật khẩu phải có ít nhất 6 ký tự');
+      setForgotError("Mật khẩu phải có ít nhất 6 ký tự");
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setForgotError('Mật khẩu xác nhận không khớp');
+      setForgotError("Mật khẩu xác nhận không khớp");
       return;
     }
 
     setForgotLoading(true);
 
     try {
-      const response = await fetch('http://localhost:3001/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resetToken, newPassword })
-      });
+      const response = await fetch(
+        "http://localhost:3001/api/auth/reset-password",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ resetToken, newPassword }),
+        },
+      );
 
       const data = await response.json();
 
       if (data.success) {
-        setView('success');
+        setView("success");
       } else {
-        setForgotError(data.error || 'Có lỗi xảy ra');
+        setForgotError(data.error || "Có lỗi xảy ra");
       }
     } catch (err) {
-      setForgotError('Có lỗi xảy ra. Vui lòng thử lại');
+      setForgotError("Có lỗi xảy ra. Vui lòng thử lại");
     } finally {
       setForgotLoading(false);
     }
@@ -240,7 +280,7 @@ export default function AdminLogin() {
   };
 
   const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === 'Backspace' && !otpCode[index] && index > 0) {
+    if (e.key === "Backspace" && !otpCode[index] && index > 0) {
       const prevInput = document.getElementById(`otp-${index - 1}`);
       prevInput?.focus();
     }
@@ -248,7 +288,10 @@ export default function AdminLogin() {
 
   const handleOtpPaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
-    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    const pasted = e.clipboardData
+      .getData("text")
+      .replace(/\D/g, "")
+      .slice(0, 6);
     if (pasted.length > 0) {
       const newOtp = [...otpCode];
       for (let i = 0; i < pasted.length && i < 6; i++) {
@@ -261,18 +304,18 @@ export default function AdminLogin() {
   };
 
   const resetForgotState = () => {
-    setForgotEmail('');
-    setForgotPhone('');
-    setForgotIdentifier('');
-    setOtpCode(['', '', '', '', '', '']);
-    setNewPassword('');
-    setConfirmPassword('');
-    setForgotError('');
-    setForgotSuccess('');
-    setResetToken('');
-    setDevOtp('');
+    setForgotEmail("");
+    setForgotPhone("");
+    setForgotIdentifier("");
+    setOtpCode(["", "", "", "", "", ""]);
+    setNewPassword("");
+    setConfirmPassword("");
+    setForgotError("");
+    setForgotSuccess("");
+    setResetToken("");
+    setDevOtp("");
     setCountdown(0);
-    setView('login');
+    setView("login");
   };
 
   if (!mounted) return null;
@@ -281,26 +324,37 @@ export default function AdminLogin() {
     <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4">
       {/* Animated gradient background */}
       <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-950" />
-      
+
       {/* Animated orbs */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute top-1/2 -left-40 w-96 h-96 bg-indigo-500/15 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute -bottom-40 right-1/3 w-72 h-72 bg-purple-500/15 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
-        <div className="absolute top-1/4 right-1/4 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '3s' }} />
+        <div
+          className="absolute top-1/2 -left-40 w-96 h-96 bg-indigo-500/15 rounded-full blur-3xl animate-pulse"
+          style={{ animationDelay: "1s" }}
+        />
+        <div
+          className="absolute -bottom-40 right-1/3 w-72 h-72 bg-purple-500/15 rounded-full blur-3xl animate-pulse"
+          style={{ animationDelay: "2s" }}
+        />
+        <div
+          className="absolute top-1/4 right-1/4 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl animate-pulse"
+          style={{ animationDelay: "3s" }}
+        />
       </div>
 
       {/* Grid pattern overlay */}
-      <div className="fixed inset-0 opacity-[0.03]" style={{
-        backgroundImage: `linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)`,
-        backgroundSize: '60px 60px'
-      }} />
+      <div
+        className="fixed inset-0 opacity-[0.03]"
+        style={{
+          backgroundImage: `linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)`,
+          backgroundSize: "60px 60px",
+        }}
+      />
 
       {/* Main content */}
       <div className="relative z-10 w-full max-w-md">
-        
         {/* ========== LOGIN VIEW ========== */}
-        {view === 'login' && (
+        {view === "login" && (
           <div className="space-y-6">
             {/* Logo Section */}
             <div className="text-center space-y-4">
@@ -329,30 +383,46 @@ export default function AdminLogin() {
               <Card className="relative border-0 bg-white/[0.07] backdrop-blur-2xl shadow-2xl rounded-2xl overflow-hidden">
                 {/* Top border glow */}
                 <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-400/50 to-transparent" />
-                
+
                 <CardContent className="p-8">
                   <div className="text-center mb-6">
-                    <h2 className="text-xl font-semibold text-white">Đăng nhập</h2>
-                    <p className="text-blue-200/50 text-sm mt-1">Nhập thông tin để truy cập trang quản trị</p>
+                    <h2 className="text-xl font-semibold text-white">
+                      Đăng nhập
+                    </h2>
+                    <p className="text-blue-200/50 text-sm mt-1">
+                      Nhập thông tin để truy cập trang quản trị
+                    </p>
                   </div>
 
                   <form onSubmit={handleLogin} className="space-y-5">
                     {error && (
                       <Alert className="bg-red-500/10 border-red-500/30 text-red-300">
                         <AlertCircle className="h-4 w-4 text-red-400" />
-                        <AlertDescription className="text-red-300">{error}</AlertDescription>
+                        <AlertDescription className="text-red-300">
+                          {error}
+                        </AlertDescription>
                       </Alert>
                     )}
 
                     <div className="space-y-2">
-                      <Label htmlFor="email" className="text-blue-200/80 text-sm font-medium">Email</Label>
+                      <Label
+                        htmlFor="email"
+                        className="text-blue-200/80 text-sm font-medium"
+                      >
+                        Email
+                      </Label>
                       <div className="relative group/input">
                         <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-blue-300/40 h-4 w-4 group-focus-within/input:text-blue-400 transition-colors" />
                         <Input
                           id="email"
                           type="email"
                           value={formData.email}
-                          onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              email: e.target.value,
+                            }))
+                          }
                           placeholder="admin@youth.com"
                           className="pl-10 h-12 bg-white/[0.06] border-white/[0.08] text-white placeholder:text-blue-200/30 rounded-xl focus:border-blue-400/50 focus:ring-blue-400/20 focus:bg-white/[0.08] transition-all duration-300"
                           required
@@ -361,14 +431,24 @@ export default function AdminLogin() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="password" className="text-blue-200/80 text-sm font-medium">Mật khẩu</Label>
+                      <Label
+                        htmlFor="password"
+                        className="text-blue-200/80 text-sm font-medium"
+                      >
+                        Mật khẩu
+                      </Label>
                       <div className="relative group/input">
                         <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-blue-300/40 h-4 w-4 group-focus-within/input:text-blue-400 transition-colors" />
                         <Input
                           id="password"
-                          type={showPassword ? 'text' : 'password'}
+                          type={showPassword ? "text" : "password"}
                           value={formData.password}
-                          onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              password: e.target.value,
+                            }))
+                          }
                           placeholder="••••••••"
                           className="pl-10 pr-11 h-12 bg-white/[0.06] border-white/[0.08] text-white placeholder:text-blue-200/30 rounded-xl focus:border-blue-400/50 focus:ring-blue-400/20 focus:bg-white/[0.08] transition-all duration-300"
                           required
@@ -378,7 +458,11 @@ export default function AdminLogin() {
                           onClick={() => setShowPassword(!showPassword)}
                           className="absolute right-3.5 top-1/2 -translate-y-1/2 text-blue-300/40 hover:text-blue-300 transition-colors"
                         >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
                         </button>
                       </div>
                     </div>
@@ -387,15 +471,15 @@ export default function AdminLogin() {
                     <div className="flex justify-end">
                       <button
                         type="button"
-                        onClick={() => setView('forgot-choose')}
+                        onClick={() => setView("forgot-choose")}
                         className="text-sm text-blue-300/60 hover:text-blue-300 transition-colors duration-300"
                       >
                         Quên mật khẩu?
                       </button>
                     </div>
 
-                    <Button 
-                      type="submit" 
+                    <Button
+                      type="submit"
                       className="w-full h-12 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 hover:from-blue-600 hover:via-indigo-600 hover:to-purple-600 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-300 border-0 relative overflow-hidden group/btn"
                       disabled={loading}
                     >
@@ -422,28 +506,32 @@ export default function AdminLogin() {
               <p className="text-blue-200/30 text-xs">
                 © 2026 Hệ thống quản lý đoàn viên Trung đoàn 196
               </p>
-              <p className="text-blue-200/20 text-xs">
-                Admin Dashboard v2.0
-              </p>
+              <p className="text-blue-200/20 text-xs">Admin Dashboard v2.0</p>
             </div>
           </div>
         )}
 
         {/* ========== FORGOT PASSWORD - CHOOSE METHOD ========== */}
-        {view === 'forgot-choose' && (
+        {view === "forgot-choose" && (
           <div className="space-y-6">
             <div className="text-center space-y-3">
               <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-amber-500/30">
                 <KeyRound className="h-8 w-8 text-white" />
               </div>
               <h2 className="text-2xl font-bold text-white">Quên mật khẩu?</h2>
-              <p className="text-blue-200/50 text-sm">Chọn phương thức khôi phục tài khoản</p>
+              <p className="text-blue-200/50 text-sm">
+                Chọn phương thức khôi phục tài khoản
+              </p>
             </div>
 
             <div className="space-y-3">
               {/* Email option */}
               <button
-                onClick={() => { setView('forgot-email'); setForgotError(''); setForgotSuccess(''); }}
+                onClick={() => {
+                  setView("forgot-email");
+                  setForgotError("");
+                  setForgotSuccess("");
+                }}
                 className="w-full group"
               >
                 <div className="relative">
@@ -453,8 +541,12 @@ export default function AdminLogin() {
                       <Mail className="h-5 w-5 text-white" />
                     </div>
                     <div className="text-left">
-                      <p className="text-white font-semibold">Gửi mã qua Email</p>
-                      <p className="text-blue-200/40 text-sm">Nhận mã OTP qua địa chỉ email đã đăng ký</p>
+                      <p className="text-white font-semibold">
+                        Gửi mã qua Email
+                      </p>
+                      <p className="text-blue-200/40 text-sm">
+                        Nhận mã OTP qua địa chỉ email đã đăng ký
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -462,7 +554,11 @@ export default function AdminLogin() {
 
               {/* Phone option */}
               <button
-                onClick={() => { setView('forgot-phone'); setForgotError(''); setForgotSuccess(''); }}
+                onClick={() => {
+                  setView("forgot-phone");
+                  setForgotError("");
+                  setForgotSuccess("");
+                }}
                 className="w-full group"
               >
                 <div className="relative">
@@ -473,7 +569,9 @@ export default function AdminLogin() {
                     </div>
                     <div className="text-left">
                       <p className="text-white font-semibold">Gửi mã qua SMS</p>
-                      <p className="text-blue-200/40 text-sm">Nhận mã OTP qua số điện thoại đã đăng ký</p>
+                      <p className="text-blue-200/40 text-sm">
+                        Nhận mã OTP qua số điện thoại đã đăng ký
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -491,14 +589,18 @@ export default function AdminLogin() {
         )}
 
         {/* ========== FORGOT - EMAIL FORM ========== */}
-        {view === 'forgot-email' && (
+        {view === "forgot-email" && (
           <div className="space-y-6">
             <div className="text-center space-y-3">
               <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-blue-500/30">
                 <Mail className="h-8 w-8 text-white" />
               </div>
-              <h2 className="text-2xl font-bold text-white">Khôi phục qua Email</h2>
-              <p className="text-blue-200/50 text-sm">Nhập email đã đăng ký để nhận mã OTP</p>
+              <h2 className="text-2xl font-bold text-white">
+                Khôi phục qua Email
+              </h2>
+              <p className="text-blue-200/50 text-sm">
+                Nhập email đã đăng ký để nhận mã OTP
+              </p>
             </div>
 
             <div className="relative group">
@@ -509,7 +611,9 @@ export default function AdminLogin() {
                   {forgotError && (
                     <Alert className="bg-red-500/10 border-red-500/30">
                       <AlertCircle className="h-4 w-4 text-red-400" />
-                      <AlertDescription className="text-red-300">{forgotError}</AlertDescription>
+                      <AlertDescription className="text-red-300">
+                        {forgotError}
+                      </AlertDescription>
                     </Alert>
                   )}
 
@@ -537,14 +641,16 @@ export default function AdminLogin() {
                         <div className="animate-spin h-4 w-4 border-2 border-white/30 border-t-white rounded-full" />
                         Đang gửi...
                       </div>
-                    ) : 'Gửi mã OTP'}
+                    ) : (
+                      "Gửi mã OTP"
+                    )}
                   </Button>
                 </CardContent>
               </Card>
             </div>
 
             <button
-              onClick={() => setView('forgot-choose')}
+              onClick={() => setView("forgot-choose")}
               className="flex items-center gap-2 text-blue-300/60 hover:text-blue-300 transition-colors mx-auto text-sm"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -554,14 +660,18 @@ export default function AdminLogin() {
         )}
 
         {/* ========== FORGOT - PHONE FORM ========== */}
-        {view === 'forgot-phone' && (
+        {view === "forgot-phone" && (
           <div className="space-y-6">
             <div className="text-center space-y-3">
               <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-green-500/30">
                 <Phone className="h-8 w-8 text-white" />
               </div>
-              <h2 className="text-2xl font-bold text-white">Khôi phục qua SMS</h2>
-              <p className="text-blue-200/50 text-sm">Nhập tài khoản và số điện thoại để nhận mã OTP</p>
+              <h2 className="text-2xl font-bold text-white">
+                Khôi phục qua SMS
+              </h2>
+              <p className="text-blue-200/50 text-sm">
+                Nhập tài khoản và số điện thoại để nhận mã OTP
+              </p>
             </div>
 
             <div className="relative group">
@@ -572,12 +682,16 @@ export default function AdminLogin() {
                   {forgotError && (
                     <Alert className="bg-red-500/10 border-red-500/30">
                       <AlertCircle className="h-4 w-4 text-red-400" />
-                      <AlertDescription className="text-red-300">{forgotError}</AlertDescription>
+                      <AlertDescription className="text-red-300">
+                        {forgotError}
+                      </AlertDescription>
                     </Alert>
                   )}
 
                   <div className="space-y-2">
-                    <Label className="text-blue-200/80 text-sm">Tên đăng nhập hoặc Email</Label>
+                    <Label className="text-blue-200/80 text-sm">
+                      Tên đăng nhập hoặc Email
+                    </Label>
                     <div className="relative">
                       <User className="absolute left-3.5 top-1/2 -translate-y-1/2 text-green-300/40 h-4 w-4" />
                       <Input
@@ -591,7 +705,12 @@ export default function AdminLogin() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-blue-200/80 text-sm">Số điện thoại nhận OTP <span className="text-green-400/60">(nhập SĐT bất kỳ)</span></Label>
+                    <Label className="text-blue-200/80 text-sm">
+                      Số điện thoại nhận OTP{" "}
+                      <span className="text-green-400/60">
+                        (nhập SĐT bất kỳ)
+                      </span>
+                    </Label>
                     <div className="relative">
                       <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-green-300/40 h-4 w-4" />
                       <Input
@@ -614,14 +733,16 @@ export default function AdminLogin() {
                         <div className="animate-spin h-4 w-4 border-2 border-white/30 border-t-white rounded-full" />
                         Đang gửi...
                       </div>
-                    ) : 'Gửi mã OTP'}
+                    ) : (
+                      "Gửi mã OTP"
+                    )}
                   </Button>
                 </CardContent>
               </Card>
             </div>
 
             <button
-              onClick={() => setView('forgot-choose')}
+              onClick={() => setView("forgot-choose")}
               className="flex items-center gap-2 text-blue-300/60 hover:text-blue-300 transition-colors mx-auto text-sm"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -631,7 +752,7 @@ export default function AdminLogin() {
         )}
 
         {/* ========== VERIFY OTP ========== */}
-        {view === 'verify-otp' && (
+        {view === "verify-otp" && (
           <div className="space-y-6">
             <div className="text-center space-y-3">
               <div className="w-16 h-16 bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-violet-500/30">
@@ -649,25 +770,37 @@ export default function AdminLogin() {
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-amber-500/40 to-orange-500/40 rounded-xl blur opacity-60 animate-pulse" />
                 <div className="relative bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 text-center overflow-hidden">
                   <div className="flex items-center justify-center gap-2 mb-1">
-                    <p className="text-amber-300/80 text-xs font-medium">Mã OTP</p>
+                    <p className="text-amber-300/80 text-xs font-medium">
+                      Mã OTP
+                    </p>
                     {countdown > 0 && (
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${countdown <= 10 ? 'bg-red-500/20 text-red-400 animate-pulse' : 'bg-amber-500/20 text-amber-300'}`}>
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${countdown <= 10 ? "bg-red-500/20 text-red-400 animate-pulse" : "bg-amber-500/20 text-amber-300"}`}
+                      >
                         ⏱ {countdown}s
                       </span>
                     )}
                   </div>
-                  <p className="text-3xl font-bold text-amber-300 tracking-[0.5em] font-mono">{devOtp}</p>
-                  <p className="text-amber-400/50 text-xs mt-1">Nhập mã này vào ô bên dưới</p>
+                  <p className="text-3xl font-bold text-amber-300 tracking-[0.5em] font-mono">
+                    {devOtp}
+                  </p>
+                  <p className="text-amber-400/50 text-xs mt-1">
+                    Nhập mã này vào ô bên dưới
+                  </p>
                   {/* Progress bar */}
                   <div className="mt-3 h-1 bg-amber-500/10 rounded-full overflow-hidden">
                     <div
-                      className={countdown <= 10 ? 'h-full bg-red-500' : 'h-full bg-gradient-to-r from-amber-500 to-orange-500'}
+                      className={
+                        countdown <= 10
+                          ? "h-full bg-red-500"
+                          : "h-full bg-gradient-to-r from-amber-500 to-orange-500"
+                      }
                       style={{
-                        width: '100%',
+                        width: "100%",
                         transform: `scaleX(${Math.max(0, Math.min(1, countdown / 60))})`,
-                        transformOrigin: 'left center',
-                        transition: 'transform 1s linear',
-                        willChange: 'transform'
+                        transformOrigin: "left center",
+                        transition: "transform 1s linear",
+                        willChange: "transform",
                       }}
                     />
                   </div>
@@ -683,14 +816,18 @@ export default function AdminLogin() {
                   {forgotError && (
                     <Alert className="bg-red-500/10 border-red-500/30">
                       <AlertCircle className="h-4 w-4 text-red-400" />
-                      <AlertDescription className="text-red-300">{forgotError}</AlertDescription>
+                      <AlertDescription className="text-red-300">
+                        {forgotError}
+                      </AlertDescription>
                     </Alert>
                   )}
 
                   {forgotSuccess && (
                     <Alert className="bg-green-500/10 border-green-500/30">
                       <CheckCircle2 className="h-4 w-4 text-green-400" />
-                      <AlertDescription className="text-green-300">{forgotSuccess}</AlertDescription>
+                      <AlertDescription className="text-green-300">
+                        {forgotSuccess}
+                      </AlertDescription>
                     </Alert>
                   )}
 
@@ -722,12 +859,16 @@ export default function AdminLogin() {
                         <div className="animate-spin h-4 w-4 border-2 border-white/30 border-t-white rounded-full" />
                         Đang xác thực...
                       </div>
-                    ) : 'Xác nhận OTP'}
+                    ) : (
+                      "Xác nhận OTP"
+                    )}
                   </Button>
 
                   <div className="text-center">
                     {countdown > 0 ? (
-                      <p className="text-blue-200/40 text-sm">Mã mới sẽ tự động gửi sau {countdown}s</p>
+                      <p className="text-blue-200/40 text-sm">
+                        Mã mới sẽ tự động gửi sau {countdown}s
+                      </p>
                     ) : (
                       <p className="text-violet-300/70 text-sm flex items-center justify-center gap-2">
                         <span className="inline-block w-3.5 h-3.5 border-2 border-violet-400/30 border-t-violet-400 rounded-full animate-spin" />
@@ -750,14 +891,18 @@ export default function AdminLogin() {
         )}
 
         {/* ========== RESET PASSWORD ========== */}
-        {view === 'reset-password' && (
+        {view === "reset-password" && (
           <div className="space-y-6">
             <div className="text-center space-y-3">
               <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/30">
                 <Lock className="h-8 w-8 text-white" />
               </div>
-              <h2 className="text-2xl font-bold text-white">Đặt mật khẩu mới</h2>
-              <p className="text-blue-200/50 text-sm">Tạo mật khẩu mới cho tài khoản của bạn</p>
+              <h2 className="text-2xl font-bold text-white">
+                Đặt mật khẩu mới
+              </h2>
+              <p className="text-blue-200/50 text-sm">
+                Tạo mật khẩu mới cho tài khoản của bạn
+              </p>
             </div>
 
             <div className="relative group">
@@ -768,16 +913,20 @@ export default function AdminLogin() {
                   {forgotError && (
                     <Alert className="bg-red-500/10 border-red-500/30">
                       <AlertCircle className="h-4 w-4 text-red-400" />
-                      <AlertDescription className="text-red-300">{forgotError}</AlertDescription>
+                      <AlertDescription className="text-red-300">
+                        {forgotError}
+                      </AlertDescription>
                     </Alert>
                   )}
 
                   <div className="space-y-2">
-                    <Label className="text-blue-200/80 text-sm">Mật khẩu mới</Label>
+                    <Label className="text-blue-200/80 text-sm">
+                      Mật khẩu mới
+                    </Label>
                     <div className="relative">
                       <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-emerald-300/40 h-4 w-4" />
                       <Input
-                        type={showNewPassword ? 'text' : 'password'}
+                        type={showNewPassword ? "text" : "password"}
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                         placeholder="Nhập mật khẩu mới"
@@ -788,13 +937,19 @@ export default function AdminLogin() {
                         onClick={() => setShowNewPassword(!showNewPassword)}
                         className="absolute right-3.5 top-1/2 -translate-y-1/2 text-blue-300/40 hover:text-blue-300"
                       >
-                        {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showNewPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
                       </button>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-blue-200/80 text-sm">Xác nhận mật khẩu</Label>
+                    <Label className="text-blue-200/80 text-sm">
+                      Xác nhận mật khẩu
+                    </Label>
                     <div className="relative">
                       <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-emerald-300/40 h-4 w-4" />
                       <Input
@@ -816,14 +971,26 @@ export default function AdminLogin() {
                             key={level}
                             className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
                               newPassword.length >= level * 3
-                                ? level <= 1 ? 'bg-red-400' : level <= 2 ? 'bg-amber-400' : level <= 3 ? 'bg-blue-400' : 'bg-emerald-400'
-                                : 'bg-white/10'
+                                ? level <= 1
+                                  ? "bg-red-400"
+                                  : level <= 2
+                                    ? "bg-amber-400"
+                                    : level <= 3
+                                      ? "bg-blue-400"
+                                      : "bg-emerald-400"
+                                : "bg-white/10"
                             }`}
                           />
                         ))}
                       </div>
                       <p className="text-xs text-blue-200/40">
-                        {newPassword.length < 6 ? 'Yếu - cần ít nhất 6 ký tự' : newPassword.length < 8 ? 'Trung bình' : newPassword.length < 12 ? 'Mạnh' : 'Rất mạnh'}
+                        {newPassword.length < 6
+                          ? "Yếu - cần ít nhất 6 ký tự"
+                          : newPassword.length < 8
+                            ? "Trung bình"
+                            : newPassword.length < 12
+                              ? "Mạnh"
+                              : "Rất mạnh"}
                       </p>
                     </div>
                   )}
@@ -838,7 +1005,9 @@ export default function AdminLogin() {
                         <div className="animate-spin h-4 w-4 border-2 border-white/30 border-t-white rounded-full" />
                         Đang cập nhật...
                       </div>
-                    ) : 'Cập nhật mật khẩu'}
+                    ) : (
+                      "Cập nhật mật khẩu"
+                    )}
                   </Button>
                 </CardContent>
               </Card>
@@ -847,7 +1016,7 @@ export default function AdminLogin() {
         )}
 
         {/* ========== SUCCESS VIEW ========== */}
-        {view === 'success' && (
+        {view === "success" && (
           <div className="space-y-6">
             <div className="text-center space-y-4">
               <div className="relative inline-block">
@@ -857,7 +1026,11 @@ export default function AdminLogin() {
                 </div>
               </div>
               <h2 className="text-2xl font-bold text-white">Thành công!</h2>
-              <p className="text-blue-200/60 text-sm">Mật khẩu đã được cập nhật thành công.<br/>Bạn có thể đăng nhập với mật khẩu mới.</p>
+              <p className="text-blue-200/60 text-sm">
+                Mật khẩu đã được cập nhật thành công.
+                <br />
+                Bạn có thể đăng nhập với mật khẩu mới.
+              </p>
             </div>
 
             <Button
