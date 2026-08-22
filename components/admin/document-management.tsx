@@ -1413,7 +1413,6 @@ export function DocumentManagement() {
                   <BarChart3 className="h-4 w-4 text-purple-600" />
                   Điều chỉnh số liệu tương tác (Admin)
                 </Label>
-                <span className="text-xs text-purple-700 bg-purple-100/80 px-2 py-0.5 rounded-full font-medium">Số liệu hiển thị báo cáo</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -1715,18 +1714,11 @@ export function DocumentManagement() {
           </DialogHeader>
 
           <div className="p-6 space-y-4">
-            <div className="bg-purple-50/70 border border-purple-200 rounded-xl p-3 text-xs text-purple-900 flex items-start gap-2">
-              <Lightbulb className="h-4 w-4 text-purple-600 shrink-0 mt-0.5" />
-              <div>
-                <strong>Lưu ý:</strong> Thay đổi số lượt xem và lượt tải xuống để hoàn thiện số liệu thống kê và báo cáo hoạt động Đoàn.
-              </div>
-            </div>
-
             <div className="space-y-3.5">
               <div>
                 <Label htmlFor="quick-viewCount" className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 mb-1.5">
                   <Eye className="h-4 w-4 text-blue-600" />
-                  Số lượt xem (View Count)
+                  Số lượt xem
                 </Label>
                 <div className="relative">
                   <Input
@@ -1747,7 +1739,7 @@ export function DocumentManagement() {
               <div>
                 <Label htmlFor="quick-downloadCount" className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 mb-1.5">
                   <Download className="h-4 w-4 text-indigo-600" />
-                  Số lượt tải xuống (Download Count)
+                  Số lượt tải xuống
                 </Label>
                 <div className="relative">
                   <Input
