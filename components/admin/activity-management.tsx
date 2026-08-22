@@ -194,7 +194,7 @@ export default function ActivityManagement() {
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem("accessToken")
-      const res = await fetch(`${API_URL}/api/users`, {
+      const res = await fetch(`${API_URL}/api/users?limit=1000&isActive=true`, {
         headers: { 
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}` 
@@ -1298,7 +1298,7 @@ export default function ActivityManagement() {
                 />
               </div>
               <div>
-                <Label className="text-xs font-semibold text-slate-700">Số lượt xem (Mắt xem báo cáo)</Label>
+                <Label className="text-xs font-semibold text-slate-700">Số lượt xem</Label>
                 <Input 
                   type="number" 
                   value={formData.viewCount} 
@@ -1497,9 +1497,6 @@ export default function ActivityManagement() {
                       )
                     })}
                 </div>
-                <p className="text-[11px] text-muted-foreground italic">
-                  * Tích chọn để admin điểm danh sẵn cho đoàn viên khi tạo hoạt động.
-                </p>
               </div>
             </div>
             
@@ -1743,7 +1740,7 @@ export default function ActivityManagement() {
                   )}
                 </div>
                 <div>
-                  <Label className="text-xs font-semibold text-slate-700">Số lượt xem (Mắt xem báo cáo)</Label>
+                  <Label className="text-xs font-semibold text-slate-700">Số lượt xem</Label>
                   {isEditMode ? (
                     <Input 
                       type="number" 
@@ -1978,9 +1975,6 @@ export default function ActivityManagement() {
                         </div>
                       )}
                     </div>
-                    <p className="text-[11px] text-muted-foreground italic">
-                      * Tích chọn đoàn viên để tự động điểm danh cho hoạt động này (kể cả hoạt động đã kết thúc).
-                    </p>
                   </div>
                 ) : (
                   <div 
