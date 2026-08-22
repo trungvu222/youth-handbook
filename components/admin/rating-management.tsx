@@ -208,7 +208,8 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
       })
       if (res.ok) {
         const data = await res.json()
-        setUsers(data.data?.users || data.data || [])
+        const userList = data.users || data.data?.users || data.data || (Array.isArray(data) ? data : [])
+        setUsers(userList)
       }
     } catch (e) {
       console.error('Error fetching users:', e)
@@ -278,6 +279,7 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
 
   // Handlers for edit and delete period
   const handleEditPeriod = async (period: RatingPeriod) => {
+    fetchUsers()
     setSelectedPeriod(period)
     setFormData({
       title: period.title,
@@ -917,14 +919,9 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
 
             <Button
               onClick={() => {
+                fetchUsers()
                 setSelectedPeriod(null)
-                setFormData({
-                  title: '',
-                  description: '',
-                  startDate: '',
-                  endDate: '',
-                  criteria: [{ name: '', description: '', isRequired: true }]
-                })
+                resetForm()
                 setShowCreateDialog(true)
               }}
               className="bg-white text-indigo-600 hover:bg-indigo-50 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 font-bold px-6 py-6 text-base rounded-2xl"
@@ -1991,9 +1988,6 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
                     </div>
                   )}
                 </div>
-                <p className="text-[11px] text-muted-foreground italic">
-                  * Tích chọn đoàn viên để tự động ghi nhận đã nộp xếp loại cho kỳ này. Bạn có thể thay đổi mức xếp loại (Xuất sắc, Tốt, Đạt, Không đạt) bên tab Danh sách.
-                </p>
               </div>
             </div>
 
