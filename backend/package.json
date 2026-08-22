@@ -24,6 +24,7 @@
   "license": "ISC",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@prisma/adapter-pg": "^6.19.3",
     "@prisma/client": "^6.15.0",
     "axios": "^1.13.4",
     "bcryptjs": "^2.4.3",

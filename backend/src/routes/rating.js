@@ -432,7 +432,7 @@ router.post('/periods', auth, async (req, res) => {
       });
     }
 
-    const { title, description, startDate, endDate, criteria, targetRating, targetAudience, unitIds, roles } = req.body;
+    const { title, description, startDate, endDate, criteria, targetRating, targetAudience, unitIds, roles, memberIds } = req.body;
 
     const period = await prisma.ratingPeriod.create({
       data: {
@@ -458,6 +458,32 @@ router.post('/periods', auth, async (req, res) => {
         }
       }
     });
+
+    // Auto-create ratings for selected members if provided
+    if (memberIds && Array.isArray(memberIds) && memberIds.length > 0) {
+      const criteriaList = Array.isArray(criteria) ? criteria : [];
+      const defaultCriteriaResponses = criteriaList.map(c => ({
+        criteriaId: c.id || c.name,
+        name: c.name,
+        value: true
+      }));
+
+      for (const userId of memberIds) {
+        await prisma.selfRating.create({
+          data: {
+            periodId: period.id,
+            userId,
+            criteriaResponses: defaultCriteriaResponses,
+            suggestedRating: 'GOOD',
+            finalRating: 'GOOD',
+            status: 'APPROVED',
+            submittedAt: new Date(),
+            reviewedAt: new Date(),
+            reviewedBy: req.user.id
+          }
+        });
+      }
+    }
 
     res.json({
       success: true,
@@ -488,7 +514,7 @@ router.put('/periods/:id', auth, async (req, res) => {
       });
     }
 
-    const { title, description, startDate, endDate, criteria, targetRating, targetAudience, unitIds, roles } = req.body;
+    const { title, description, startDate, endDate, criteria, targetRating, targetAudience, unitIds, roles, memberIds } = req.body;
 
     // Check if period exists
     const existingPeriod = await prisma.ratingPeriod.findUnique({
@@ -526,6 +552,70 @@ router.put('/periods/:id', auth, async (req, res) => {
       }
     });
 
+    // Update submitted members if memberIds array is provided
+    if (memberIds !== undefined && Array.isArray(memberIds)) {
+      const criteriaList = Array.isArray(criteria) ? criteria : (existingPeriod?.criteria || []);
+      const defaultCriteriaResponses = criteriaList.map(c => ({
+        criteriaId: c.id || c.name,
+        name: c.name,
+        value: true
+      }));
+
+      for (const userId of memberIds) {
+        const existingRating = await prisma.selfRating.findUnique({
+          where: {
+            periodId_userId: {
+              periodId: id,
+              userId
+            }
+          }
+        });
+
+        if (existingRating) {
+          if (existingRating.status === 'DRAFT') {
+            await prisma.selfRating.update({
+              where: {
+                periodId_userId: {
+                  periodId: id,
+                  userId
+                }
+              },
+              data: {
+                status: 'APPROVED',
+                suggestedRating: existingRating.suggestedRating || 'GOOD',
+                finalRating: existingRating.finalRating || existingRating.suggestedRating || 'GOOD',
+                submittedAt: existingRating.submittedAt || new Date(),
+                reviewedAt: new Date(),
+                reviewedBy: req.user.id
+              }
+            });
+          }
+        } else {
+          await prisma.selfRating.create({
+            data: {
+              periodId: id,
+              userId,
+              criteriaResponses: defaultCriteriaResponses,
+              suggestedRating: 'GOOD',
+              finalRating: 'GOOD',
+              status: 'APPROVED',
+              submittedAt: new Date(),
+              reviewedAt: new Date(),
+              reviewedBy: req.user.id
+            }
+          });
+        }
+      }
+
+      // Remove members who were unselected
+      await prisma.selfRating.deleteMany({
+        where: {
+          periodId: id,
+          userId: { notIn: memberIds }
+        }
+      });
+    }
+
     res.json({
       success: true,
       data: {
@@ -539,6 +629,53 @@ router.put('/periods/:id', auth, async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Không thể cập nhật kỳ xếp loại'
+    });
+  }
+});
+
+// Quick update member rating level (Admin only)
+router.patch('/ratings/:id/level', auth, async (req, res) => {
+  try {
+    const { role } = req.user;
+    if (role !== 'ADMIN' && role !== 'LEADER') {
+      return res.status(403).json({
+        success: false,
+        error: 'Không có quyền truy cập'
+      });
+    }
+
+    const { id } = req.params;
+    const { rating } = req.body;
+
+    const validRatings = ['EXCELLENT', 'GOOD', 'AVERAGE', 'POOR'];
+    if (!validRatings.includes(rating)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Mức xếp loại không hợp lệ'
+      });
+    }
+
+    const updated = await prisma.selfRating.update({
+      where: { id },
+      data: {
+        finalRating: rating,
+        suggestedRating: rating,
+        status: 'APPROVED',
+        reviewedAt: new Date(),
+        reviewedBy: req.user.id
+      }
+    });
+
+    res.json({
+      success: true,
+      data: updated,
+      message: 'Đã cập nhật mức xếp loại'
+    });
+  } catch (error) {
+    console.error('Quick update rating level error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Không thể cập nhật xếp loại'
     });
   }
 });
@@ -1092,11 +1229,10 @@ router.get('/periods/:periodId/ratings', auth, async (req, res) => {
       });
     }
 
-    // Get all approved ratings for this period with user details
+    // Get all ratings for this period with user details
     const ratings = await prisma.selfRating.findMany({
       where: {
-        periodId,
-        status: 'APPROVED'
+        periodId
       },
       include: {
         user: {
@@ -1114,9 +1250,10 @@ router.get('/periods/:periodId/ratings', auth, async (req, res) => {
           }
         }
       },
-      orderBy: {
-        reviewedAt: 'desc'
-      }
+      orderBy: [
+        { reviewedAt: 'desc' },
+        { createdAt: 'desc' }
+      ]
     });
 
     // Format response data
@@ -1127,7 +1264,7 @@ router.get('/periods/:periodId/ratings', auth, async (req, res) => {
       militaryRank: rating.user.militaryRank || '',
       youthPosition: rating.user.youthPosition || '',
       unitName: rating.user.unit?.name || '',
-      finalRating: rating.finalRating,
+      finalRating: rating.finalRating || rating.suggestedRating || 'GOOD',
       pointsAwarded: rating.pointsAwarded,
       submittedAt: rating.submittedAt,
       reviewedAt: rating.reviewedAt

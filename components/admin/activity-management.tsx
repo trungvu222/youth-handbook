@@ -13,7 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Calendar, Plus, Users, Edit, Trash2, Eye, RefreshCw, MapPin, Clock, AlertTriangle, MoreVertical, ClipboardList, FileText, CheckCircle2, XCircle, Clock3, FileCheck, Upload, X, Send, Bell, Copy, Ban, PlayCircle, ChevronLeft, ChevronRight, Award, Megaphone, QrCode, Hash } from "lucide-react"
+import { Calendar, Plus, Users, Edit, Trash2, Eye, RefreshCw, MapPin, Clock, AlertTriangle, MoreVertical, ClipboardList, FileText, CheckCircle2, XCircle, Clock3, FileCheck, Upload, X, Send, Bell, Copy, Ban, PlayCircle, ChevronLeft, ChevronRight, Award, Megaphone, QrCode, Hash, ArrowUpDown, Search, Check, UserCheck, HeartHandshake, BookOpen, Sparkles, Mic } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { BACKEND_URL } from "@/lib/config"
 import { notificationApi } from "@/lib/api"
@@ -53,6 +53,8 @@ interface Activity {
   materials?: string
   delegates?: string
   attachments?: string[]
+  viewCount?: number
+  tasks?: any
 }
 
 interface Participant {
@@ -132,6 +134,8 @@ export default function ActivityManagement() {
   const [notifyUserIds, setNotifyUserIds] = useState<string[]>([])
   const [isEditMode, setIsEditMode] = useState(false)
   const [editFormData, setEditFormData] = useState<any>({})
+  const [attendeeSearch, setAttendeeSearch] = useState("")
+  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc")
   const [currentPage, setCurrentPage] = useState(1)
   const ACTIVITIES_PER_PAGE = 10
 
@@ -139,6 +143,7 @@ export default function ActivityManagement() {
     title: "",
     description: "",
     type: "MEETING",
+    status: "AUTO",
     startTime: "",
     endTime: "",
     location: "",
@@ -148,6 +153,7 @@ export default function ActivityManagement() {
     managerId: "",         // Phụ trách
     delegates: "",         // Đại biểu tham dự
     materials: "",         // Vật chất
+    viewCount: 150         // Mắt xem báo cáo
   })
 
   const fetchActivities = async () => {
@@ -163,7 +169,7 @@ export default function ActivityManagement() {
       }
       
       console.log("[ActivityManagement] Fetching activities...")
-      const res = await fetch(`${API_URL}/api/activities`, {
+      const res = await fetch(`${API_URL}/api/activities?limit=100`, {
         headers: { 
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}` 
@@ -255,7 +261,7 @@ export default function ActivityManagement() {
           setTimeout(() => setAttendanceFlash(false), 2000)
           const diff = newCheckedIn - lastCheckedInCount
           toast({ 
-            title: "🔔 Điểm danh mới!", 
+            title: "Điểm danh mới!", 
             description: `${diff} đoàn viên vừa điểm danh thành công`,
           })
         }
@@ -465,9 +471,22 @@ export default function ActivityManagement() {
     )
   }
 
+  const selectAllAttendees = () => {
+    const allIds = users.map(u => u.id)
+    setSelectedAttendees(allIds)
+  }
+
+  const deselectAllAttendees = () => {
+    setSelectedAttendees([])
+  }
+
   const handleCreate = async () => {
     if (!formData.title || !formData.startTime) {
-      toast({ title: "Lỗi", description: "Vui lòng điền tiêu đề và thời gian", variant: "destructive" })
+      toast({ title: "Lỗi", description: "Vui lòng điền tiêu đề và thời gian bắt đầu", variant: "destructive" })
+      return
+    }
+    if (formData.endTime && new Date(formData.endTime) < new Date(formData.startTime)) {
+      toast({ title: "Lỗi thời gian", description: "Thời gian kết thúc không thể trước thời gian bắt đầu", variant: "destructive" })
       return
     }
     try {
@@ -532,6 +551,7 @@ export default function ActivityManagement() {
       title: "", 
       description: "", 
       type: "MEETING", 
+      status: "AUTO",
       startTime: "", 
       endTime: "", 
       location: "", 
@@ -540,22 +560,25 @@ export default function ActivityManagement() {
       hostUnit: "",
       managerId: "",
       delegates: "",
-      materials: ""
+      materials: "",
+      viewCount: 150
     })
     setSelectedFiles([])
     setSelectedAttendees([])
+    setAttendeeSearch("")
     setSendNotification(false)
     setNotifyAll(true)
     setNotifyUserIds([])
   }
 
   // Open detail dialog
-  const openDetailDialog = (activity: Activity) => {
+  const openDetailDialog = async (activity: Activity) => {
     setSelectedActivity(activity)
     setEditFormData({
       title: activity.title,
       description: activity.description || "",
       type: activity.type,
+      status: activity.status || "AUTO",
       startTime: activity.startTime ? toLocalDatetimeInput(activity.startTime) : "",
       endTime: activity.endTime ? toLocalDatetimeInput(activity.endTime) : "",
       location: activity.location || "",
@@ -563,10 +586,36 @@ export default function ActivityManagement() {
       hostUnit: activity.hostUnit || "",
       managerId: activity.manager?.id || "",
       delegates: activity.delegates || "",
-      materials: activity.materials || ""
+      materials: activity.materials || "",
+      lateThresholdMinutes: activity.lateThresholdMinutes || 15,
+      viewCount: activity.viewCount || activity.tasks?.viewCount || 150
     })
     setIsEditMode(false)
+    setAttendeeSearch("")
     setShowDetailDialog(true)
+
+    // Load existing participants for this activity
+    try {
+      const token = localStorage.getItem("accessToken")
+      const res = await fetch(`${API_URL}/api/activities/${activity.id}/stats`, {
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}` 
+        }
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const participantIds = (data.data?.participants || [])
+          .map((p: any) => p.userId || p.user?.id)
+          .filter(Boolean)
+        setSelectedAttendees(participantIds)
+      } else {
+        setSelectedAttendees([])
+      }
+    } catch (e) {
+      console.error("Error loading activity attendees:", e)
+      setSelectedAttendees([])
+    }
   }
 
   // Enable edit mode
@@ -581,6 +630,7 @@ export default function ActivityManagement() {
         title: selectedActivity.title,
         description: selectedActivity.description || "",
         type: selectedActivity.type,
+        status: selectedActivity.status || "AUTO",
         startTime: selectedActivity.startTime ? toLocalDatetimeInput(selectedActivity.startTime) : "",
         endTime: selectedActivity.endTime ? toLocalDatetimeInput(selectedActivity.endTime) : "",
         location: selectedActivity.location || "",
@@ -588,7 +638,9 @@ export default function ActivityManagement() {
         hostUnit: selectedActivity.hostUnit || "",
         managerId: selectedActivity.manager?.id || "",
         delegates: selectedActivity.delegates || "",
-        materials: selectedActivity.materials || ""
+        materials: selectedActivity.materials || "",
+        lateThresholdMinutes: selectedActivity.lateThresholdMinutes || 15,
+        viewCount: selectedActivity.viewCount || selectedActivity.tasks?.viewCount || 150
       })
     }
     setIsEditMode(false)
@@ -597,6 +649,15 @@ export default function ActivityManagement() {
   // Save edited activity
   const handleSaveEdit = async () => {
     if (!selectedActivity) return
+    
+    if (!editFormData.startTime) {
+      toast({ title: "Lỗi", description: "Thời gian bắt đầu không được để trống", variant: "destructive" })
+      return
+    }
+    if (editFormData.endTime && new Date(editFormData.endTime) < new Date(editFormData.startTime)) {
+      toast({ title: "Lỗi thời gian", description: "Thời gian kết thúc không thể trước thời gian bắt đầu", variant: "destructive" })
+      return
+    }
     
     try {
       const token = localStorage.getItem("accessToken")
@@ -610,19 +671,28 @@ export default function ActivityManagement() {
           ...editFormData,
           startTime: toUTCISOString(editFormData.startTime),
           endTime: toUTCISOString(editFormData.endTime),
+          attendeeIds: selectedAttendees,
         })
       })
       
       if (res.ok) {
-        toast({ title: "Thành công", description: "Đã cập nhật hoạt động" })
+        toast({ 
+          title: "Thành công", 
+          description: `Đã cập nhật hoạt động và điểm danh cho ${selectedAttendees.length} đoàn viên` 
+        })
         setIsEditMode(false)
         setShowDetailDialog(false)
         fetchActivities()
       } else {
-        toast({ title: "Lỗi", description: "Không thể cập nhật hoạt động", variant: "destructive" })
+        const errorData = await res.json().catch(() => ({}))
+        toast({ 
+          title: "Lỗi", 
+          description: errorData.error || errorData.message || "Không thể cập nhật hoạt động", 
+          variant: "destructive" 
+        })
       }
-    } catch (error) {
-      toast({ title: "Lỗi", description: "Có lỗi xảy ra", variant: "destructive" })
+    } catch (error: any) {
+      toast({ title: "Lỗi", description: error?.message || "Có lỗi xảy ra", variant: "destructive" })
     }
   }
 
@@ -750,7 +820,39 @@ export default function ActivityManagement() {
     return <Badge variant="outline">{labels[type] || type}</Badge>
   }
 
-  const filtered = activities.filter(a => filterStatus === "all" || a.status === filterStatus)
+  // Helper function to get status display based on time and status
+  const getActivityStatus = (activity: Activity) => {
+    if (activity.status === "CANCELLED") return "CANCELLED"
+    if (activity.status === "COMPLETED") return "COMPLETED"
+    
+    const now = new Date()
+    const startTime = new Date(activity.startTime)
+    const endTime = activity.endTime ? new Date(activity.endTime) : null
+
+    if (endTime && now > endTime) {
+      return "COMPLETED" // Quá thời gian kết thúc -> Đã kết thúc
+    } else if (now < startTime) {
+      return "DRAFT" // Sắp diễn ra
+    } else {
+      return "ACTIVE" // Đang diễn ra
+    }
+  }
+
+  const filtered = activities
+    .filter(a => {
+      if (filterStatus === "all") return true
+      const effStatus = getActivityStatus(a)
+      return effStatus === filterStatus || a.status === filterStatus
+    })
+    .sort((a, b) => {
+      const timeA = new Date(a.startTime).getTime() || 0
+      const timeB = new Date(b.startTime).getTime() || 0
+      if (sortOrder === "asc") {
+        return timeA - timeB // Cũ nhất trước -> Mới nhất sau (Tháng 3 -> Tháng 4 -> Tháng 8)
+      } else {
+        return timeB - timeA // Mới nhất trước -> Cũ nhất sau (Tháng 8 -> Tháng 4 -> Tháng 3)
+      }
+    })
 
   // Pagination calculations
   const totalPages = Math.ceil(filtered.length / ACTIVITIES_PER_PAGE)
@@ -759,28 +861,13 @@ export default function ActivityManagement() {
     currentPage * ACTIVITIES_PER_PAGE
   )
 
-  // Reset to page 1 when filter changes
+  // Reset to page 1 when filter or sort order changes
   useEffect(() => {
     setCurrentPage(1)
-  }, [filterStatus])
+  }, [filterStatus, sortOrder])
 
-  // Helper function to get status display based on time
   const getActivityStatusDisplay = (activity: Activity) => {
-    const now = new Date()
-    const startTime = new Date(activity.startTime)
-    const endTime = activity.endTime ? new Date(activity.endTime) : null
-
-    if (activity.status === "COMPLETED" || activity.status === "CANCELLED") {
-      return activity.status
-    }
-    
-    if (now < startTime) {
-      return "UPCOMING" // Sắp diễn ra
-    } else if (endTime && now > endTime) {
-      return "ENDED" // Đã kết thúc
-    } else {
-      return "ACTIVE" // Đang diễn ra
-    }
+    return getActivityStatus(activity)
   }
 
   if (loading) return (
@@ -804,19 +891,19 @@ export default function ActivityManagement() {
     CANCELLED: { bg: 'bg-red-50', text: 'text-red-600', border: 'border-l-red-300', dot: 'bg-red-400', label: 'Đã hủy', gradient: 'from-red-400 to-rose-400' },
   }
 
-  const typeConfig: Record<string, { icon: string; bg: string; text: string; label: string }> = {
-    MEETING: { icon: '📋', bg: 'bg-violet-50 ring-1 ring-violet-200/60', text: 'text-violet-700', label: 'Sinh hoạt' },
-    VOLUNTEER: { icon: '🤝', bg: 'bg-pink-50 ring-1 ring-pink-200/60', text: 'text-pink-700', label: 'Tình nguyện' },
-    STUDY: { icon: '📚', bg: 'bg-amber-50 ring-1 ring-amber-200/60', text: 'text-amber-700', label: 'Học tập' },
-    TASK: { icon: '✅', bg: 'bg-cyan-50 ring-1 ring-cyan-200/60', text: 'text-cyan-700', label: 'Nhiệm vụ' },
-    SOCIAL: { icon: '🎉', bg: 'bg-orange-50 ring-1 ring-orange-200/60', text: 'text-orange-700', label: 'Giao lưu' },
-    CONFERENCE: { icon: '🎤', bg: 'bg-indigo-50 ring-1 ring-indigo-200/60', text: 'text-indigo-700', label: 'Hội nghị' },
+  const typeConfig: Record<string, { icon: any; bg: string; text: string; label: string }> = {
+    MEETING: { icon: ClipboardList, bg: 'bg-violet-50 ring-1 ring-violet-200/60', text: 'text-violet-700', label: 'Sinh hoạt' },
+    VOLUNTEER: { icon: HeartHandshake, bg: 'bg-pink-50 ring-1 ring-pink-200/60', text: 'text-pink-700', label: 'Tình nguyện' },
+    STUDY: { icon: BookOpen, bg: 'bg-amber-50 ring-1 ring-amber-200/60', text: 'text-amber-700', label: 'Học tập' },
+    TASK: { icon: CheckCircle2, bg: 'bg-cyan-50 ring-1 ring-cyan-200/60', text: 'text-cyan-700', label: 'Nhiệm vụ' },
+    SOCIAL: { icon: Sparkles, bg: 'bg-orange-50 ring-1 ring-orange-200/60', text: 'text-orange-700', label: 'Giao lưu' },
+    CONFERENCE: { icon: Mic, bg: 'bg-indigo-50 ring-1 ring-indigo-200/60', text: 'text-indigo-700', label: 'Hội nghị' },
   }
 
   // Stats summary
-  const statsActive = activities.filter(a => a.status === 'ACTIVE').length
-  const statsCompleted = activities.filter(a => a.status === 'COMPLETED').length
-  const statsDraft = activities.filter(a => a.status === 'DRAFT').length
+  const statsActive = activities.filter(a => getActivityStatus(a) === 'ACTIVE').length
+  const statsCompleted = activities.filter(a => getActivityStatus(a) === 'COMPLETED').length
+  const statsDraft = activities.filter(a => getActivityStatus(a) === 'DRAFT').length
 
   return (
     <div className="space-y-6">
@@ -831,7 +918,7 @@ export default function ActivityManagement() {
               </div>
               <h2 className="text-2xl font-bold tracking-tight">Quản lý hoạt động</h2>
             </div>
-            <div className="flex items-center gap-4 text-white/80 text-sm">
+            <div className="flex items-center gap-4 text-white/80 text-sm flex-wrap">
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse"></span>
                 {statsActive} đang diễn ra
@@ -844,9 +931,9 @@ export default function ActivityManagement() {
               <span className="font-medium text-white">{activities.length} tổng cộng</span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-44 h-9 bg-white/15 backdrop-blur-sm border-white/20 text-white hover:bg-white/25 [&>svg]:text-white">
+              <SelectTrigger className="w-36 sm:w-40 h-9 bg-white/15 backdrop-blur-sm border-white/20 text-white hover:bg-white/25 [&>svg]:text-white text-xs sm:text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -857,10 +944,25 @@ export default function ActivityManagement() {
                 <SelectItem value="CANCELLED">Đã hủy</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="ghost" size="icon" className="h-9 w-9 text-white hover:bg-white/15" onClick={fetchActivities}>
+
+            {/* Bộ chọn sắp xếp theo ngày tháng */}
+            <Select value={sortOrder} onValueChange={(val: "desc" | "asc") => setSortOrder(val)}>
+              <SelectTrigger className="w-48 sm:w-52 h-9 bg-white/15 backdrop-blur-sm border-white/20 text-white hover:bg-white/25 [&>svg]:text-white text-xs sm:text-sm font-medium">
+                <div className="flex items-center gap-1.5 truncate">
+                  <ArrowUpDown className="h-3.5 w-3.5 shrink-0 opacity-80" />
+                  <SelectValue />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="desc">Mới nhất → Cũ nhất</SelectItem>
+                <SelectItem value="asc">Cũ nhất → Mới nhất</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button variant="ghost" size="icon" className="h-9 w-9 text-white hover:bg-white/15" onClick={fetchActivities} title="Làm mới">
               <RefreshCw className="h-4 w-4" />
             </Button>
-            <Button className="h-9 bg-white text-indigo-700 hover:bg-white/90 shadow-md font-semibold" onClick={() => setShowCreateDialog(true)}>
+            <Button className="h-9 bg-white text-indigo-700 hover:bg-white/90 shadow-md font-semibold text-xs sm:text-sm" onClick={() => setShowCreateDialog(true)}>
               <Plus className="h-4 w-4 mr-1.5" />Tạo mới
             </Button>
           </div>
@@ -881,7 +983,8 @@ export default function ActivityManagement() {
             </Button>
           </div>
         ) : paginatedActivities.map((activity) => {
-          const sc = statusConfig[activity.status] || statusConfig.DRAFT
+          const effStatus = getActivityStatus(activity)
+          const sc = statusConfig[effStatus] || statusConfig.DRAFT
           const tc = typeConfig[activity.type] || typeConfig.MEETING
           return (
             <div
@@ -899,10 +1002,10 @@ export default function ActivityManagement() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-semibold text-[15px] text-slate-800 leading-snug">{activity.title}</h3>
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold ${tc.bg} ${tc.text}`}>
-                        <span className="text-xs">{tc.icon}</span> {tc.label}
+                        <tc.icon className="h-3 w-3" /> {tc.label}
                       </span>
                       <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold ${sc.bg} ${sc.text}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${sc.dot} ${activity.status === 'ACTIVE' ? 'animate-pulse' : ''}`}></span>
+                        <span className={`w-1.5 h-1.5 rounded-full ${sc.dot} ${effStatus === 'ACTIVE' ? 'animate-pulse' : ''}`}></span>
                         {sc.label}
                       </span>
                       {activity.conclusion && (
@@ -918,10 +1021,13 @@ export default function ActivityManagement() {
                     )}
 
                     {/* Meta row */}
-                    <div className="flex items-center gap-3.5 text-[12px]">
+                    <div className="flex items-center gap-3.5 text-[12px] flex-wrap">
                       <span className="inline-flex items-center gap-1.5 text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md">
                         <Clock className="h-3 w-3 text-indigo-400" />
                         {new Date(activity.startTime).toLocaleString("vi-VN", { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })}
+                        {activity.endTime && (
+                          <> - {new Date(activity.endTime).toLocaleString("vi-VN", { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })}</>
+                        )}
                       </span>
                       {activity.location && (
                         <span className="inline-flex items-center gap-1.5 text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md">
@@ -929,9 +1035,13 @@ export default function ActivityManagement() {
                           <span className="truncate max-w-[140px]">{activity.location}</span>
                         </span>
                       )}
-                      <span className="inline-flex items-center gap-1.5 text-slate-500 bg-slate-50 px-2 py-0.5 rounded-md">
-                        <Users className="h-3 w-3 text-emerald-400" />
-                        {activity._count?.participants || 0} người
+                      <span className="inline-flex items-center gap-1.5 text-blue-600 bg-blue-50/70 px-2 py-0.5 rounded-md font-medium" title="Số lượt xem">
+                        <Eye className="h-3 w-3 text-blue-500" />
+                        {activity.viewCount || activity.tasks?.viewCount || 150} lượt xem
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 text-emerald-700 bg-emerald-50/80 px-2 py-0.5 rounded-md font-medium" title="Số người điểm danh">
+                        <Users className="h-3 w-3 text-emerald-500" />
+                        {activity._count?.participants || 0} người điểm danh
                       </span>
                       {activity.pointsReward > 0 && (
                         <span className="inline-flex items-center gap-1.5 text-amber-600 bg-amber-50/70 px-2 py-0.5 rounded-md font-medium">
@@ -943,8 +1053,8 @@ export default function ActivityManagement() {
                   </div>
 
                   {/* Right: Action buttons */}
-                  <div className="flex items-center gap-1 flex-shrink-0 opacity-90 group-hover:opacity-100 transition-opacity">
-                    {(activity.status === "COMPLETED" || activity.status === "ACTIVE") && (
+                  <div className="flex items-center gap-1.5 flex-shrink-0 opacity-90 group-hover:opacity-100 transition-opacity">
+                    {(activity.status === "COMPLETED" || activity.status === "ACTIVE" || activity.conclusion) && (
                       <Button 
                         variant="outline" 
                         size="sm"
@@ -956,19 +1066,18 @@ export default function ActivityManagement() {
                       </Button>
                     )}
                     
-                    {activity.status === "ACTIVE" && (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => openAttendanceDialog(activity)}
-                        className="h-8 rounded-lg text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 text-xs font-medium shadow-sm"
-                      >
-                        <ClipboardList className="h-3.5 w-3.5 mr-1" />
-                        Điểm danh
-                      </Button>
-                    )}
+                    {/* Nút Điểm danh luôn hiển thị cho mọi hoạt động */}
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => openAttendanceDialog(activity)}
+                      className="h-8 rounded-lg text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 text-xs font-medium shadow-sm"
+                    >
+                      <ClipboardList className="h-3.5 w-3.5 mr-1" />
+                      Điểm danh
+                    </Button>
                     
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-slate-100" onClick={() => openDetailDialog(activity)}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-slate-100" onClick={() => openDetailDialog(activity)} title="Xem chi tiết">
                       <Eye className="h-4 w-4 text-slate-400" />
                     </Button>
                     
@@ -991,6 +1100,12 @@ export default function ActivityManagement() {
                         </DropdownMenuItem>
                         
                         <DropdownMenuSeparator className="my-1" />
+
+                        {/* Điểm danh */}
+                        <DropdownMenuItem onClick={() => openAttendanceDialog(activity)} className="cursor-pointer rounded-lg h-9">
+                          <ClipboardList className="h-4 w-4 mr-2 text-emerald-500" />
+                          Điểm danh đoàn viên
+                        </DropdownMenuItem>
                         
                         {/* Status changes */}
                         {activity.status !== "ACTIVE" && activity.status !== "COMPLETED" && activity.status !== "CANCELLED" && (
@@ -1106,37 +1221,48 @@ export default function ActivityManagement() {
         </div>
       )}
 
+      {/* Create Activity Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={(open) => { setShowCreateDialog(open); if (!open) resetForm(); }}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Tạo hoạt động mới</DialogTitle></DialogHeader>
-          <div className="space-y-4">
+        <DialogContent className="max-w-2xl md:max-w-3xl w-[95vw] sm:w-full max-h-[90vh] flex flex-col p-0 overflow-hidden rounded-2xl shadow-2xl">
+          <DialogHeader className="px-6 py-4 border-b bg-slate-50/60 shrink-0">
+            <DialogTitle className="text-lg font-bold text-slate-800 flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600">
+                <Plus className="h-4 w-4" />
+              </div>
+              Tạo hoạt động mới
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-4 space-y-4">
             {/* Tiêu đề */}
             <div>
-              <Label>Tiêu đề *</Label>
+              <Label className="text-xs font-semibold text-slate-700">Tiêu đề *</Label>
               <Input 
                 value={formData.title} 
                 onChange={e => setFormData({...formData, title: e.target.value})} 
                 placeholder="Nhập tiêu đề hoạt động"
+                className="mt-1"
               />
             </div>
             
             {/* Mô tả */}
             <div>
-              <Label>Mô tả</Label>
+              <Label className="text-xs font-semibold text-slate-700">Mô tả</Label>
               <Textarea 
                 value={formData.description} 
                 onChange={e => setFormData({...formData, description: e.target.value})} 
                 placeholder="Nhập mô tả chi tiết..."
-                rows={3}
+                rows={2}
+                className="mt-1"
               />
             </div>
             
-            {/* Loại & Điểm thưởng */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Loại hoạt động, Trạng thái, Điểm thưởng, Số lượt xem */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <Label>Loại</Label>
+                <Label className="text-xs font-semibold text-slate-700">Loại hoạt động</Label>
                 <Select value={formData.type} onValueChange={v => setFormData({...formData, type: v})}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="MEETING">Sinh hoạt</SelectItem>
                     <SelectItem value="VOLUNTEER">Tình nguyện</SelectItem>
@@ -1147,126 +1273,271 @@ export default function ActivityManagement() {
                 </Select>
               </div>
               <div>
-                <Label>Điểm thưởng</Label>
+                <Label className="text-xs font-semibold text-slate-700">Trạng thái hoạt động</Label>
+                <Select value={formData.status} onValueChange={v => setFormData({...formData, status: v})}>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="AUTO">🕒 Tự động theo thời gian thực</SelectItem>
+                    <SelectItem value="DRAFT">🔵 Sắp diễn ra</SelectItem>
+                    <SelectItem value="ACTIVE">🟢 Đang diễn ra</SelectItem>
+                    <SelectItem value="COMPLETED">⚪ Đã kết thúc</SelectItem>
+                    <SelectItem value="CANCELLED">🔴 Đã hủy</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs font-semibold text-slate-700">Điểm thưởng</Label>
                 <Input 
                   type="number" 
                   value={formData.pointsReward} 
                   onChange={e => setFormData({...formData, pointsReward: parseInt(e.target.value) || 0})} 
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold text-slate-700">Số lượt xem (Mắt xem báo cáo)</Label>
+                <Input 
+                  type="number" 
+                  value={formData.viewCount} 
+                  onChange={e => setFormData({...formData, viewCount: parseInt(e.target.value) || 0})} 
+                  placeholder="150"
+                  className="mt-1"
                 />
               </div>
             </div>
             
-            {/* Thời gian */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Thời gian bắt đầu & kết thúc */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <Label>Bắt đầu *</Label>
+                <Label className="text-xs font-semibold text-slate-700">Bắt đầu *</Label>
                 <Input 
                   type="datetime-local" 
                   value={formData.startTime} 
-                  onChange={e => setFormData({...formData, startTime: e.target.value})} 
+                  onChange={e => {
+                    const newStart = e.target.value
+                    setFormData(prev => {
+                      const update: any = { ...prev, startTime: newStart }
+                      if (prev.endTime && newStart && new Date(prev.endTime) < new Date(newStart)) {
+                        update.endTime = ""
+                      }
+                      return update
+                    })
+                  }} 
+                  className="mt-1"
                 />
               </div>
               <div>
-                <Label>Kết thúc</Label>
+                <Label className="text-xs font-semibold text-slate-700">Kết thúc</Label>
                 <Input 
                   type="datetime-local" 
+                  min={formData.startTime || undefined}
                   value={formData.endTime} 
                   onChange={e => setFormData({...formData, endTime: e.target.value})} 
+                  className="mt-1"
                 />
               </div>
             </div>
             
-            {/* Ngưỡng tính trễ */}
-            <div>
-              <Label>
-                Ngưỡng tính trễ (phút) 
-                <span className="text-xs ml-2 text-gray-500">
-                  (Sau bao nhiêu phút kể từ giờ bắt đầu được tính là trễ? Mặc định: 15)
-                </span>
-              </Label>
-              <Input 
-                type="number"
-                min="1"
-                max="120"
-                value={formData.lateThresholdMinutes || 15} 
-                onChange={e => setFormData({...formData, lateThresholdMinutes: parseInt(e.target.value) || 15})} 
-                placeholder="15"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                VD: Nhập 10 → Check-in sau 10 phút tính trễ. Nhập 30 → Check-in sau 30 phút tính trễ.
-              </p>
+            {/* Ngưỡng tính trễ & Đơn vị chủ trì */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs font-semibold text-slate-700">
+                  Ngưỡng tính trễ (phút)
+                </Label>
+                <Input 
+                  type="number"
+                  min="1"
+                  max="120"
+                  value={formData.lateThresholdMinutes || 15} 
+                  onChange={e => setFormData({...formData, lateThresholdMinutes: parseInt(e.target.value) || 15})} 
+                  placeholder="15"
+                  className="mt-1"
+                />
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Check-in sau số phút này tính là trễ (Mặc định: 15p)
+                </p>
+              </div>
+              <div>
+                <Label className="text-xs font-semibold text-slate-700">Đơn vị chủ trì</Label>
+                <Input 
+                  value={formData.hostUnit} 
+                  onChange={e => setFormData({...formData, hostUnit: e.target.value})} 
+                  placeholder="VD: Đoàn cơ sở, Chi đoàn ABC..."
+                  className="mt-1"
+                />
+              </div>
             </div>
             
-            {/* Đơn vị chủ trì */}
-            <div>
-              <Label>Đơn vị chủ trì</Label>
-              <Input 
-                value={formData.hostUnit} 
-                onChange={e => setFormData({...formData, hostUnit: e.target.value})} 
-                placeholder="VD: Đoàn cơ sở, Chi đoàn ABC..."
-              />
+            {/* Phụ trách & Địa điểm */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs font-semibold text-slate-700">Người phụ trách</Label>
+                <Select value={formData.managerId} onValueChange={v => setFormData({...formData, managerId: v})}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Chọn người phụ trách" /></SelectTrigger>
+                  <SelectContent>
+                    {users.map(user => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.fullName} {user.role === 'ADMIN' && '(Admin)'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs font-semibold text-slate-700">Địa điểm</Label>
+                <Input 
+                  value={formData.location} 
+                  onChange={e => setFormData({...formData, location: e.target.value})} 
+                  placeholder="Nhập địa điểm tổ chức"
+                  className="mt-1"
+                />
+              </div>
+            </div>
+
+            {/* Đoàn viên tham gia & Điểm danh */}
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                  <UserCheck className="h-4 w-4 text-indigo-500" />
+                  Đoàn viên tham gia & Điểm danh ({selectedAttendees.length}/{users.length})
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 border-indigo-200 font-semibold text-xs py-0.5">
+                    Đã chọn: {selectedAttendees.length} / {users.length}
+                  </Badge>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 border-indigo-200 px-2.5"
+                    onClick={selectAllAttendees}
+                  >
+                    Chọn tất cả
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs text-rose-600 hover:text-rose-800 hover:bg-rose-50 border-rose-200 px-2.5"
+                    onClick={deselectAllAttendees}
+                  >
+                    Bỏ chọn
+                  </Button>
+                </div>
+              </div>
+
+              <div className="border rounded-xl p-3 bg-slate-50/70 space-y-2.5 w-full overflow-hidden">
+                {/* Search box */}
+                <div className="relative w-full">
+                  <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Tìm kiếm đoàn viên theo tên, email..."
+                    value={attendeeSearch}
+                    onChange={e => setAttendeeSearch(e.target.value)}
+                    className="pl-9 pr-8 h-8 bg-white text-xs sm:text-sm border-slate-200 w-full"
+                  />
+                  {attendeeSearch && (
+                    <button 
+                      type="button"
+                      onClick={() => setAttendeeSearch("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                {/* Member selection list */}
+                <div className="max-h-44 overflow-y-auto overflow-x-hidden w-full border rounded-lg bg-white p-1.5 space-y-1">
+                  {users
+                    .filter(u => {
+                      if (!attendeeSearch) return true
+                      const s = attendeeSearch.toLowerCase()
+                      return u.fullName.toLowerCase().includes(s) || (u.email && u.email.toLowerCase().includes(s))
+                    })
+                    .map(user => {
+                      const isChecked = selectedAttendees.includes(user.id)
+                      return (
+                        <div
+                          key={user.id}
+                          onClick={() => toggleAttendee(user.id)}
+                          className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all gap-2 w-full overflow-hidden ${
+                            isChecked
+                              ? "bg-indigo-50/90 border border-indigo-200 text-indigo-950 font-medium"
+                              : "hover:bg-slate-50 text-slate-700 border border-transparent"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1 overflow-hidden">
+                            <Checkbox
+                              id={`create-attendee-${user.id}`}
+                              checked={isChecked}
+                              onCheckedChange={() => toggleAttendee(user.id)}
+                              className="data-[state=checked]:bg-indigo-600 shrink-0"
+                            />
+                            <div className="truncate min-w-0 flex-1">
+                              <span className="text-xs sm:text-sm font-medium truncate block sm:inline">{user.fullName}</span>
+                              {user.email && (
+                                <span className="text-[11px] text-muted-foreground truncate hidden sm:inline ml-1.5">({user.email})</span>
+                              )}
+                            </div>
+                          </div>
+                          {isChecked ? (
+                            <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-0 text-[10px] shrink-0 font-semibold px-2">
+                              ✓ Đã điểm danh
+                            </Badge>
+                          ) : (
+                            <span className="text-[11px] text-muted-foreground shrink-0 hidden sm:inline">
+                              Chưa chọn
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })}
+                </div>
+                <p className="text-[11px] text-muted-foreground italic">
+                  * Tích chọn để admin điểm danh sẵn cho đoàn viên khi tạo hoạt động.
+                </p>
+              </div>
             </div>
             
-            {/* Phụ trách */}
-            <div>
-              <Label>Phụ trách</Label>
-              <Select value={formData.managerId} onValueChange={v => setFormData({...formData, managerId: v})}>
-                <SelectTrigger><SelectValue placeholder="Chọn người phụ trách" /></SelectTrigger>
-                <SelectContent>
-                  {users.map(user => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.fullName} {user.role === 'ADMIN' && '(Admin)'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            {/* Đại biểu tham dự */}
-            <div>
-              <Label>Đại biểu tham dự</Label>
-              <Textarea
-                value={formData.delegates}
-                onChange={e => setFormData({...formData, delegates: e.target.value})}
-                placeholder="VD: Nguyễn Văn A, Trần Thị B, ..."
-                rows={3}
-              />
-            </div>
-            
-            {/* Địa điểm */}
-            <div>
-              <Label>Địa điểm</Label>
-              <Input 
-                value={formData.location} 
-                onChange={e => setFormData({...formData, location: e.target.value})} 
-                placeholder="Nhập địa điểm tổ chức"
-              />
-            </div>
-            
-            {/* Vật chất */}
-            <div>
-              <Label>Vật chất cần thiết</Label>
-              <Input 
-                value={formData.materials} 
-                onChange={e => setFormData({...formData, materials: e.target.value})} 
-                placeholder="VD: Sổ tay, Sổ học tập, Máy chiếu..."
-              />
+            {/* Đại biểu tham dự & Vật chất */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs font-semibold text-slate-700">Đại biểu tham dự</Label>
+                <Textarea
+                  value={formData.delegates}
+                  onChange={e => setFormData({...formData, delegates: e.target.value})}
+                  placeholder="VD: Nguyễn Văn A, Trần Thị B, ..."
+                  rows={2}
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold text-slate-700">Vật chất cần thiết</Label>
+                <Textarea 
+                  value={formData.materials} 
+                  onChange={e => setFormData({...formData, materials: e.target.value})} 
+                  placeholder="VD: Sổ tay, Sổ học tập, Máy chiếu..."
+                  rows={2}
+                  className="mt-1"
+                />
+              </div>
             </div>
             
             {/* Tệp đính kèm */}
             <div>
-              <Label>Tệp đính kèm</Label>
-              <div className="space-y-2">
+              <Label className="text-xs font-semibold text-slate-700">Tệp đính kèm</Label>
+              <div className="mt-1 space-y-2">
                 <div 
-                  className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-muted/50 transition-colors"
+                  className="border-2 border-dashed rounded-xl p-3 text-center cursor-pointer hover:bg-slate-50 transition-colors"
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    Nhấn để chọn file hoặc kéo thả vào đây
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Hỗ trợ: {ALLOWED_FILE_TYPES.join(', ')} - Tối đa 20MB
+                  <Upload className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
+                  <p className="text-xs text-muted-foreground">
+                    Nhấn để chọn file hoặc kéo thả vào đây (Tối đa 20MB)
                   </p>
                 </div>
                 <input
@@ -1277,23 +1548,21 @@ export default function ActivityManagement() {
                   onChange={handleFileSelect}
                   className="hidden"
                 />
-                
-                {/* Selected files list */}
                 {selectedFiles.length > 0 && (
                   <div className="space-y-1">
                     {selectedFiles.map((file, index) => (
-                      <div key={index} className="flex items-center justify-between p-2 bg-muted rounded">
-                        <span className="text-sm truncate flex-1">{file.name}</span>
-                        <span className="text-xs text-muted-foreground mx-2">
+                      <div key={index} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg text-xs">
+                        <span className="truncate flex-1 font-medium">{file.name}</span>
+                        <span className="text-muted-foreground mx-2">
                           {(file.size / 1024 / 1024).toFixed(2)} MB
                         </span>
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="h-6 w-6"
+                          className="h-6 w-6 text-slate-400 hover:text-slate-600"
                           onClick={() => removeFile(index)}
                         >
-                          <X className="h-4 w-4" />
+                          <X className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     ))}
@@ -1303,23 +1572,23 @@ export default function ActivityManagement() {
             </div>
             
             {/* Thông báo mời họp */}
-            <div className="border rounded-lg p-4 space-y-3">
+            <div className="border rounded-xl p-3 bg-slate-50/50 space-y-2">
               <div className="flex items-center space-x-2">
                 <Checkbox 
                   id="send-notification"
                   checked={sendNotification}
                   onCheckedChange={(checked) => setSendNotification(checked as boolean)}
                 />
-                <label htmlFor="send-notification" className="text-sm font-medium cursor-pointer flex items-center gap-2">
-                  <Bell className="h-4 w-4" />
+                <label htmlFor="send-notification" className="text-xs font-semibold cursor-pointer flex items-center gap-1.5 text-slate-700">
+                  <Bell className="h-3.5 w-3.5 text-indigo-500" />
                   Gửi thông báo mời họp
                 </label>
               </div>
               
               {sendNotification && (
-                <div className="pl-6 space-y-3">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-2">
+                <div className="pl-5 space-y-2 pt-1">
+                  <div className="flex items-center gap-4 text-xs">
+                    <label className="flex items-center gap-1.5 cursor-pointer">
                       <input 
                         type="radio" 
                         id="notify-all" 
@@ -1327,11 +1596,9 @@ export default function ActivityManagement() {
                         checked={notifyAll}
                         onChange={() => setNotifyAll(true)}
                       />
-                      <label htmlFor="notify-all" className="text-sm cursor-pointer">
-                        Gửi đến tất cả đoàn viên
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-2">
+                      Tất cả đoàn viên
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer">
                       <input 
                         type="radio" 
                         id="notify-selected" 
@@ -1339,22 +1606,20 @@ export default function ActivityManagement() {
                         checked={!notifyAll}
                         onChange={() => setNotifyAll(false)}
                       />
-                      <label htmlFor="notify-selected" className="text-sm cursor-pointer">
-                        Gửi đến cá nhân được chọn
-                      </label>
-                    </div>
+                      Cá nhân được chọn
+                    </label>
                   </div>
                   
                   {!notifyAll && (
-                    <div className="border rounded p-2 max-h-32 overflow-y-auto">
+                    <div className="border rounded-lg p-2 max-h-32 overflow-y-auto bg-white space-y-1">
                       {users.map(user => (
-                        <div key={user.id} className="flex items-center space-x-2 py-1">
+                        <div key={user.id} className="flex items-center space-x-2 py-0.5">
                           <Checkbox 
                             id={`notify-${user.id}`}
                             checked={notifyUserIds.includes(user.id)}
                             onCheckedChange={() => toggleNotifyUser(user.id)}
                           />
-                          <label htmlFor={`notify-${user.id}`} className="text-sm cursor-pointer">
+                          <label htmlFor={`notify-${user.id}`} className="text-xs cursor-pointer truncate">
                             {user.fullName}
                           </label>
                         </div>
@@ -1365,57 +1630,73 @@ export default function ActivityManagement() {
               )}
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="px-6 py-3 border-t bg-slate-50/80 shrink-0 flex items-center justify-end gap-2">
             <Button variant="outline" onClick={() => { setShowCreateDialog(false); resetForm(); }}>Hủy</Button>
-            <Button onClick={handleCreate}>
-              <Plus className="h-4 w-4 mr-2" />
+            <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-medium shadow" onClick={handleCreate}>
+              <Plus className="h-4 w-4 mr-1.5" />
               Tạo hoạt động
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+      {/* Detail / Edit Activity Dialog */}
       <Dialog open={showDetailDialog} onOpenChange={(open) => { setShowDetailDialog(open); if (!open) { setIsEditMode(false); } }}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Chi tiết hoạt động</DialogTitle>
+        <DialogContent className="max-w-2xl md:max-w-3xl w-[95vw] sm:w-full max-h-[90vh] flex flex-col p-0 overflow-hidden rounded-2xl shadow-2xl">
+          <DialogHeader className="px-6 py-4 border-b bg-slate-50/60 shrink-0">
+            <DialogTitle className="text-lg font-bold text-slate-800 flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600">
+                  <Calendar className="h-4 w-4" />
+                </div>
+                {isEditMode ? "Chỉnh sửa hoạt động" : "Chi tiết hoạt động"}
+              </span>
+              {selectedActivity && (
+                <div className="mr-6">
+                  {getStatusBadge(selectedActivity.status)}
+                </div>
+              )}
+            </DialogTitle>
           </DialogHeader>
+
           {selectedActivity && (
-            <div className="space-y-4">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-4 space-y-4">
               {/* Tiêu đề */}
               <div>
-                <Label className="text-muted-foreground">Tiêu đề</Label>
+                <Label className="text-xs font-semibold text-slate-700">Tiêu đề *</Label>
                 {isEditMode ? (
                   <Input 
                     value={editFormData.title} 
                     onChange={e => setEditFormData({...editFormData, title: e.target.value})}
+                    className="mt-1"
                   />
                 ) : (
-                  <p className="font-medium">{selectedActivity.title}</p>
+                  <p className="font-semibold text-base text-slate-900 mt-1">{selectedActivity.title}</p>
                 )}
               </div>
 
               {/* Mô tả */}
               <div>
-                <Label className="text-muted-foreground">Mô tả</Label>
+                <Label className="text-xs font-semibold text-slate-700">Mô tả</Label>
                 {isEditMode ? (
                   <Textarea 
                     value={editFormData.description} 
                     onChange={e => setEditFormData({...editFormData, description: e.target.value})}
-                    rows={3}
+                    rows={2}
+                    className="mt-1"
                   />
                 ) : (
-                  <p>{selectedActivity.description || "Không có"}</p>
+                  <p className="text-sm text-slate-600 mt-1">{selectedActivity.description || "Không có mô tả"}</p>
                 )}
               </div>
 
-              {/* Loại & Trạng thái */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* Loại & Trạng thái & Điểm & Mắt xem */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-muted-foreground">Loại</Label>
+                  <Label className="text-xs font-semibold text-slate-700">Loại hoạt động</Label>
                   {isEditMode ? (
                     <Select value={editFormData.type} onValueChange={v => setEditFormData({...editFormData, type: v})}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="MEETING">Sinh hoạt</SelectItem>
                         <SelectItem value="VOLUNTEER">Tình nguyện</SelectItem>
@@ -1425,179 +1706,347 @@ export default function ActivityManagement() {
                       </SelectContent>
                     </Select>
                   ) : (
-                    <div>{getTypeBadge(selectedActivity.type)}</div>
+                    <div className="mt-1">{getTypeBadge(selectedActivity.type)}</div>
                   )}
                 </div>
                 <div>
-                  <Label className="text-muted-foreground">Trạng thái</Label>
-                  <div>{getStatusBadge(selectedActivity.status)}</div>
+                  <Label className="text-xs font-semibold text-slate-700">Trạng thái hoạt động</Label>
+                  {isEditMode ? (
+                    <Select value={editFormData.status || "AUTO"} onValueChange={v => setEditFormData({...editFormData, status: v})}>
+                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="AUTO">🕒 Tự động theo thời gian thực</SelectItem>
+                        <SelectItem value="DRAFT">🔵 Sắp diễn ra</SelectItem>
+                        <SelectItem value="ACTIVE">🟢 Đang diễn ra</SelectItem>
+                        <SelectItem value="COMPLETED">⚪ Đã kết thúc</SelectItem>
+                        <SelectItem value="CANCELLED">🔴 Đã hủy</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="mt-1">{getStatusBadge(getActivityStatus(selectedActivity))}</div>
+                  )}
                 </div>
               </div>
 
-              {/* Thời gian */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-muted-foreground">Thời gian bắt đầu</Label>
+                  <Label className="text-xs font-semibold text-slate-700">Điểm thưởng</Label>
+                  {isEditMode ? (
+                    <Input 
+                      type="number" 
+                      value={editFormData.pointsReward} 
+                      onChange={e => setEditFormData({...editFormData, pointsReward: parseInt(e.target.value) || 0})}
+                      className="mt-1"
+                    />
+                  ) : (
+                    <p className="font-bold text-indigo-600 mt-1 text-sm">+{selectedActivity.pointsReward} điểm</p>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-slate-700">Số lượt xem (Mắt xem báo cáo)</Label>
+                  {isEditMode ? (
+                    <Input 
+                      type="number" 
+                      value={editFormData.viewCount !== undefined ? editFormData.viewCount : 150} 
+                      onChange={e => setEditFormData({...editFormData, viewCount: parseInt(e.target.value) || 0})}
+                      className="mt-1"
+                      placeholder="150"
+                    />
+                  ) : (
+                    <p className="font-bold text-blue-600 mt-1 text-sm flex items-center gap-1.5">
+                      <Eye className="h-4 w-4" />
+                      {selectedActivity.viewCount || selectedActivity.tasks?.viewCount || 150} lượt xem
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Thời gian bắt đầu & kết thúc */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-xs font-semibold text-slate-700">Thời gian bắt đầu</Label>
                   {isEditMode ? (
                     <Input 
                       type="datetime-local" 
                       value={editFormData.startTime} 
-                      onChange={e => setEditFormData({...editFormData, startTime: e.target.value})}
+                      onChange={e => {
+                        const newStart = e.target.value
+                        const update: any = { ...editFormData, startTime: newStart }
+                        if (editFormData.endTime && newStart && new Date(editFormData.endTime) < new Date(newStart)) {
+                          update.endTime = ""
+                        }
+                        setEditFormData(update)
+                      }}
+                      className="mt-1"
                     />
                   ) : (
-                    <p>{new Date(selectedActivity.startTime).toLocaleString("vi-VN")}</p>
+                    <p className="text-sm font-medium mt-1">{new Date(selectedActivity.startTime).toLocaleString("vi-VN")}</p>
                   )}
                 </div>
                 <div>
-                  <Label className="text-muted-foreground">Thời gian kết thúc</Label>
+                  <Label className="text-xs font-semibold text-slate-700">Thời gian kết thúc</Label>
                   {isEditMode ? (
                     <Input 
                       type="datetime-local" 
+                      min={editFormData.startTime || undefined}
                       value={editFormData.endTime} 
                       onChange={e => setEditFormData({...editFormData, endTime: e.target.value})}
+                      className="mt-1"
                     />
                   ) : (
-                    <p>{selectedActivity.endTime ? new Date(selectedActivity.endTime).toLocaleString("vi-VN") : "Chưa xác định"}</p>
+                    <p className="text-sm font-medium mt-1">{selectedActivity.endTime ? new Date(selectedActivity.endTime).toLocaleString("vi-VN") : "Chưa xác định"}</p>
                   )}
                 </div>
               </div>
 
-              {/* Ngưỡng tính trễ */}
-              <div>
-                <Label className="text-muted-foreground">
-                  Ngưỡng tính trễ (phút) 
-                  <span className="text-xs ml-2 text-gray-500">
-                    (Số phút sau giờ bắt đầu được tính là trễ, mặc định 15 phút)
-                  </span>
-                </Label>
+              {/* Ngưỡng tính trễ & Đơn vị chủ trì */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-xs font-semibold text-slate-700">
+                    Ngưỡng tính trễ (phút)
+                  </Label>
+                  {isEditMode ? (
+                    <Input 
+                      type="number"
+                      min="1"
+                      max="120"
+                      value={editFormData.lateThresholdMinutes || 15} 
+                      onChange={e => setEditFormData({...editFormData, lateThresholdMinutes: parseInt(e.target.value) || 15})}
+                      placeholder="15"
+                      className="mt-1"
+                    />
+                  ) : (
+                    <p className="text-sm text-slate-600 mt-1">{selectedActivity.lateThresholdMinutes || 15} phút</p>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-slate-700">Đơn vị chủ trì</Label>
+                  {isEditMode ? (
+                    <Input 
+                      value={editFormData.hostUnit} 
+                      onChange={e => setEditFormData({...editFormData, hostUnit: e.target.value})}
+                      className="mt-1"
+                    />
+                  ) : (
+                    <p className="text-sm text-slate-600 mt-1">{selectedActivity.hostUnit || "Chưa xác định"}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Phụ trách & Địa điểm */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-xs font-semibold text-slate-700">Người phụ trách</Label>
+                  {isEditMode ? (
+                    <Select value={editFormData.managerId} onValueChange={v => setEditFormData({...editFormData, managerId: v})}>
+                      <SelectTrigger className="mt-1"><SelectValue placeholder="Chọn người phụ trách" /></SelectTrigger>
+                      <SelectContent>
+                        {users.map(user => (
+                          <SelectItem key={user.id} value={user.id}>
+                            {user.fullName} {user.role === 'ADMIN' && '(Admin)'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <p className="text-sm text-slate-600 mt-1">{selectedActivity.manager?.fullName || "Chưa xác định"}</p>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-slate-700">Địa điểm</Label>
+                  {isEditMode ? (
+                    <Input 
+                      value={editFormData.location} 
+                      onChange={e => setEditFormData({...editFormData, location: e.target.value})}
+                      className="mt-1"
+                    />
+                  ) : (
+                    <p className="text-sm text-slate-600 mt-1">{selectedActivity.location || "Chưa xác định"}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Đoàn viên tham gia & Điểm danh */}
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                    <UserCheck className="h-4 w-4 text-indigo-500" />
+                    Đoàn viên tham gia & Điểm danh
+                  </Label>
+                  {isEditMode && (
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 border-indigo-200 font-semibold text-xs py-0.5">
+                        Đã chọn: {selectedAttendees.length} / {users.length}
+                      </Badge>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 border-indigo-200 px-2.5"
+                        onClick={selectAllAttendees}
+                      >
+                        Chọn tất cả
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs text-rose-600 hover:text-rose-800 hover:bg-rose-50 border-rose-200 px-2.5"
+                        onClick={deselectAllAttendees}
+                      >
+                        Bỏ chọn
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
                 {isEditMode ? (
-                  <Input 
-                    type="number"
-                    min="1"
-                    max="120"
-                    value={editFormData.lateThresholdMinutes || 15} 
-                    onChange={e => setEditFormData({...editFormData, lateThresholdMinutes: parseInt(e.target.value) || 15})}
-                    placeholder="15"
-                  />
+                  <div className="border rounded-xl p-3 bg-slate-50/70 space-y-2.5 w-full overflow-hidden">
+                    {/* Search box */}
+                    <div className="relative w-full">
+                      <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        placeholder="Tìm kiếm đoàn viên theo tên, email..."
+                        value={attendeeSearch}
+                        onChange={e => setAttendeeSearch(e.target.value)}
+                        className="pl-9 pr-8 h-8 bg-white text-xs sm:text-sm border-slate-200 w-full"
+                      />
+                      {attendeeSearch && (
+                        <button 
+                          type="button"
+                          onClick={() => setAttendeeSearch("")}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Member selection list */}
+                    <div className="max-h-48 overflow-y-auto overflow-x-hidden w-full border rounded-lg bg-white p-1.5 space-y-1">
+                      {users
+                        .filter(u => {
+                          if (!attendeeSearch) return true
+                          const s = attendeeSearch.toLowerCase()
+                          return u.fullName.toLowerCase().includes(s) || (u.email && u.email.toLowerCase().includes(s))
+                        })
+                        .map(user => {
+                          const isChecked = selectedAttendees.includes(user.id)
+                          return (
+                            <div
+                              key={user.id}
+                              onClick={() => toggleAttendee(user.id)}
+                              className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all gap-2 w-full overflow-hidden ${
+                                isChecked
+                                  ? "bg-indigo-50/90 border border-indigo-200 text-indigo-950 font-medium"
+                                  : "hover:bg-slate-50 text-slate-700 border border-transparent"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0 flex-1 overflow-hidden">
+                                <Checkbox
+                                  id={`edit-attendee-${user.id}`}
+                                  checked={isChecked}
+                                  onCheckedChange={() => toggleAttendee(user.id)}
+                                  className="data-[state=checked]:bg-indigo-600 shrink-0"
+                                />
+                                <div className="truncate min-w-0 flex-1">
+                                  <span className="text-xs sm:text-sm font-medium truncate block sm:inline">{user.fullName}</span>
+                                  {user.email && (
+                                    <span className="text-[11px] text-muted-foreground truncate hidden sm:inline ml-1.5">({user.email})</span>
+                                  )}
+                                </div>
+                              </div>
+                              {isChecked ? (
+                                <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-0 text-[10px] shrink-0 font-semibold px-2">
+                                  ✓ Đã điểm danh
+                                </Badge>
+                              ) : (
+                                <span className="text-[11px] text-muted-foreground shrink-0 hidden sm:inline">
+                                  Chưa chọn
+                                </span>
+                              )}
+                            </div>
+                          )
+                        })}
+                      {users.filter(u => {
+                        if (!attendeeSearch) return true
+                        const s = attendeeSearch.toLowerCase()
+                        return u.fullName.toLowerCase().includes(s) || (u.email && u.email.toLowerCase().includes(s))
+                      }).length === 0 && (
+                        <div className="py-6 text-center text-xs text-muted-foreground">
+                          Không tìm thấy đoàn viên nào phù hợp
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground italic">
+                      * Tích chọn đoàn viên để tự động điểm danh cho hoạt động này (kể cả hoạt động đã kết thúc).
+                    </p>
+                  </div>
                 ) : (
-                  <p>{selectedActivity.lateThresholdMinutes || 15} phút (Check-in sau {
-                    new Date(new Date(selectedActivity.startTime).getTime() + (selectedActivity.lateThresholdMinutes || 15) * 60000)
-                      .toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-                  } tính là trễ)</p>
+                  <div 
+                    className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between cursor-pointer hover:bg-indigo-50/50 transition-colors" 
+                    onClick={() => openAttendanceDialog(selectedActivity)}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-indigo-500" />
+                      <span className="font-semibold text-sm text-slate-800">
+                        {selectedActivity._count?.participants || selectedAttendees.length || 0} đoàn viên đã tham gia
+                      </span>
+                    </div>
+                    <span className="text-xs font-medium text-indigo-600 hover:underline">
+                      Xem chi tiết điểm danh →
+                    </span>
+                  </div>
                 )}
               </div>
 
-              {/* Đơn vị chủ trì */}
-              <div>
-                <Label className="text-muted-foreground">Đơn vị chủ trì</Label>
-                {isEditMode ? (
-                  <Input 
-                    value={editFormData.hostUnit} 
-                    onChange={e => setEditFormData({...editFormData, hostUnit: e.target.value})}
-                  />
-                ) : (
-                  <p>{selectedActivity.hostUnit || "Chưa xác định"}</p>
-                )}
-              </div>
-
-              {/* Phụ trách */}
-              <div>
-                <Label className="text-muted-foreground">Phụ trách</Label>
-                {isEditMode ? (
-                  <Select value={editFormData.managerId} onValueChange={v => setEditFormData({...editFormData, managerId: v})}>
-                    <SelectTrigger><SelectValue placeholder="Chọn người phụ trách" /></SelectTrigger>
-                    <SelectContent>
-                      {users.map(user => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.fullName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <p>{selectedActivity.manager?.fullName || "Chưa xác định"}</p>
-                )}
-              </div>
-
-              {/* Người tham gia */}
-              <div>
-                <Label className="text-muted-foreground">Người tham gia</Label>
-                <p className="font-semibold text-lg text-blue-600 cursor-pointer hover:underline" onClick={() => openAttendanceDialog(selectedActivity)}>
-                  {selectedActivity._count?.participants || 0} người 
-                  <span className="text-sm text-muted-foreground ml-2">(Nhấn để xem chi tiết)</span>
-                </p>
-              </div>
-
-              {/* Địa điểm */}
-              <div>
-                <Label className="text-muted-foreground">Địa điểm</Label>
-                {isEditMode ? (
-                  <Input 
-                    value={editFormData.location} 
-                    onChange={e => setEditFormData({...editFormData, location: e.target.value})}
-                  />
-                ) : (
-                  <p>{selectedActivity.location || "Chưa xác định"}</p>
-                )}
-              </div>
-
-              {/* Vật chất */}
-              <div>
-                <Label className="text-muted-foreground">Vật chất</Label>
-                {isEditMode ? (
-                  <Input 
-                    value={editFormData.materials} 
-                    onChange={e => setEditFormData({...editFormData, materials: e.target.value})}
-                  />
-                ) : (
-                  <p>{selectedActivity.materials || "Chưa xác định"}</p>
-                )}
-              </div>
-
-              {/* Đại biểu tham dự */}
-              <div>
-                <Label className="text-muted-foreground">Đại biểu tham dự</Label>
-                {isEditMode ? (
-                  <Textarea 
-                    value={editFormData.delegates} 
-                    onChange={e => setEditFormData({...editFormData, delegates: e.target.value})}
-                    placeholder="VD: Nguyễn Văn A, Trần Thị B, ..."
-                    rows={3}
-                  />
-                ) : (
-                  <p>{selectedActivity.delegates || "Chưa xác định"}</p>
-                )}
-              </div>
-
-              {/* Điểm thưởng */}
-              <div>
-                <Label className="text-muted-foreground">Điểm thưởng</Label>
-                {isEditMode ? (
-                  <Input 
-                    type="number" 
-                    value={editFormData.pointsReward} 
-                    onChange={e => setEditFormData({...editFormData, pointsReward: parseInt(e.target.value) || 0})}
-                  />
-                ) : (
-                  <p className="font-bold text-lg">{selectedActivity.pointsReward} điểm</p>
-                )}
+              {/* Đại biểu tham dự & Vật chất */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-xs font-semibold text-slate-700">Đại biểu tham dự</Label>
+                  {isEditMode ? (
+                    <Textarea 
+                      value={editFormData.delegates} 
+                      onChange={e => setEditFormData({...editFormData, delegates: e.target.value})}
+                      placeholder="VD: Nguyễn Văn A, Trần Thị B, ..."
+                      rows={2}
+                      className="mt-1"
+                    />
+                  ) : (
+                    <p className="text-sm text-slate-600 mt-1">{selectedActivity.delegates || "Không có"}</p>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-slate-700">Vật chất</Label>
+                  {isEditMode ? (
+                    <Textarea 
+                      value={editFormData.materials} 
+                      onChange={e => setEditFormData({...editFormData, materials: e.target.value})} 
+                      placeholder="VD: Sổ tay, máy chiếu..."
+                      rows={2}
+                      className="mt-1"
+                    />
+                  ) : (
+                    <p className="text-sm text-slate-600 mt-1">{selectedActivity.materials || "Không có"}</p>
+                  )}
+                </div>
               </div>
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="px-6 py-3 border-t bg-slate-50/80 shrink-0 flex items-center justify-end gap-2">
             {isEditMode ? (
               <>
                 <Button variant="outline" onClick={cancelEdit}>Hủy</Button>
-                <Button onClick={handleSaveEdit}>
-                  <Edit className="h-4 w-4 mr-2" />
-                  Lưu
+                <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-medium shadow" onClick={handleSaveEdit}>
+                  <Edit className="h-4 w-4 mr-1.5" />
+                  Lưu thay đổi
                 </Button>
               </>
             ) : (
               <>
                 <Button variant="outline" onClick={() => setShowDetailDialog(false)}>Đóng</Button>
-                <Button onClick={enableEditMode}>
-                  <Edit className="h-4 w-4 mr-2" />
+                <Button className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium" onClick={enableEditMode}>
+                  <Edit className="h-4 w-4 mr-1.5" />
                   Chỉnh sửa
                 </Button>
               </>
@@ -1702,7 +2151,7 @@ export default function ActivityManagement() {
                   onClick={() => {
                     if (selectedActivity) {
                       fetchActivityStats(selectedActivity.id)
-                      toast({ title: "✅ Đã tải lại", description: "Dữ liệu điểm danh đã được cập nhật" })
+                      toast({ title: "Đã tải lại", description: "Dữ liệu điểm danh đã được cập nhật" })
                     }
                   }}
                   disabled={loadingStats}
@@ -1890,16 +2339,30 @@ export default function ActivityManagement() {
               )}
             </div>
           )}
-          <DialogFooter className="px-6 pb-6 pt-4 shrink-0 flex gap-2">
+          <DialogFooter className="px-6 pb-6 pt-4 shrink-0 flex flex-wrap gap-2 justify-end">
             <Button 
               variant="default" 
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs sm:text-sm"
+              onClick={() => {
+                setShowAttendanceDialog(false);
+                if (selectedActivity) {
+                  openDetailDialog(selectedActivity);
+                  setTimeout(() => enableEditMode(), 100);
+                }
+              }}
+            >
+              <UserCheck className="h-4 w-4 mr-1.5" />
+              Điểm danh hộ / Sửa danh sách ({activityStats?.checkedIn || selectedAttendees.length || 0}/{users.length})
+            </Button>
+            <Button 
+              variant="default" 
+              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm"
               onClick={() => { setShowCheckinCodeDialog(true); setCheckinCodeMode('qr'); setCopiedCode(false); setCheckinSendMode('all'); setCheckinSelectedUsers([]); }}
             >
               <QrCode className="h-4 w-4 mr-1.5" />
               Mã điểm danh
             </Button>
-            <Button variant="outline" onClick={() => setShowAttendanceDialog(false)}>
+            <Button variant="outline" onClick={() => setShowAttendanceDialog(false)} className="text-xs sm:text-sm">
               Đóng
             </Button>
           </DialogFooter>
@@ -2063,7 +2526,7 @@ export default function ActivityManagement() {
                 setSendingCheckinCode(true)
                 try {
                   const result = await notificationApi.sendNotification({
-                    title: `🎯 Mã điểm danh: ${selectedActivity.title}`,
+                    title: `Mã điểm danh: ${selectedActivity.title}`,
                     message: `Mã điểm danh cho hoạt động "${selectedActivity.title}" là:\n\n${code}\n\nSao chép mã rồi mở phần Điểm danh trong ứng dụng để nhập.`,
                     type: 'CHECKIN_CODE',
                     relatedId: code,
@@ -2073,7 +2536,7 @@ export default function ActivityManagement() {
                   if (result.success) {
                     const sentCount = result.data?.sent ?? targetCount
                     toast({
-                      title: "✅ Đã gửi mã điểm danh",
+                      title: "Đã gửi mã điểm danh",
                       description: `Đã gửi cho ${sentCount} đoàn viên qua mục Thông báo`,
                     })
                     setShowCheckinCodeDialog(false)

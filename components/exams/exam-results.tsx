@@ -105,7 +105,7 @@ export function ExamResults({ exam, attempt, onBack }: ExamResultsProps) {
         if (exam.allowReview) {
           const examResponse = await examApi.getExam(exam.id)
           if (examResponse.success && examResponse.data?.questions) {
-            setQuestions(examResponse.data.questions)
+            setQuestions((examResponse.data as any).questions || [])
           }
         }
       } else {

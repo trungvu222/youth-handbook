@@ -584,7 +584,7 @@ router.post('/:id/respond', auth, async (req, res) => {
           await prisma.notification.create({
             data: {
               userId: suggestion.userId,
-              title: '📝 Phản hồi kiến nghị',
+              title: 'Phản hồi kiến nghị',
               message: `Kiến nghị "${suggestion.title}" của bạn đã được phản hồi. Trạng thái: ${statusLabel}`,
               type: 'SUGGESTION',
               relatedId: id
@@ -667,7 +667,7 @@ router.put('/:id/status', auth, async (req, res) => {
         await prisma.notification.create({
           data: {
             userId: suggestion.user.id,
-            title: '📝 Cập nhật trạng thái kiến nghị',
+            title: 'Cập nhật trạng thái kiến nghị',
             message: `Kiến nghị "${suggestion.title}" của bạn đã chuyển sang trạng thái: ${statusLabel}`,
             type: 'SUGGESTION',
             relatedId: id

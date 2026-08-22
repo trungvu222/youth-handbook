@@ -7,6 +7,7 @@ const {
   getFavoriteDocuments,
   createDocument,
   updateDocument,
+  updateDocumentStats,
   deleteDocument,
   getDocumentStats,
   sendDocumentNotification,
@@ -84,6 +85,8 @@ router.route('/:id')
 router.get('/:id/download', downloadDocument);
 router.post('/:id/favorite', toggleDocumentFavorite);
 router.post('/:id/notify', authorize('ADMIN', 'LEADER'), sendDocumentNotification);
+router.patch('/:id/stats', authorize('ADMIN', 'LEADER'), updateDocumentStats);
+router.put('/:id/stats', authorize('ADMIN', 'LEADER'), updateDocumentStats);
 
 // Admin routes
 router.get('/admin/stats', authorize('ADMIN', 'LEADER'), getDocumentStats);

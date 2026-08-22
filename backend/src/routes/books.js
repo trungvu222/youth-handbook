@@ -9,7 +9,10 @@ const {
   returnBook,
   getBorrowingStats,
   getBookByQR,
-  getMyBorrowings
+  getMyBorrowings,
+  createManualBorrowings,
+  updateBorrowing,
+  deleteBorrowing
 } = require('../controllers/bookController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -20,6 +23,11 @@ router.use(protect);
 
 // Admin stats route (must be before /:id to avoid conflict)
 router.get('/admin/stats', authorize('ADMIN', 'LEADER'), getBorrowingStats);
+
+// Admin manual borrowing routes
+router.post('/admin/borrowings', authorize('ADMIN', 'LEADER'), createManualBorrowings);
+router.put('/admin/borrowings/:id', authorize('ADMIN', 'LEADER'), updateBorrowing);
+router.delete('/admin/borrowings/:id', authorize('ADMIN', 'LEADER'), deleteBorrowing);
 
 // My borrowings route
 router.get('/my-borrows', getMyBorrowings);

@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog'
 import { Alert, AlertDescription } from '../ui/alert'
+import { Checkbox } from '../ui/checkbox'
+import { BACKEND_URL } from '@/lib/config'
 import {
   Plus,
   Search,
@@ -31,6 +33,9 @@ import {
   RefreshCw
 } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
+
+const RAW_API_URL = BACKEND_URL;
+const API_URL = RAW_API_URL.replace(/\/api\/?$/, '');
 
 interface RatingPeriod {
   id: string;
@@ -184,8 +189,95 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
   const [currentPageList, setCurrentPageList] = useState(1)
   const itemsPerPage = 10
 
+  // Member selection states for rating period
+  const [users, setUsers] = useState<any[]>([])
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([])
+  const [memberSearchTerm, setMemberSearchTerm] = useState('')
+  const [loadingMembers, setLoadingMembers] = useState(false)
+
+  // Fetch users for member selection
+  const fetchUsers = async () => {
+    try {
+      setLoadingMembers(true)
+      const token = localStorage.getItem('accessToken')
+      const res = await fetch(`${API_URL}/api/users?limit=1000&isActive=true`, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        }
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setUsers(data.data?.users || data.data || [])
+      }
+    } catch (e) {
+      console.error('Error fetching users:', e)
+    } finally {
+      setLoadingMembers(false)
+    }
+  }
+
+  // Member selection handlers
+  const toggleMember = (userId: string) => {
+    setSelectedMembers(prev =>
+      prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
+    )
+  }
+
+  const selectAllMembers = () => {
+    setSelectedMembers(users.map(u => u.id))
+  }
+
+  const deselectAllMembers = () => {
+    setSelectedMembers([])
+  }
+
+  // Quick rating level update handler
+  const handleQuickUpdateRatingLevel = async (ratingId: string, periodId: string, newLevel: string) => {
+    try {
+      // Optimistic update
+      setAllPeriodsRatings(prev => prev.map(p => {
+        if (p.periodId !== periodId) return p
+        return {
+          ...p,
+          ratings: p.ratings.map(r => r.id === ratingId ? { ...r, finalRating: newLevel } : r)
+        }
+      }))
+
+      const res = await ratingApi.updateRatingLevel(ratingId, newLevel)
+      if (res.success) {
+        toast({
+          title: 'Thành công',
+          description: `Đã cập nhật xếp loại: ${
+            newLevel === 'EXCELLENT' ? 'Xuất sắc' :
+            newLevel === 'GOOD' ? 'Tốt' :
+            newLevel === 'AVERAGE' ? 'Đạt' : 'Không đạt'
+          }`
+        })
+      } else {
+        toast({
+          title: 'Lỗi',
+          description: res.error || 'Không thể cập nhật xếp loại',
+          variant: 'destructive'
+        })
+        if (periods.length > 0) {
+          loadAllPeriodsRatings(periods)
+        }
+      }
+    } catch (e) {
+      toast({
+        title: 'Lỗi',
+        description: 'Có lỗi xảy ra khi cập nhật xếp loại',
+        variant: 'destructive'
+      })
+      if (periods.length > 0) {
+        loadAllPeriodsRatings(periods)
+      }
+    }
+  }
+
   // Handlers for edit and delete period
-  const handleEditPeriod = (period: RatingPeriod) => {
+  const handleEditPeriod = async (period: RatingPeriod) => {
     setSelectedPeriod(period)
     setFormData({
       title: period.title,
@@ -196,7 +288,21 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
         ? period.criteria.map(c => ({ name: c.name, description: c.description, isRequired: c.isRequired }))
         : [{ name: '', description: '', isRequired: true }]
     })
+    setMemberSearchTerm('')
     setShowCreateDialog(true)
+
+    try {
+      const res = await ratingApi.getPeriodRatings(period.id)
+      if (res.success && res.data && res.data.ratings) {
+        const memberIds = res.data.ratings.map((r: any) => r.userId).filter(Boolean)
+        setSelectedMembers(memberIds)
+      } else {
+        setSelectedMembers([])
+      }
+    } catch (e) {
+      console.error('Error loading period ratings:', e)
+      setSelectedMembers([])
+    }
   }
 
   const handleDeletePeriod = (periodId: string) => {
@@ -257,6 +363,7 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
 
   useEffect(() => {
     loadData()
+    fetchUsers()
   }, [])
 
   // Sync filter when prop changes
@@ -275,14 +382,14 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
       const periodsResponse = await ratingApi.getRatingPeriods()
       let loadedPeriods: RatingPeriod[] = []
       if (periodsResponse.success && periodsResponse.data) {
-        loadedPeriods = periodsResponse.data
+        loadedPeriods = periodsResponse.data as unknown as RatingPeriod[]
         setPeriods(loadedPeriods)
       }
 
       // Load pending ratings
       const pendingResponse = await ratingApi.getPendingRatings()
       if (pendingResponse.success && pendingResponse.data) {
-        setPendingRatings(pendingResponse.data)
+        setPendingRatings(pendingResponse.data as unknown as SelfRating[])
       }
 
       // Load stats
@@ -472,7 +579,8 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
           id: `criteria_${index}`,
           ...c
         })),
-        targetAudience: 'ALL' as const
+        targetAudience: 'ALL' as const,
+        memberIds: selectedMembers
       }
 
       const response = selectedPeriod 
@@ -482,7 +590,9 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
       if (response.success) {
         toast({
           title: 'Thành công',
-          description: selectedPeriod ? 'Đã cập nhật kỳ xếp loại' : 'Đã tạo kỳ xếp loại mới'
+          description: selectedPeriod 
+            ? `Đã cập nhật kỳ xếp loại (${selectedMembers.length} đoàn viên đã gửi)` 
+            : `Đã tạo kỳ xếp loại mới (${selectedMembers.length} đoàn viên đã gửi)`
         })
         setShowCreateDialog(false)
         resetForm()
@@ -617,6 +727,8 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
         { name: '', description: '', isRequired: true }
       ]
     })
+    setSelectedMembers([])
+    setMemberSearchTerm('')
   }
 
   const resetApprovalForm = () => {
@@ -1187,9 +1299,21 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
                                       <td className="px-4 py-3 text-sm text-gray-600">{rating.youthPosition || 'Đoàn viên'}</td>
                                       <td className="px-4 py-3 text-sm text-gray-600">{rating.unitName || '-'}</td>
                                       <td className="px-4 py-3">
-                                        <div className={`inline-flex items-center justify-center px-3 py-1.5 rounded-full text-sm font-semibold border-2 shadow-sm whitespace-nowrap ${getRatingColorBadge(rating.finalRating)}`}>
-                                          <span className="mr-1">{getRatingIcon(rating.finalRating)}</span>
-                                          {getRatingLabelShort(rating.finalRating)}
+                                        <div className="flex items-center justify-center">
+                                          <Select
+                                            value={rating.finalRating || 'GOOD'}
+                                            onValueChange={(val) => handleQuickUpdateRatingLevel(rating.id, period.id, val)}
+                                          >
+                                            <SelectTrigger className={`h-8.5 w-[150px] rounded-full text-xs font-bold border-2 shadow-sm ${getRatingColorBadge(rating.finalRating)} transition-all hover:scale-105`}>
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="EXCELLENT" className="text-xs font-semibold text-purple-700">⭐ Xuất sắc</SelectItem>
+                                              <SelectItem value="GOOD" className="text-xs font-semibold text-blue-700">✓ Tốt</SelectItem>
+                                              <SelectItem value="AVERAGE" className="text-xs font-semibold text-green-700">• Đạt</SelectItem>
+                                              <SelectItem value="POOR" className="text-xs font-semibold text-red-700">✗ Không đạt</SelectItem>
+                                            </SelectContent>
+                                          </Select>
                                         </div>
                                       </td>
                                     </tr>
@@ -1680,86 +1804,224 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
       {/* Create Period Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={(open) => {
         setShowCreateDialog(open)
-        if (!open) setSelectedPeriod(null)
+        if (!open) {
+          setSelectedPeriod(null)
+          resetForm()
+        }
       }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{selectedPeriod ? 'Chỉnh sửa kỳ xếp loại' : 'Tạo kỳ xếp loại mới'}</DialogTitle>
-            <DialogDescription>
-              {selectedPeriod ? 'Cập nhật thông tin và tiêu chí cho kỳ xếp loại' : 'Thiết lập thông tin và tiêu chí cho kỳ xếp loại'}
+        <DialogContent className="max-w-2xl md:max-w-3xl w-[95vw] sm:w-full max-h-[90vh] flex flex-col p-0 overflow-hidden rounded-2xl shadow-2xl">
+          <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-indigo-50/80 to-purple-50/80 shrink-0">
+            <DialogTitle className="text-lg font-bold text-slate-800">
+              {selectedPeriod ? 'Chỉnh sửa kỳ xếp loại' : 'Tạo kỳ xếp loại mới'}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              {selectedPeriod ? 'Cập nhật thông tin, tiêu chí và chọn đoàn viên đã gửi xếp loại' : 'Thiết lập thông tin, tiêu chí và đoàn viên cho kỳ xếp loại'}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-4 space-y-5">
             {/* Basic Info */}
-            <div>
-              <Label htmlFor="title">Tiêu đề *</Label>
-              <Input
-                id="title"
-                value={formData.title}
-                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                placeholder="Ví dụ: Xếp loại chất lượng Quý 1/2024"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="description">Mô tả</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Mô tả về mục đích và nội dung của kỳ xếp loại"
-                rows={3}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-3">
               <div>
-                <Label htmlFor="startDate">Ngày bắt đầu *</Label>
+                <Label htmlFor="title" className="text-xs font-semibold text-slate-700">Tiêu đề kỳ xếp loại *</Label>
                 <Input
-                  id="startDate"
-                  type="date"
-                  value={formData.startDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
+                  id="title"
+                  value={formData.title}
+                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="Ví dụ: Xếp loại chất lượng Quý 1/2024"
+                  className="mt-1"
                 />
               </div>
 
               <div>
-                <Label htmlFor="endDate">Ngày kết thúc *</Label>
-                <Input
-                  id="endDate"
-                  type="date"
-                  value={formData.endDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
+                <Label htmlFor="description" className="text-xs font-semibold text-slate-700">Mô tả</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Mô tả về mục đích và nội dung của kỳ xếp loại..."
+                  rows={2}
+                  className="mt-1"
                 />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="startDate" className="text-xs font-semibold text-slate-700">Ngày bắt đầu *</Label>
+                  <Input
+                    id="startDate"
+                    type="date"
+                    value={formData.startDate}
+                    onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
+                    className="mt-1"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="endDate" className="text-xs font-semibold text-slate-700">Ngày kết thúc *</Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={formData.endDate}
+                    onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Member Selection Section */}
+            <div className="space-y-2 pt-2 border-t border-slate-100">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                  <Users className="h-4 w-4 text-indigo-600" />
+                  Đoàn viên đã gửi xếp loại
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 border-indigo-200 font-semibold text-xs py-0.5">
+                    Đã chọn: {selectedMembers.length} / {users.length}
+                  </Badge>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 border-indigo-200 px-2.5"
+                    onClick={selectAllMembers}
+                  >
+                    Chọn tất cả
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs text-rose-600 hover:text-rose-800 hover:bg-rose-50 border-rose-200 px-2.5"
+                    onClick={deselectAllMembers}
+                  >
+                    Bỏ chọn
+                  </Button>
+                </div>
+              </div>
+
+              <div className="border rounded-xl p-3 bg-slate-50/70 space-y-2.5 w-full overflow-hidden">
+                {/* Search box */}
+                <div className="relative w-full">
+                  <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Tìm kiếm đoàn viên theo tên, email, chi đoàn..."
+                    value={memberSearchTerm}
+                    onChange={e => setMemberSearchTerm(e.target.value)}
+                    className="pl-9 pr-8 h-8.5 bg-white text-xs sm:text-sm border-slate-200 w-full"
+                  />
+                  {memberSearchTerm && (
+                    <button 
+                      type="button"
+                      onClick={() => setMemberSearchTerm("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                {/* Member list */}
+                <div className="max-h-48 overflow-y-auto overflow-x-hidden w-full border rounded-lg bg-white p-1.5 space-y-1">
+                  {loadingMembers ? (
+                    <div className="py-6 text-center text-xs text-muted-foreground">
+                      Đang tải danh sách đoàn viên...
+                    </div>
+                  ) : users
+                    .filter(u => {
+                      if (!memberSearchTerm) return true
+                      const s = memberSearchTerm.toLowerCase()
+                      return (
+                        u.fullName?.toLowerCase().includes(s) ||
+                        u.email?.toLowerCase().includes(s) ||
+                        u.unit?.name?.toLowerCase().includes(s)
+                      )
+                    })
+                    .map(user => {
+                      const isChecked = selectedMembers.includes(user.id)
+                      return (
+                        <div
+                          key={user.id}
+                          onClick={() => toggleMember(user.id)}
+                          className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all gap-2 w-full overflow-hidden ${
+                            isChecked
+                              ? "bg-indigo-50/90 border border-indigo-200 text-indigo-950 font-medium"
+                              : "hover:bg-slate-50 text-slate-700 border border-transparent"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1 overflow-hidden">
+                            <Checkbox
+                              id={`rating-member-${user.id}`}
+                              checked={isChecked}
+                              onCheckedChange={() => toggleMember(user.id)}
+                              className="data-[state=checked]:bg-indigo-600 shrink-0"
+                            />
+                            <div className="truncate min-w-0 flex-1">
+                              <span className="text-xs sm:text-sm font-medium truncate block sm:inline">{user.fullName}</span>
+                              {user.unit?.name && (
+                                <span className="text-[11px] text-muted-foreground truncate hidden sm:inline ml-1.5">({user.unit.name})</span>
+                              )}
+                            </div>
+                          </div>
+                          {isChecked ? (
+                            <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-0 text-[10px] shrink-0 font-semibold px-2">
+                              ✓ Đã gửi xếp loại
+                            </Badge>
+                          ) : (
+                            <span className="text-[11px] text-muted-foreground shrink-0 hidden sm:inline">
+                              Chưa chọn
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })}
+                  {!loadingMembers && users.filter(u => {
+                    if (!memberSearchTerm) return true
+                    const s = memberSearchTerm.toLowerCase()
+                    return (
+                      u.fullName?.toLowerCase().includes(s) ||
+                      u.email?.toLowerCase().includes(s) ||
+                      u.unit?.name?.toLowerCase().includes(s)
+                    )
+                  }).length === 0 && (
+                    <div className="py-6 text-center text-xs text-muted-foreground">
+                      Không tìm thấy đoàn viên nào phù hợp
+                    </div>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground italic">
+                  * Tích chọn đoàn viên để tự động ghi nhận đã nộp xếp loại cho kỳ này. Bạn có thể thay đổi mức xếp loại (Xuất sắc, Tốt, Đạt, Không đạt) bên tab Danh sách.
+                </p>
               </div>
             </div>
 
             {/* Criteria */}
-            <div>
-              <div className="flex justify-between items-center mb-3">
-                <Label>Tiêu chí đánh giá *</Label>
-                <Button type="button" variant="outline" size="sm" onClick={addCriteria}>
-                  <Plus className="h-4 w-4 mr-1" />
+            <div className="space-y-3 pt-2 border-t border-slate-100">
+              <div className="flex justify-between items-center">
+                <Label className="text-xs font-semibold text-slate-700">Tiêu chí đánh giá *</Label>
+                <Button type="button" variant="outline" size="sm" onClick={addCriteria} className="h-7 text-xs">
+                  <Plus className="h-3.5 w-3.5 mr-1" />
                   Thêm tiêu chí
                 </Button>
               </div>
 
               <div className="space-y-3">
                 {formData.criteria.map((criteria, index) => (
-                  <Card key={index} className="p-4">
-                    <div className="space-y-3">
+                  <Card key={index} className="p-3.5 border-slate-200">
+                    <div className="space-y-2.5">
                       <div className="flex justify-between items-center">
-                        <h4 className="font-medium">Tiêu chí {index + 1}</h4>
+                        <h4 className="text-xs font-bold text-slate-700">Tiêu chí {index + 1}</h4>
                         {formData.criteria.length > 1 && (
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
                             onClick={() => removeCriteria(index)}
-                            className="text-red-600 hover:text-red-700"
+                            className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         )}
                       </div>
@@ -1768,6 +2030,7 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
                         placeholder="Tên tiêu chí"
                         value={criteria.name}
                         onChange={(e) => updateCriteria(index, 'name', e.target.value)}
+                        className="text-xs sm:text-sm h-8"
                       />
 
                       <Textarea
@@ -1775,6 +2038,7 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
                         value={criteria.description}
                         onChange={(e) => updateCriteria(index, 'description', e.target.value)}
                         rows={2}
+                        className="text-xs sm:text-sm"
                       />
 
                       <div className="flex items-center space-x-2">
@@ -1783,8 +2047,9 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
                           id={`required-${index}`}
                           checked={criteria.isRequired}
                           onChange={(e) => updateCriteria(index, 'isRequired', e.target.checked)}
+                          className="rounded border-slate-300"
                         />
-                        <Label htmlFor={`required-${index}`} className="text-sm">
+                        <Label htmlFor={`required-${index}`} className="text-xs text-slate-600 cursor-pointer">
                           Tiêu chí bắt buộc
                         </Label>
                       </div>
@@ -1795,7 +2060,7 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 mt-6">
+          <div className="px-6 py-3 border-t bg-slate-50/80 shrink-0 flex items-center justify-end gap-2">
             <Button
               variant="outline"
               onClick={() => {
@@ -1805,7 +2070,7 @@ export default function RatingManagement({ initialRatingFilter }: RatingManageme
             >
               Hủy
             </Button>
-            <Button onClick={handleCreatePeriod}>
+            <Button onClick={handleCreatePeriod} className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold">
               {selectedPeriod ? 'Lưu thay đổi' : 'Tạo kỳ xếp loại'}
             </Button>
           </div>

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { ExamTaking } from '../exams/exam-taking'
 import { examApi } from '../../lib/api'
 import { useAutoRefresh } from '@/hooks/use-auto-refresh'
+import { Search, FileText, Clock, Trophy, BarChart3, Loader2, RotateCcw, Play, CheckCircle2, XCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 
 export default function ExamsScreenMobile() {
   const [exams, setExams] = useState<any[]>([])
@@ -249,13 +250,15 @@ export default function ExamsScreenMobile() {
       {/* Search */}
       <div style={searchContainerStyle}>
         <div style={{ position: 'relative' }}>
-          <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '16px' }}>🔍</span>
+          <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', pointerEvents: 'none' }}>
+            <Search style={{ width: '16px', height: '16px', color: '#94a3b8' }} />
+          </span>
           <input
             type="text"
             placeholder="Tìm kiếm kỳ thi..."
             value={searchText}
             onChange={(e) => { setSearchText(e.target.value); setExamPage(1) }}
-            style={searchInputStyle}
+            style={{ ...searchInputStyle, paddingLeft: '38px' }}
           />
         </div>
       </div>
@@ -269,7 +272,9 @@ export default function ExamsScreenMobile() {
             borderRadius: '14px', 
             padding: '32px 16px'
           }}>
-            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'linear-gradient(135deg, #ede9fe, #f5f3ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: '24px' }}>📝</div>
+            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'linear-gradient(135deg, #ede9fe, #f5f3ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <FileText style={{ width: '28px', height: '28px', color: '#7c3aed' }} />
+            </div>
             <p style={{ color: '#0f172a', fontSize: '15px', fontWeight: 600, marginBottom: '6px' }}>
               {searchText ? 'Không tìm thấy kỳ thi phù hợp' : 'Chưa có kỳ thi nào'}
             </p>
@@ -305,10 +310,16 @@ export default function ExamsScreenMobile() {
                 </p>
 
                 {/* Meta */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', fontSize: '12px', color: '#64748b', marginBottom: '12px' }}>
-                  <span>⏱️ {formatDuration(exam.duration)}</span>
-                  <span>🏆 Điểm đạt: {exam.passingScore}%</span>
-                  <span>📊 Tối đa: {exam.maxAttempts} lần</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', fontSize: '12px', color: '#64748b', marginBottom: '12px' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <Clock style={{ width: '14px', height: '14px', color: '#64748b' }} /> {formatDuration(exam.duration)}
+                  </span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <Trophy style={{ width: '14px', height: '14px', color: '#d97706' }} /> Điểm đạt: {exam.passingScore}%
+                  </span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <BarChart3 style={{ width: '14px', height: '14px', color: '#7c3aed' }} /> Tối đa: {exam.maxAttempts} lần
+                  </span>
                 </div>
 
                 {/* Attempts info + Xem điểm */}
@@ -355,8 +366,11 @@ export default function ExamsScreenMobile() {
                         color: '#64748b',
                         fontSize: '12px',
                         fontWeight: 500,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
                       }}>
-                        ⏳ Đang chấm điểm
+                        <Loader2 style={{ width: '12px', height: '12px', animation: 'spin 1s linear infinite' }} /> Đang chấm điểm
                       </span>
                     )}
                   </div>
@@ -368,6 +382,10 @@ export default function ExamsScreenMobile() {
                     ...buttonStyle,
                     backgroundColor: canTakeExam ? '#7c3aed' : '#9ca3af',
                     opacity: canTakeExam ? 1 : 0.7,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
                   }}
                   disabled={!canTakeExam}
                   onClick={() => {
@@ -376,7 +394,13 @@ export default function ExamsScreenMobile() {
                     }
                   }}
                 >
-                  {!canTakeExam ? 'Đã hết lượt thi' : attemptCount > 0 ? 'Thi lại ▶' : 'Bắt đầu thi ▶'}
+                  {!canTakeExam ? (
+                    'Đã hết lượt thi'
+                  ) : attemptCount > 0 ? (
+                    <>Thi lại <RotateCcw style={{ width: '14px', height: '14px' }} /></>
+                  ) : (
+                    <>Bắt đầu thi <Play style={{ width: '14px', height: '14px' }} /></>
+                  )}
                 </button>
               </div>
             )

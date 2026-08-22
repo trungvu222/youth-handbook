@@ -3,6 +3,22 @@
 import { useState, useEffect } from "react"
 import { notificationApi } from "@/lib/api"
 import { useAutoRefresh } from "@/hooks/use-auto-refresh"
+import { 
+  Calendar, 
+  Star, 
+  ClipboardList, 
+  FileText, 
+  Megaphone, 
+  QrCode, 
+  Bell, 
+  ArrowLeft, 
+  Copy, 
+  Check, 
+  ExternalLink,
+  Clock,
+  Sparkles,
+  Info
+} from "lucide-react"
 
 interface Notification {
   id: string
@@ -17,6 +33,31 @@ interface Notification {
 interface NotificationsScreenMobileProps {
   onBack?: () => void
   onOpenDocument?: (docId: string) => void
+}
+
+// Normalize notification message timestamps to Vietnam Time (Asia/Ho_Chi_Minh - UTC+7)
+function formatNotificationMessage(msg: string): string {
+  if (!msg || typeof msg !== 'string') return ''
+  // Match patterns like "vào lúc 02:00:00 16/8/2026" or "vào lúc 00:00:00 25/8/2026"
+  return msg.replace(/vào lúc\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s+(\d{1,2})\/(\d{1,2})\/(\d{4})/gi, (match, hourStr, minStr, secStr, dayStr, monthStr, yearStr) => {
+    if (secStr !== undefined) {
+      // Server formatted in UTC without offset -> convert UTC to Vietnam Time (+7 hours)
+      const h = parseInt(hourStr, 10)
+      const m = parseInt(minStr, 10)
+      const d = parseInt(dayStr, 10)
+      const mo = parseInt(monthStr, 10) - 1
+      const y = parseInt(yearStr, 10)
+      const utcDate = new Date(Date.UTC(y, mo, d, h, m))
+      const vnDate = new Date(utcDate.getTime() + 7 * 60 * 60 * 1000)
+      const localH = String(vnDate.getUTCHours()).padStart(2, '0')
+      const localM = String(vnDate.getUTCMinutes()).padStart(2, '0')
+      const localD = String(vnDate.getUTCDate()).padStart(2, '0')
+      const localMo = String(vnDate.getUTCMonth() + 1).padStart(2, '0')
+      const localY = vnDate.getUTCFullYear()
+      return `vào lúc ${localH}:${localM} ${localD}/${localMo}/${localY}`
+    }
+    return `vào lúc ${hourStr.padStart(2, '0')}:${minStr} ${dayStr.padStart(2, '0')}/${monthStr.padStart(2, '0')}/${yearStr}`
+  })
 }
 
 export default function NotificationsScreenMobile({ onBack, onOpenDocument }: NotificationsScreenMobileProps) {
@@ -54,15 +95,50 @@ export default function NotificationsScreenMobile({ onBack, onOpenDocument }: No
     }
   }
 
-  function getTypeIcon(type?: string) {
+  function renderTypeIcon(type?: string) {
     switch (type) {
-      case 'ACTIVITY': return '📅'
-      case 'POINTS': return '⭐'
-      case 'SURVEY': return '📋'
-      case 'DOCUMENT': return '📄'
-      case 'ANNOUNCEMENT': return '📢'
-      case 'CHECKIN_CODE': return '🎯'
-      default: return '🔔'
+      case 'ACTIVITY':
+        return (
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Calendar style={{ width: 20, height: 20, color: '#2563eb' }} />
+          </div>
+        )
+      case 'POINTS':
+        return (
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Star style={{ width: 20, height: 20, color: '#d97706' }} />
+          </div>
+        )
+      case 'SURVEY':
+        return (
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <ClipboardList style={{ width: 20, height: 20, color: '#16a34a' }} />
+          </div>
+        )
+      case 'DOCUMENT':
+        return (
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <FileText style={{ width: 20, height: 20, color: '#7c3aed' }} />
+          </div>
+        )
+      case 'ANNOUNCEMENT':
+        return (
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: '#fff1f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Megaphone style={{ width: 20, height: 20, color: '#e11d48' }} />
+          </div>
+        )
+      case 'CHECKIN_CODE':
+        return (
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <QrCode style={{ width: 20, height: 20, color: '#15803d' }} />
+          </div>
+        )
+      default:
+        return (
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Bell style={{ width: 20, height: 20, color: '#d97706' }} />
+          </div>
+        )
     }
   }
 
@@ -77,7 +153,7 @@ export default function NotificationsScreenMobile({ onBack, onOpenDocument }: No
     if (diffHours < 24) return `${diffHours} giờ trước`
     const diffDays = Math.floor(diffHours / 24)
     if (diffDays < 30) return `${diffDays} ngày trước`
-    return new Date(dateStr).toLocaleDateString('vi-VN')
+    return new Date(dateStr).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
   }
 
   const unreadCount = notifications.filter(n => !n.isRead).length
@@ -88,11 +164,14 @@ export default function NotificationsScreenMobile({ onBack, onOpenDocument }: No
       <div style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 50%, #ef4444 100%)', padding: '24px 16px 20px', color: '#fff' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {onBack && (
-            <button onClick={onBack} style={{ width: 36, height: 36, background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', fontSize: 16, cursor: 'pointer', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              ←
+            <button onClick={onBack} style={{ width: 36, height: 36, background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', cursor: 'pointer', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <ArrowLeft style={{ width: 20, height: 20, color: '#fff' }} />
             </button>
           )}
-          <h1 style={{ fontSize: 20, fontWeight: 700, flex: 1 }}>Thông báo</h1>
+          <h1 style={{ fontSize: 20, fontWeight: 700, flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Bell style={{ width: 22, height: 22 }} />
+            Thông báo
+          </h1>
           {unreadCount > 0 && (
             <span style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', padding: '4px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700, backdropFilter: 'blur(4px)' }}>
               {unreadCount} mới
@@ -111,12 +190,14 @@ export default function NotificationsScreenMobile({ onBack, onOpenDocument }: No
           </div>
         ) : notifications.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 40 }}>
-            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'linear-gradient(135deg, #fef3c7, #fffbeb)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', fontSize: '24px' }}>🔔</div>
+            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'linear-gradient(135deg, #fef3c7, #fffbeb)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+              <Bell style={{ width: 28, height: 28, color: '#f59e0b' }} />
+            </div>
             <h3 style={{ fontSize: 15, fontWeight: 600, color: '#64748b', marginTop: 12 }}>Không có thông báo</h3>
             <p style={{ color: '#94a3b8', fontSize: 13, marginTop: 4 }}>Bạn sẽ nhận thông báo khi có hoạt động mới</p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {notifications.map(notification => (
               <button
                 key={notification.id}
@@ -146,10 +227,10 @@ export default function NotificationsScreenMobile({ onBack, onOpenDocument }: No
                   <div style={{ position: 'absolute', top: 16, right: 16, width: 8, height: 8, borderRadius: '50%', background: notification.type === 'CHECKIN_CODE' ? '#16a34a' : '#2563eb' }} />
                 )}
                 <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                  <span style={{ fontSize: 24 }}>{getTypeIcon(notification.type)}</span>
+                  {renderTypeIcon(notification.type)}
                   <div style={{ flex: 1 }}>
                     <h3 style={{ fontSize: 14, fontWeight: 600, color: '#0f172a', marginBottom: 4 }}>
-                      {notification.title}
+                      {notification.title.replace(/^[^\w\s\u00C0-\u1EF9]+/, '').trim()}
                     </h3>
 
                     {notification.type === 'CHECKIN_CODE' && notification.relatedId ? (
@@ -170,9 +251,32 @@ export default function NotificationsScreenMobile({ onBack, onOpenDocument }: No
                               })
                               if (!notification.isRead) handleMarkRead(notification.id)
                             }}
-                            style={{ background: copiedId === notification.id ? '#16a34a' : '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 600, color: copiedId === notification.id ? '#fff' : '#16a34a', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                            style={{ 
+                              background: copiedId === notification.id ? '#16a34a' : '#f0fdf4', 
+                              border: '1px solid #86efac', 
+                              borderRadius: 8, 
+                              padding: '6px 12px', 
+                              fontSize: 13, 
+                              fontWeight: 600, 
+                              color: copiedId === notification.id ? '#fff' : '#16a34a', 
+                              cursor: 'pointer', 
+                              whiteSpace: 'nowrap',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4
+                            }}
                           >
-                            {copiedId === notification.id ? '✓ Đã sao chép!' : '📋 Sao chép'}
+                            {copiedId === notification.id ? (
+                              <>
+                                <Check style={{ width: 14, height: 14 }} />
+                                Đã sao chép!
+                              </>
+                            ) : (
+                              <>
+                                <Copy style={{ width: 14, height: 14 }} />
+                                Sao chép
+                              </>
+                            )}
                           </button>
                         </div>
                         <p style={{ fontSize: 12, color: '#6b7280' }}>
@@ -181,17 +285,20 @@ export default function NotificationsScreenMobile({ onBack, onOpenDocument }: No
                       </div>
                     ) : (
                       <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.5 }}>
-                        {notification.message}
+                        {formatNotificationMessage(notification.message)}
                       </p>
                     )}
 
-                    <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 6 }}>
-                      {timeAgo(notification.createdAt)}
-                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6, color: '#94a3b8', fontSize: 11 }}>
+                      <Clock style={{ width: 12, height: 12 }} />
+                      <span>{timeAgo(notification.createdAt)}</span>
+                    </div>
+
                     {notification.type === 'DOCUMENT' && notification.relatedId && onOpenDocument && (
-                      <p style={{ fontSize: 12, color: '#0284c7', fontWeight: 600, marginTop: 6 }}>
-                        📂 Nhấn để xem tài liệu →
-                      </p>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#0284c7', fontWeight: 600, marginTop: 6 }}>
+                        <FileText style={{ width: 13, height: 13 }} />
+                        Nhấn để xem tài liệu →
+                      </span>
                     )}
                   </div>
                 </div>

@@ -344,8 +344,13 @@ const createDocument = async (req, res, next) => {
       expiryDate,
       unitId,
       tags,
+      viewCount,
+      downloadCount,
       sendNotification = false
     } = req.body;
+
+    const parsedViewCount = viewCount !== undefined && viewCount !== null && viewCount !== '' ? Math.max(0, parseInt(viewCount, 10) || 0) : 0;
+    const parsedDownloadCount = downloadCount !== undefined && downloadCount !== null && downloadCount !== '' ? Math.max(0, parseInt(downloadCount, 10) || 0) : 0;
 
     const document = await prisma.document.create({
       data: {
@@ -364,6 +369,8 @@ const createDocument = async (req, res, next) => {
         authorId: req.user.id,
         unitId,
         tags,
+        viewCount: parsedViewCount,
+        downloadCount: parsedDownloadCount,
         status: 'PUBLISHED',
         isNotificationSent: sendNotification
       },
@@ -444,29 +451,40 @@ const updateDocument = async (req, res, next) => {
       unitId,
       tags,
       status,
+      viewCount,
+      downloadCount,
       sendNotification = false
     } = req.body;
 
+    const updateData = {
+      title,
+      documentNumber,
+      documentType,
+      issuer,
+      description,
+      content,
+      fileUrl,
+      fileName,
+      fileSize,
+      issuedDate: issuedDate ? new Date(issuedDate) : undefined,
+      effectiveDate: effectiveDate ? new Date(effectiveDate) : undefined,
+      expiryDate: expiryDate ? new Date(expiryDate) : undefined,
+      unitId,
+      tags,
+      status,
+      isNotificationSent: sendNotification ? true : undefined
+    };
+
+    if (viewCount !== undefined && viewCount !== null && viewCount !== '') {
+      updateData.viewCount = Math.max(0, parseInt(viewCount, 10) || 0);
+    }
+    if (downloadCount !== undefined && downloadCount !== null && downloadCount !== '') {
+      updateData.downloadCount = Math.max(0, parseInt(downloadCount, 10) || 0);
+    }
+
     const updatedDocument = await prisma.document.update({
       where: { id },
-      data: {
-        title,
-        documentNumber,
-        documentType,
-        issuer,
-        description,
-        content,
-        fileUrl,
-        fileName,
-        fileSize,
-        issuedDate: issuedDate ? new Date(issuedDate) : undefined,
-        effectiveDate: effectiveDate ? new Date(effectiveDate) : undefined,
-        expiryDate: expiryDate ? new Date(expiryDate) : undefined,
-        unitId,
-        tags,
-        status,
-        isNotificationSent: sendNotification ? true : undefined
-      },
+      data: updateData,
       include: {
         author: {
           select: {
@@ -491,6 +509,64 @@ const updateDocument = async (req, res, next) => {
 
   } catch (error) {
     console.error('Update document error:', error);
+    next(error);
+  }
+};
+
+// @desc    Quick update document stats (viewCount, downloadCount)
+// @route   PATCH /api/documents/:id/stats
+// @access  Private (Admin/Leader)
+const updateDocumentStats = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { viewCount, downloadCount } = req.body;
+
+    const document = await prisma.document.findUnique({
+      where: { id }
+    });
+
+    if (!document) {
+      return res.status(404).json({
+        success: false,
+        error: 'Document not found'
+      });
+    }
+
+    const data = {};
+    if (viewCount !== undefined && viewCount !== null && viewCount !== '') {
+      data.viewCount = Math.max(0, parseInt(viewCount, 10) || 0);
+    }
+    if (downloadCount !== undefined && downloadCount !== null && downloadCount !== '') {
+      data.downloadCount = Math.max(0, parseInt(downloadCount, 10) || 0);
+    }
+
+    const updated = await prisma.document.update({
+      where: { id },
+      data,
+      include: {
+        author: {
+          select: {
+            id: true,
+            fullName: true,
+            role: true
+          }
+        },
+        unit: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      data: updated,
+      message: 'Đã cập nhật số liệu văn bản'
+    });
+  } catch (error) {
+    console.error('Update document stats error:', error);
     next(error);
   }
 };
@@ -753,6 +829,7 @@ module.exports = {
   getFavoriteDocuments,
   createDocument,
   updateDocument,
+  updateDocumentStats,
   deleteDocument,
   getDocumentStats,
   uploadDocumentFile,

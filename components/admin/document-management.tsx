@@ -26,10 +26,25 @@ import {
   Upload,
   Calendar,
   BarChart3,
+  BarChart2,
   Filter,
   CheckCircle,
   AlertCircle,
-  AlertTriangle
+  AlertTriangle,
+  Lightbulb,
+  Flame,
+  Star,
+  Rocket,
+  Paperclip,
+  Mail,
+  BookOpen,
+  Book,
+  FileEdit,
+  Layers,
+  Bookmark,
+  Bell,
+  FileCheck,
+  ArrowUpDown
 } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 
@@ -84,6 +99,7 @@ export function DocumentManagement() {
   const [searchTerm, setSearchTerm] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [dateSort, setDateSort] = useState<'desc' | 'asc'>('desc')
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
@@ -99,6 +115,13 @@ export function DocumentManagement() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null)
 
+  // Quick Stats Dialog state
+  const [showStatsDialog, setShowStatsDialog] = useState(false)
+  const [statsDoc, setStatsDoc] = useState<Document | null>(null)
+  const [editViewCount, setEditViewCount] = useState<number>(0)
+  const [editDownloadCount, setEditDownloadCount] = useState<number>(0)
+  const [updatingStats, setUpdatingStats] = useState(false)
+
   // Form state
   const [formData, setFormData] = useState({
     title: '',
@@ -111,6 +134,8 @@ export function DocumentManagement() {
     effectiveDate: '',
     expiryDate: '',
     tags: '',
+    viewCount: 0,
+    downloadCount: 0,
     sendNotification: false,
     notificationType: 'all' as 'all' | 'specific',
     selectedUserIds: [] as string[],
@@ -235,6 +260,8 @@ export function DocumentManagement() {
       effectiveDate: '',
       expiryDate: '',
       tags: '',
+      viewCount: 0,
+      downloadCount: 0,
       sendNotification: false,
       notificationType: 'all',
       selectedUserIds: [],
@@ -356,6 +383,8 @@ export function DocumentManagement() {
         effectiveDate: formData.effectiveDate || undefined,
         expiryDate: formData.expiryDate || undefined,
         tags: formData.tags || undefined,
+        viewCount: formData.viewCount,
+        downloadCount: formData.downloadCount,
         sendNotification: formData.sendNotification,
         ...fileData
       }
@@ -400,14 +429,14 @@ export function DocumentManagement() {
             }
             
             toast({
-              title: '✅ Thông báo đã gửi thành công',
+              title: 'Thông báo đã gửi thành công',
               description: notificationMessage,
               className: 'bg-green-50 border-green-500 text-green-900',
               duration: 5000
             })
           } else {
             toast({
-              title: '⚠️ Cảnh báo',
+              title: 'Cảnh báo gửi thông báo',
               description: 'Văn bản đã lưu nhưng gửi thông báo thất bại: ' + (notifResponse.error || 'Lỗi không xác định'),
               variant: 'destructive',
               duration: 5000
@@ -446,16 +475,63 @@ export function DocumentManagement() {
       issuer: document.issuer || '',
       description: document.description || '',
       content: document.content || '',
-      issuedDate: document.issuedDate || '',
-      effectiveDate: document.effectiveDate || '',
-      expiryDate: document.expiryDate || '',
+      issuedDate: document.issuedDate ? document.issuedDate.split('T')[0] : '',
+      effectiveDate: document.effectiveDate ? document.effectiveDate.split('T')[0] : '',
+      expiryDate: document.expiryDate ? document.expiryDate.split('T')[0] : '',
       tags: document.tags || '',
+      viewCount: document.viewCount || 0,
+      downloadCount: document.downloadCount || 0,
       sendNotification: false,
       notificationType: 'all',
       selectedUserIds: [],
       file: null
     })
     setShowEditDialog(true)
+  }
+
+  // Quick Stats Dialog Handlers
+  const openStatsDialog = (document: Document) => {
+    setStatsDoc(document)
+    setEditViewCount(document.viewCount || 0)
+    setEditDownloadCount(document.downloadCount || 0)
+    setShowStatsDialog(true)
+  }
+
+  const handleSaveStats = async () => {
+    if (!statsDoc) return
+    try {
+      setUpdatingStats(true)
+      const res = await documentApi.updateDocumentStats(statsDoc.id, {
+        viewCount: editViewCount,
+        downloadCount: editDownloadCount
+      })
+      if (res.success) {
+        toast({
+          title: 'Đã cập nhật số liệu thành công',
+          description: `Văn bản "${statsDoc.title}": ${editViewCount.toLocaleString()} lượt xem, ${editDownloadCount.toLocaleString()} tải xuống`,
+          className: 'bg-green-50 border-green-500 text-green-900',
+          duration: 3000
+        })
+        setShowStatsDialog(false)
+        setStatsDoc(null)
+        loadDocuments()
+        loadStats()
+      } else {
+        toast({
+          title: 'Lỗi',
+          description: res.error || 'Không thể cập nhật số liệu',
+          variant: 'destructive'
+        })
+      }
+    } catch (e) {
+      toast({
+        title: 'Lỗi',
+        description: 'Có lỗi xảy ra khi cập nhật số liệu',
+        variant: 'destructive'
+      })
+    } finally {
+      setUpdatingStats(false)
+    }
   }
 
   const openDeleteDialog = (document: Document) => {
@@ -563,17 +639,24 @@ export function DocumentManagement() {
     }
   }
 
-  const filteredDocuments = documents.filter(doc => {
-    const matchSearch = !searchTerm || 
-      doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.documentNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredDocuments = documents
+    .filter(doc => {
+      const matchSearch = !searchTerm || 
+        doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        doc.documentNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        doc.description?.toLowerCase().includes(searchTerm.toLowerCase())
 
-    const matchType = typeFilter === 'all' || doc.documentType === typeFilter
-    const matchStatus = statusFilter === 'all' || doc.status === statusFilter
+      const matchType = typeFilter === 'all' || doc.documentType === typeFilter
+      const matchStatus = statusFilter === 'all' || doc.status === statusFilter
 
-    return matchSearch && matchType && matchStatus
-  })
+      return matchSearch && matchType && matchStatus
+    })
+    .sort((a, b) => {
+      // Sắp xếp theo ngày ban hành (ưu tiên issuedDate, fallback createdAt)
+      const timeA = a.issuedDate ? new Date(a.issuedDate).getTime() : new Date(a.createdAt).getTime()
+      const timeB = b.issuedDate ? new Date(b.issuedDate).getTime() : new Date(b.createdAt).getTime()
+      return dateSort === 'asc' ? timeA - timeB : timeB - timeA
+    })
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return ''
@@ -670,7 +753,7 @@ export function DocumentManagement() {
                 </div>
 
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger className="w-full sm:w-56 h-12 border-2 rounded-xl">
+                  <SelectTrigger className="w-full sm:w-48 h-12 border-2 rounded-xl">
                     <SelectValue placeholder="Loại văn bản" />
                   </SelectTrigger>
                   <SelectContent>
@@ -684,7 +767,7 @@ export function DocumentManagement() {
                 </Select>
 
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full sm:w-48 h-12 border-2 rounded-xl">
+                  <SelectTrigger className="w-full sm:w-44 h-12 border-2 rounded-xl">
                     <SelectValue placeholder="Trạng thái" />
                   </SelectTrigger>
                   <SelectContent>
@@ -694,6 +777,19 @@ export function DocumentManagement() {
                         {status.label}
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={dateSort} onValueChange={(v: 'desc' | 'asc') => setDateSort(v)}>
+                  <SelectTrigger className="w-full sm:w-56 h-12 border-2 rounded-xl bg-slate-50 font-medium">
+                    <div className="flex items-center gap-2">
+                      <ArrowUpDown className="h-4 w-4 text-blue-600" />
+                      <SelectValue placeholder="Sắp xếp thời gian" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="desc">Mới nhất → Cũ nhất</SelectItem>
+                    <SelectItem value="asc">Cũ nhất → Mới nhất</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -814,17 +910,26 @@ export function DocumentManagement() {
                         </div>
 
                         {/* Statistics */}
-                        <div className="flex flex-wrap gap-4 text-sm p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-100">
-                          <div className="flex items-center gap-2">
-                            <Eye className="h-4 w-4 text-blue-600" />
-                            <span className="font-semibold text-gray-900">{document.viewCount}</span>
-                            <span className="text-gray-600">lượt xem</span>
+                        <div 
+                          onClick={() => openStatsDialog(document)}
+                          className="flex flex-wrap items-center justify-between gap-4 text-sm p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-100 cursor-pointer hover:border-purple-300 hover:bg-purple-50/50 transition-all group shadow-sm"
+                          title="Nhấn để điều chỉnh số liệu lượt xem & tải xuống"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                              <Eye className="h-4 w-4 text-blue-600" />
+                              <span className="font-bold text-gray-900">{document.viewCount?.toLocaleString() || 0}</span>
+                              <span className="text-gray-600">lượt xem</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Download className="h-4 w-4 text-indigo-600" />
+                              <span className="font-bold text-gray-900">{document.downloadCount?.toLocaleString() || 0}</span>
+                              <span className="text-gray-600">tải xuống</span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <Download className="h-4 w-4 text-indigo-600" />
-                            <span className="font-semibold text-gray-900">{document.downloadCount}</span>
-                            <span className="text-gray-600">tải xuống</span>
-                          </div>
+                          <span className="text-xs text-purple-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                            <Edit className="h-3 w-3" /> Sửa số liệu
+                          </span>
                         </div>
                       </div>
 
@@ -835,9 +940,19 @@ export function DocumentManagement() {
                           size="sm"
                           onClick={() => handleEdit(document)}
                           className="hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                          title="Chỉnh sửa"
+                          title="Chỉnh sửa chi tiết văn bản"
                         >
                           <Edit className="h-4 w-4" />
+                        </Button>
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openStatsDialog(document)}
+                          className="hover:bg-purple-50 text-purple-600 hover:text-purple-700 transition-colors"
+                          title="Điều chỉnh số liệu (Lượt xem, Tải xuống)"
+                        >
+                          <BarChart3 className="h-4 w-4" />
                         </Button>
 
                         {document.status === 'PUBLISHED' && (
@@ -995,17 +1110,17 @@ export function DocumentManagement() {
                   return acc
                 }, {} as Record<string, { count: number; views: number; downloads: number }>)
 
-                const typeLabels: Record<string, { label: string; gradient: string; icon: string }> = {
-                  'CIRCULAR': { label: 'Thông tư', gradient: 'bg-gradient-to-br from-blue-500 to-blue-700', icon: '📜' },
-                  'DECISION': { label: 'Quyết định', gradient: 'bg-gradient-to-br from-green-500 to-green-700', icon: '📋' },
-                  'DIRECTIVE': { label: 'Chỉ thị', gradient: 'bg-gradient-to-br from-purple-500 to-purple-700', icon: '📌' },
-                  'INSTRUCTION': { label: 'Hướng dẫn', gradient: 'bg-gradient-to-br from-cyan-500 to-cyan-700', icon: '📖' },
-                  'REGULATION': { label: 'Quy định', gradient: 'bg-gradient-to-br from-indigo-500 to-indigo-700', icon: '📑' },
-                  'NOTICE': { label: 'Thông báo', gradient: 'bg-gradient-to-br from-yellow-500 to-orange-600', icon: '📢' },
-                  'LETTER': { label: 'Công văn', gradient: 'bg-gradient-to-br from-teal-500 to-teal-700', icon: '✉️' },
-                  'GUIDELINE': { label: 'Cẩm nang', gradient: 'bg-gradient-to-br from-pink-500 to-pink-700', icon: '📚' },
-                  'FORM': { label: 'Biểu mẫu', gradient: 'bg-gradient-to-br from-gray-500 to-gray-700', icon: '📝' },
-                  'OTHER': { label: 'Khác', gradient: 'bg-gradient-to-br from-slate-500 to-slate-700', icon: '📄' }
+                const typeLabels: Record<string, { label: string; gradient: string; icon: React.ReactNode }> = {
+                  'CIRCULAR': { label: 'Thông tư', gradient: 'bg-gradient-to-br from-blue-500 to-blue-700', icon: <FileText className="h-5 w-5" /> },
+                  'DECISION': { label: 'Quyết định', gradient: 'bg-gradient-to-br from-green-500 to-green-700', icon: <FileCheck className="h-5 w-5" /> },
+                  'DIRECTIVE': { label: 'Chỉ thị', gradient: 'bg-gradient-to-br from-purple-500 to-purple-700', icon: <Bookmark className="h-5 w-5" /> },
+                  'INSTRUCTION': { label: 'Hướng dẫn', gradient: 'bg-gradient-to-br from-cyan-500 to-cyan-700', icon: <BookOpen className="h-5 w-5" /> },
+                  'REGULATION': { label: 'Quy định', gradient: 'bg-gradient-to-br from-indigo-500 to-indigo-700', icon: <Layers className="h-5 w-5" /> },
+                  'NOTICE': { label: 'Thông báo', gradient: 'bg-gradient-to-br from-yellow-500 to-orange-600', icon: <Bell className="h-5 w-5" /> },
+                  'LETTER': { label: 'Công văn', gradient: 'bg-gradient-to-br from-teal-500 to-teal-700', icon: <Mail className="h-5 w-5" /> },
+                  'GUIDELINE': { label: 'Cẩm nang', gradient: 'bg-gradient-to-br from-pink-500 to-pink-700', icon: <Book className="h-5 w-5" /> },
+                  'FORM': { label: 'Biểu mẫu', gradient: 'bg-gradient-to-br from-gray-500 to-gray-700', icon: <FileEdit className="h-5 w-5" /> },
+                  'OTHER': { label: 'Khác', gradient: 'bg-gradient-to-br from-slate-500 to-slate-700', icon: <FileText className="h-5 w-5" /> }
                 }
 
                 if (Object.keys(typeStats).length === 0) {
@@ -1026,7 +1141,7 @@ export function DocumentManagement() {
                           <div className={`absolute inset-0 ${config.gradient} opacity-90`}></div>
                           <CardContent className="relative p-4 text-white">
                             <div className="flex items-start justify-between mb-3">
-                              <div className="text-2xl">{config.icon}</div>
+                              <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">{config.icon}</div>
                               <div className="text-right">
                                 <div className="text-2xl font-extrabold drop-shadow-lg">{stats.count}</div>
                                 <div className="text-xs font-semibold text-white/90">Văn bản</div>
@@ -1291,13 +1406,56 @@ export function DocumentManagement() {
               />
             </div>
 
+            {/* Stats Adjustment Section (Admin) */}
+            <div className="p-4 bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border-2 border-purple-200 rounded-xl space-y-3 shadow-sm">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-bold text-purple-900 flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-purple-600" />
+                  Điều chỉnh số liệu tương tác (Admin)
+                </Label>
+                <span className="text-xs text-purple-700 bg-purple-100/80 px-2 py-0.5 rounded-full font-medium">Số liệu hiển thị báo cáo</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="form-viewCount" className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 mb-1.5">
+                    <Eye className="h-3.5 w-3.5 text-blue-600" />
+                    Số lượt xem
+                  </Label>
+                  <Input
+                    id="form-viewCount"
+                    type="number"
+                    min="0"
+                    value={formData.viewCount}
+                    onChange={(e) => setFormData(prev => ({ ...prev, viewCount: Math.max(0, parseInt(e.target.value) || 0) }))}
+                    placeholder="0"
+                    className="bg-white font-semibold text-blue-900"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="form-downloadCount" className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 mb-1.5">
+                    <Download className="h-3.5 w-3.5 text-indigo-600" />
+                    Số lượt tải xuống
+                  </Label>
+                  <Input
+                    id="form-downloadCount"
+                    type="number"
+                    min="0"
+                    value={formData.downloadCount}
+                    onChange={(e) => setFormData(prev => ({ ...prev, downloadCount: Math.max(0, parseInt(e.target.value) || 0) }))}
+                    placeholder="0"
+                    className="bg-white font-semibold text-indigo-900"
+                  />
+                </div>
+              </div>
+            </div>
+
             {/* File Upload */}
             <div>
               <Label htmlFor="file">File đính kèm (PDF, Word, Excel, PowerPoint - tối đa 10MB)</Label>
               {/* Show existing file if editing */}
               {selectedDocument?.fileName && !formData.file && (
                 <div className="mb-2 flex items-center gap-2 text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded px-3 py-2">
-                  <span>📎</span>
+                  <Paperclip className="h-4 w-4 text-blue-600 shrink-0" />
                   <span>File hiện tại: <strong>{selectedDocument.fileName}</strong></span>
                   <span className="text-muted-foreground">(chọn file mới bên dưới để thay thế)</span>
                 </div>
@@ -1329,8 +1487,7 @@ export function DocumentManagement() {
             </div>
 
             {/* Options */}
-            <div className="space-y-
-4">
+            <div className="space-y-4">
               <div className="flex items-center space-x-2">
                 <Switch
                   id="sendNotification"
@@ -1386,8 +1543,8 @@ export function DocumentManagement() {
                         </SelectContent>
                       </Select>
                       {formData.selectedUserIds.length > 0 && (
-                        <p className="text-sm text-green-600 mt-1">
-                          ✓ Đã chọn {formData.selectedUserIds.length} đoàn viên
+                        <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
+                          <CheckCircle className="h-3.5 w-3.5" /> Đã chọn {formData.selectedUserIds.length} đoàn viên
                         </p>
                       )}
                     </div>
@@ -1536,6 +1693,146 @@ export function DocumentManagement() {
               Xóa văn bản
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick Edit Stats Dialog */}
+      <Dialog open={showStatsDialog} onOpenChange={(open) => {
+        if (!open) {
+          setShowStatsDialog(false)
+          setStatsDoc(null)
+        }
+      }}>
+        <DialogContent className="max-w-md p-0 overflow-hidden rounded-2xl shadow-2xl border-0">
+          <DialogHeader className="px-6 py-4 border-b bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white">
+            <DialogTitle className="text-lg font-bold flex items-center gap-2 text-white">
+              <BarChart3 className="h-5 w-5 text-purple-200" />
+              Điều chỉnh số liệu văn bản
+            </DialogTitle>
+            <DialogDescription className="text-xs text-purple-100 font-medium truncate">
+              {statsDoc?.title} {statsDoc?.documentNumber ? `(${statsDoc.documentNumber})` : ''}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="p-6 space-y-4">
+            <div className="bg-purple-50/70 border border-purple-200 rounded-xl p-3 text-xs text-purple-900 flex items-start gap-2">
+              <Lightbulb className="h-4 w-4 text-purple-600 shrink-0 mt-0.5" />
+              <div>
+                <strong>Lưu ý:</strong> Thay đổi số lượt xem và lượt tải xuống để hoàn thiện số liệu thống kê và báo cáo hoạt động Đoàn.
+              </div>
+            </div>
+
+            <div className="space-y-3.5">
+              <div>
+                <Label htmlFor="quick-viewCount" className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 mb-1.5">
+                  <Eye className="h-4 w-4 text-blue-600" />
+                  Số lượt xem (View Count)
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="quick-viewCount"
+                    type="number"
+                    min="0"
+                    value={editViewCount}
+                    onChange={(e) => setEditViewCount(Math.max(0, parseInt(e.target.value) || 0))}
+                    placeholder="Nhập số lượt xem..."
+                    className="font-bold text-base text-blue-900 pr-16 bg-slate-50 focus:bg-white"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-medium pointer-events-none">
+                    lượt
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="quick-downloadCount" className="text-xs font-semibold text-slate-700 flex items-center gap-1.5 mb-1.5">
+                  <Download className="h-4 w-4 text-indigo-600" />
+                  Số lượt tải xuống (Download Count)
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="quick-downloadCount"
+                    type="number"
+                    min="0"
+                    value={editDownloadCount}
+                    onChange={(e) => setEditDownloadCount(Math.max(0, parseInt(e.target.value) || 0))}
+                    placeholder="Nhập số lượt tải xuống..."
+                    className="font-bold text-base text-indigo-900 pr-16 bg-slate-50 focus:bg-white"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-medium pointer-events-none">
+                    lượt
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Presets */}
+            <div className="space-y-1.5 pt-2 border-t border-slate-100">
+              <Label className="text-[11px] font-semibold text-slate-500">Gợi ý số liệu nhanh:</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-xs justify-start h-8 bg-slate-50 hover:bg-purple-50 hover:text-purple-700 border-slate-200"
+                  onClick={() => { setEditViewCount(680); setEditDownloadCount(210); }}
+                >
+                  <BarChart2 className="h-3.5 w-3.5 text-blue-600 mr-1.5 shrink-0" />
+                  680 xem / 210 tải
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-xs justify-start h-8 bg-slate-50 hover:bg-purple-50 hover:text-purple-700 border-slate-200"
+                  onClick={() => { setEditViewCount(1250); setEditDownloadCount(480); }}
+                >
+                  <Flame className="h-3.5 w-3.5 text-orange-500 mr-1.5 shrink-0" />
+                  1.25k xem / 480 tải
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-xs justify-start h-8 bg-slate-50 hover:bg-purple-50 hover:text-purple-700 border-slate-200"
+                  onClick={() => { setEditViewCount(2800); setEditDownloadCount(950); }}
+                >
+                  <Star className="h-3.5 w-3.5 text-amber-500 mr-1.5 shrink-0" />
+                  2.8k xem / 950 tải
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-xs justify-start h-8 bg-slate-50 hover:bg-purple-50 hover:text-purple-700 border-slate-200"
+                  onClick={() => { setEditViewCount(5200); setEditDownloadCount(1850); }}
+                >
+                  <Rocket className="h-3.5 w-3.5 text-indigo-500 mr-1.5 shrink-0" />
+                  5.2k xem / 1.85k tải
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="px-6 py-3.5 border-t bg-slate-50/80 shrink-0 flex items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowStatsDialog(false)
+                setStatsDoc(null)
+              }}
+              disabled={updatingStats}
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={handleSaveStats}
+              disabled={updatingStats}
+              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold shadow-md"
+            >
+              {updatingStats ? 'Đang lưu...' : 'Lưu số liệu'}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

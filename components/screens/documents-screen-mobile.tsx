@@ -4,19 +4,60 @@ import { useState, useEffect, useCallback } from "react"
 import { documentApi } from "@/lib/api"
 import { useAutoRefresh } from "@/hooks/use-auto-refresh"
 import { BACKEND_URL } from "@/lib/config"
+import {
+  FileText,
+  FileCheck,
+  Bookmark,
+  BookOpen,
+  Layers,
+  Bell,
+  Mail,
+  Book,
+  FileEdit,
+  Search,
+  Heart,
+  Eye,
+  Download,
+  Calendar,
+  Clock,
+  Flame,
+  ArrowUpDown,
+  CheckCircle2,
+  AlertCircle,
+  Info,
+  RefreshCw,
+  Tag,
+  Paperclip
+} from "lucide-react"
 
 // ===== CONSTANTS =====
-const DOC_TYPES: Record<string, { label: string; color: string; bg: string; icon: string }> = {
-  CIRCULAR:    { label: 'Thông tư',          color: '#0284c7', bg: '#e0f2fe', icon: '📋' },
-  DECISION:    { label: 'Quyết định',         color: '#7c3aed', bg: '#ede9fe', icon: '⚖️' },
-  DIRECTIVE:   { label: 'Chỉ thị',            color: '#dc2626', bg: '#fee2e2', icon: '📢' },
-  INSTRUCTION: { label: 'Hướng dẫn',          color: '#059669', bg: '#d1fae5', icon: '📌' },
-  REGULATION:  { label: 'Quy định',           color: '#d97706', bg: '#fef3c7', icon: '📜' },
-  NOTICE:      { label: 'Thông báo',          color: '#0891b2', bg: '#cffafe', icon: '🔔' },
-  LETTER:      { label: 'Công văn',           color: '#4f46e5', bg: '#e0e7ff', icon: '✉️' },
-  GUIDELINE:   { label: 'Tài liệu hướng dẫn', color: '#0d9488', bg: '#ccfbf1', icon: '📚' },
-  FORM:        { label: 'Mẫu biểu',           color: '#db2777', bg: '#fce7f3', icon: '📝' },
-  OTHER:       { label: 'Khác',               color: '#64748b', bg: '#f1f5f9', icon: '📄' },
+const DOC_TYPES: Record<string, { label: string; color: string; bg: string }> = {
+  CIRCULAR:    { label: 'Thông tư',          color: '#0284c7', bg: '#e0f2fe' },
+  DECISION:    { label: 'Quyết định',         color: '#7c3aed', bg: '#ede9fe' },
+  DIRECTIVE:   { label: 'Chỉ thị',            color: '#dc2626', bg: '#fee2e2' },
+  INSTRUCTION: { label: 'Hướng dẫn',          color: '#059669', bg: '#d1fae5' },
+  REGULATION:  { label: 'Quy định',           color: '#d97706', bg: '#fef3c7' },
+  NOTICE:      { label: 'Thông báo',          color: '#0891b2', bg: '#cffafe' },
+  LETTER:      { label: 'Công văn',           color: '#4f46e5', bg: '#e0e7ff' },
+  GUIDELINE:   { label: 'Tài liệu hướng dẫn', color: '#0d9488', bg: '#ccfbf1' },
+  FORM:        { label: 'Mẫu biểu',           color: '#db2777', bg: '#fce7f3' },
+  OTHER:       { label: 'Khác',               color: '#64748b', bg: '#f1f5f9' },
+}
+
+const getDocTypeIcon = (type: string, size = 14) => {
+  const style = { width: size, height: size }
+  switch (type) {
+    case 'CIRCULAR': return <FileText style={style} />
+    case 'DECISION': return <FileCheck style={style} />
+    case 'DIRECTIVE': return <Bookmark style={style} />
+    case 'INSTRUCTION': return <BookOpen style={style} />
+    case 'REGULATION': return <Layers style={style} />
+    case 'NOTICE': return <Bell style={style} />
+    case 'LETTER': return <Mail style={style} />
+    case 'GUIDELINE': return <Book style={style} />
+    case 'FORM': return <FileEdit style={style} />
+    default: return <FileText style={style} />
+  }
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
@@ -50,7 +91,7 @@ export default function DocumentsScreenMobile({ initialDocumentId, onDocumentOpe
   const [selectedDoc, setSelectedDoc] = useState<any>(null)
   const [searchText, setSearchText] = useState('')
   const [activeTab, setActiveTab] = useState<'all' | 'favorites' | string>('all')
-  const [sortBy, setSortBy] = useState<'newest' | 'popular'>('newest')
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'popular'>('newest')
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'info' }>({ show: false, message: '', type: 'success' })
   const [detailLoading, setDetailLoading] = useState(false)
   const [downloading, setDownloading] = useState(false)
@@ -176,7 +217,10 @@ export default function DocumentsScreenMobile({ initialDocumentId, onDocumentOpe
     })
     .sort((a, b) => {
       if (sortBy === 'popular') return (b.viewCount || 0) - (a.viewCount || 0)
-      return new Date(b.issuedDate || b.createdAt || 0).getTime() - new Date(a.issuedDate || a.createdAt || 0).getTime()
+      const timeA = new Date(a.issuedDate || a.createdAt || 0).getTime()
+      const timeB = new Date(b.issuedDate || b.createdAt || 0).getTime()
+      if (sortBy === 'oldest') return timeA - timeB
+      return timeB - timeA
     })
 
   const DOC_ITEMS_PER_PAGE = 5
@@ -188,7 +232,6 @@ export default function DocumentsScreenMobile({ initialDocumentId, onDocumentOpe
   const favCount = documents.filter(d => d.isFavorited).length
 
   const toastBg = toast.type === 'success' ? '#10b981' : toast.type === 'error' ? '#ef4444' : '#3b82f6'
-  const toastIcon = toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : 'ℹ️'
 
   // ===== LOADING =====
   if (loading) return (
@@ -210,7 +253,8 @@ export default function DocumentsScreenMobile({ initialDocumentId, onDocumentOpe
         {/* Toast */}
         {toast.show && (
           <div style={{ position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, backgroundColor: toastBg, color: '#fff', padding: '11px 20px', borderRadius: '14px', fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.2)', animation: 'slideDown 0.3s ease', minWidth: '220px', justifyContent: 'center' }}>
-            <span>{toastIcon}</span><span>{toast.message}</span>
+            {toast.type === 'success' ? <CheckCircle2 style={{ width: 16, height: 16 }} /> : toast.type === 'error' ? <AlertCircle style={{ width: 16, height: 16 }} /> : <Info style={{ width: 16, height: 16 }} />}
+            <span>{toast.message}</span>
           </div>
         )}
 
@@ -222,17 +266,20 @@ export default function DocumentsScreenMobile({ initialDocumentId, onDocumentOpe
               <div style={{ fontSize: '12px', opacity: 0.8 }}>Chi tiết văn bản</div>
               <div style={{ fontSize: '15px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedDoc.title}</div>
             </div>
-            <button onClick={() => toggleFavorite(selectedDoc)} style={{ width: '36px', height: '36px', borderRadius: '10px', border: '1.5px solid rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.15)', color: 'white', fontSize: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              {selectedDoc.isFavorited ? '❤️' : '🤍'}
+            <button onClick={() => toggleFavorite(selectedDoc)} style={{ width: '36px', height: '36px', borderRadius: '10px', border: '1.5px solid rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.15)', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Heart style={{ width: 18, height: 18, fill: selectedDoc.isFavorited ? '#ef4444' : 'none', color: selectedDoc.isFavorited ? '#ef4444' : 'white' }} />
             </button>
           </div>
         </div>
 
         {/* Type + Status badges */}
         <div style={{ backgroundColor: 'white', padding: '14px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ padding: '4px 12px', borderRadius: '99px', fontSize: '12px', fontWeight: 600, backgroundColor: typeInfo.bg, color: typeInfo.color }}>{typeInfo.icon} {typeInfo.label}</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 12px', borderRadius: '99px', fontSize: '12px', fontWeight: 600, backgroundColor: typeInfo.bg, color: typeInfo.color }}>
+            {getDocTypeIcon(selectedDoc.documentType, 13)}
+            <span>{typeInfo.label}</span>
+          </span>
           <span style={{ padding: '4px 12px', borderRadius: '99px', fontSize: '12px', fontWeight: 600, backgroundColor: statusInfo.bg, color: statusInfo.color }}>● {statusInfo.label}</span>
-          {detailLoading && <span style={{ fontSize: '12px', color: '#94a3b8', marginLeft: 'auto' }}>⏳ Đang tải...</span>}
+          {detailLoading && <span style={{ fontSize: '12px', color: '#94a3b8', marginLeft: 'auto' }}>Đang tải...</span>}
         </div>
 
         {/* Meta card */}
@@ -269,11 +316,17 @@ export default function DocumentsScreenMobile({ initialDocumentId, onDocumentOpe
           )}
           <div style={{ padding: '10px 16px', display: 'flex', gap: '24px' }}>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '16px', fontWeight: 700, color: '#0284c7' }}>{selectedDoc.viewCount || 0}</div>
+              <div style={{ fontSize: '16px', fontWeight: 700, color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                <Eye style={{ width: 15, height: 15 }} />
+                <span>{selectedDoc.viewCount || 0}</span>
+              </div>
               <div style={{ fontSize: '11px', color: '#94a3b8' }}>Lượt xem</div>
             </div>
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '16px', fontWeight: 700, color: '#7c3aed' }}>{selectedDoc.downloadCount || 0}</div>
+              <div style={{ fontSize: '16px', fontWeight: 700, color: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                <Download style={{ width: 15, height: 15 }} />
+                <span>{selectedDoc.downloadCount || 0}</span>
+              </div>
               <div style={{ fontSize: '11px', color: '#94a3b8' }}>Tải xuống</div>
             </div>
             {selectedDoc.author && (
@@ -307,7 +360,10 @@ export default function DocumentsScreenMobile({ initialDocumentId, onDocumentOpe
             <div style={{ fontSize: '12px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>Từ khoá</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
               {selectedDoc.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean).map((tag: string) => (
-                <span key={tag} style={{ padding: '4px 12px', backgroundColor: '#f1f5f9', color: '#475569', borderRadius: '99px', fontSize: '12px', fontWeight: 500 }}>🏷️ {tag}</span>
+                <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 12px', backgroundColor: '#f1f5f9', color: '#475569', borderRadius: '99px', fontSize: '12px', fontWeight: 500 }}>
+                  <Tag style={{ width: 11, height: 11 }} />
+                  <span>{tag}</span>
+                </span>
               ))}
             </div>
           </div>
@@ -320,16 +376,19 @@ export default function DocumentsScreenMobile({ initialDocumentId, onDocumentOpe
               onClick={() => handleDownload(selectedDoc)}
               disabled={downloading}
               style={{ width: '100%', padding: '13px', borderRadius: '14px', border: 'none', background: 'linear-gradient(135deg, #0284c7, #0369a1)', color: 'white', fontSize: '15px', fontWeight: 600, cursor: downloading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(2,132,199,0.3)', opacity: downloading ? 0.8 : 1 }}>
-              {downloading ? '⏳ Đang tải xuống...' : `📥 Tải xuống ${selectedDoc.fileName ? `(${selectedDoc.fileName.split('.').pop()?.toUpperCase()})` : 'văn bản'}`}
+              <Download style={{ width: 18, height: 18 }} />
+              <span>{downloading ? 'Đang tải xuống...' : `Tải xuống ${selectedDoc.fileName ? `(${selectedDoc.fileName.split('.').pop()?.toUpperCase()})` : 'văn bản'}`}</span>
             </button>
           ) : (
             <button disabled style={{ width: '100%', padding: '13px', borderRadius: '14px', border: '1.5px dashed #cbd5e1', background: '#f8fafc', color: '#94a3b8', fontSize: '14px', fontWeight: 500, cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-              📎 Chưa có file đính kèm
+              <Paperclip style={{ width: 16, height: 16 }} />
+              <span>Chưa có file đính kèm</span>
             </button>
           )}
           <button onClick={() => toggleFavorite(selectedDoc)}
             style={{ width: '100%', padding: '13px', borderRadius: '14px', border: `2px solid ${selectedDoc.isFavorited ? '#fecdd3' : '#e2e8f0'}`, backgroundColor: selectedDoc.isFavorited ? '#fff1f2' : 'white', color: selectedDoc.isFavorited ? '#dc2626' : '#64748b', fontSize: '15px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-            {selectedDoc.isFavorited ? '❤️ Đã yêu thích' : '🤍 Thêm vào yêu thích'}
+            <Heart style={{ width: 18, height: 18, fill: selectedDoc.isFavorited ? '#ef4444' : 'none', color: selectedDoc.isFavorited ? '#ef4444' : '#64748b' }} />
+            <span>{selectedDoc.isFavorited ? 'Đã yêu thích' : 'Thêm vào yêu thích'}</span>
           </button>
         </div>
       </div>
@@ -344,7 +403,8 @@ export default function DocumentsScreenMobile({ initialDocumentId, onDocumentOpe
       {/* Toast */}
       {toast.show && (
         <div style={{ position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, backgroundColor: toastBg, color: '#fff', padding: '11px 20px', borderRadius: '14px', fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.2)', animation: 'slideDown 0.3s ease', minWidth: '220px', justifyContent: 'center' }}>
-          <span>{toastIcon}</span><span>{toast.message}</span>
+          {toast.type === 'success' ? <CheckCircle2 style={{ width: 16, height: 16 }} /> : toast.type === 'error' ? <AlertCircle style={{ width: 16, height: 16 }} /> : <Info style={{ width: 16, height: 16 }} />}
+          <span>{toast.message}</span>
         </div>
       )}
 
@@ -355,10 +415,16 @@ export default function DocumentsScreenMobile({ initialDocumentId, onDocumentOpe
         <div style={{ position: 'absolute', bottom: -10, left: 20, width: 60, height: 60, borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
           <div>
-            <h1 style={{ fontSize: '22px', fontWeight: 800, letterSpacing: '0.2px', margin: 0 }}>📂 Tài liệu</h1>
+            <h1 style={{ fontSize: '22px', fontWeight: 800, letterSpacing: '0.2px', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <FileText style={{ width: 22, height: 22 }} />
+              <span>Tài liệu</span>
+            </h1>
             <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)', margin: '3px 0 0' }}>Kho văn bản, quy định & hướng dẫn</p>
           </div>
-          <button onClick={() => loadDocuments(true)} style={{ padding: '7px 12px', backgroundColor: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '10px', color: 'white', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>🔄 Tải lại</button>
+          <button onClick={() => loadDocuments(true)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 12px', backgroundColor: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '10px', color: 'white', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
+            <RefreshCw style={{ width: 13, height: 13 }} />
+            <span>Tải lại</span>
+          </button>
         </div>
 
         {/* Stats row */}
@@ -379,7 +445,7 @@ export default function DocumentsScreenMobile({ initialDocumentId, onDocumentOpe
 
         {/* Search */}
         <div style={{ marginTop: '14px', position: 'relative' }}>
-          <span style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', fontSize: '16px', zIndex: 1 }}>🔍</span>
+          <Search style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: '#94a3b8', zIndex: 1 }} />
           <input type="text" placeholder="Tìm kiếm văn bản, số hiệu, cơ quan..." value={searchText} onChange={e => setSearchText(e.target.value)}
             style={{ width: '100%', padding: '13px 40px 13px 44px', borderRadius: '14px', border: '2px solid transparent', backgroundColor: 'white', color: '#0f172a', fontSize: '14px', fontWeight: 500, outline: 'none', boxSizing: 'border-box', boxShadow: '0 4px 14px rgba(0,0,0,0.15)' }} />
           {searchText && (
@@ -392,17 +458,19 @@ export default function DocumentsScreenMobile({ initialDocumentId, onDocumentOpe
       <div style={{ backgroundColor: 'white', borderBottom: '1px solid #f1f5f9', overflowX: 'auto', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
         <div style={{ display: 'flex', padding: '10px 12px', gap: '8px', width: 'max-content' }}>
           {[
-            { key: 'all', label: 'Tất cả', count: documents.length, icon: '📂', color: '#0284c7', bg: '#e0f2fe' },
-            { key: 'favorites', label: 'Yêu thích', count: favCount, icon: '❤️', color: '#dc2626', bg: '#fee2e2' },
+            { key: 'all', label: 'Tất cả', count: documents.length, icon: FileText, color: '#0284c7', bg: '#e0f2fe' },
+            { key: 'favorites', label: 'Yêu thích', count: favCount, icon: Heart, color: '#dc2626', bg: '#fee2e2' },
             ...Object.entries(DOC_TYPES)
               .filter(([k]) => typeCounts[k] > 0)
-              .map(([k, v]) => ({ key: k, label: v.label, count: typeCounts[k] || 0, icon: v.icon, color: v.color, bg: v.bg }))
+              .map(([k, v]) => ({ key: k, label: v.label, count: typeCounts[k] || 0, color: v.color, bg: v.bg }))
           ].map(tab => {
             const isActive = activeTab === tab.key
             return (
               <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-                style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '7px 12px', borderRadius: '20px', border: isActive ? `1.5px solid ${tab.color}` : '1.5px solid #e2e8f0', backgroundColor: isActive ? tab.bg : 'white', color: isActive ? tab.color : '#64748b', fontSize: '13px', fontWeight: isActive ? 700 : 500, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.15s' }}>
-                <span>{tab.icon}</span>
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 12px', borderRadius: '20px', border: isActive ? `1.5px solid ${tab.color}` : '1.5px solid #e2e8f0', backgroundColor: isActive ? tab.bg : 'white', color: isActive ? tab.color : '#64748b', fontSize: '13px', fontWeight: isActive ? 700 : 500, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.15s' }}>
+                {tab.key === 'all' && <FileText style={{ width: 13, height: 13 }} />}
+                {tab.key === 'favorites' && <Heart style={{ width: 13, height: 13, fill: isActive ? '#dc2626' : 'none' }} />}
+                {tab.key !== 'all' && tab.key !== 'favorites' && getDocTypeIcon(tab.key, 13)}
                 <span>{tab.label}</span>
                 {tab.count > 0 && <span style={{ backgroundColor: isActive ? tab.color : '#e2e8f0', color: isActive ? 'white' : '#64748b', borderRadius: '99px', fontSize: '10px', fontWeight: 700, padding: '1px 6px', minWidth: '16px', textAlign: 'center' }}>{tab.count}</span>}
               </button>
@@ -414,21 +482,31 @@ export default function DocumentsScreenMobile({ initialDocumentId, onDocumentOpe
       {/* ── SORT BAR ── */}
       <div style={{ backgroundColor: 'white', borderBottom: '1px solid #f1f5f9', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
         <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500, marginRight: '4px' }}>Sắp xếp:</span>
-        {[{ key: 'newest', label: '📅 Mới nhất' }, { key: 'popular', label: '🔥 Xem nhiều' }].map(s => (
-          <button key={s.key} onClick={() => setSortBy(s.key as any)}
-            style={{ padding: '5px 12px', borderRadius: '8px', border: sortBy === s.key ? '1.5px solid #0284c7' : '1.5px solid #e2e8f0', backgroundColor: sortBy === s.key ? '#e0f2fe' : 'white', color: sortBy === s.key ? '#0284c7' : '#64748b', fontSize: '12px', fontWeight: sortBy === s.key ? 700 : 500, cursor: 'pointer' }}>
-            {s.label}
-          </button>
-        ))}
+        {[
+          { key: 'newest', label: 'Mới nhất', icon: Clock },
+          { key: 'oldest', label: 'Cũ nhất', icon: Calendar },
+          { key: 'popular', label: 'Xem nhiều', icon: Flame }
+        ].map(s => {
+          const Icon = s.icon
+          return (
+            <button key={s.key} onClick={() => setSortBy(s.key as any)}
+              style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '5px 12px', borderRadius: '8px', border: sortBy === s.key ? '1.5px solid #0284c7' : '1.5px solid #e2e8f0', backgroundColor: sortBy === s.key ? '#e0f2fe' : 'white', color: sortBy === s.key ? '#0284c7' : '#64748b', fontSize: '12px', fontWeight: sortBy === s.key ? 700 : 500, cursor: 'pointer' }}>
+              <Icon style={{ width: 13, height: 13 }} />
+              <span>{s.label}</span>
+            </button>
+          )
+        })}
         <span style={{ marginLeft: 'auto', fontSize: '12px', color: '#94a3b8' }}>{filteredDocs.length} văn bản</span>
       </div>
 
       {/* ── LIST ── */}
       {filteredDocs.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 16px' }}>
-          <span style={{ fontSize: '52px', display: 'block', marginBottom: '14px' }}>{activeTab === 'favorites' ? '❤️' : '📄'}</span>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '14px' }}>
+            {activeTab === 'favorites' ? <Heart style={{ width: 48, height: 48, color: '#f87171' }} /> : <FileText style={{ width: 48, height: 48, color: '#94a3b8' }} />}
+          </div>
           <p style={{ color: '#64748b', fontSize: '16px', fontWeight: 600, marginBottom: '6px' }}>{activeTab === 'favorites' ? 'Chưa có văn bản yêu thích' : 'Không tìm thấy văn bản'}</p>
-          <p style={{ color: '#94a3b8', fontSize: '13px' }}>{activeTab === 'favorites' ? 'Nhấn ❤️ trên văn bản để thêm vào đây' : 'Thử thay đổi bộ lọc hoặc từ khóa'}</p>
+          <p style={{ color: '#94a3b8', fontSize: '13px' }}>{activeTab === 'favorites' ? 'Nhấn icon yêu thích trên văn bản để thêm vào đây' : 'Thử thay đổi bộ lọc hoặc từ khóa'}</p>
         </div>
       ) : (
         <div style={{ padding: '10px 0 20px' }}>
@@ -444,13 +522,16 @@ export default function DocumentsScreenMobile({ initialDocumentId, onDocumentOpe
                   {/* Top row */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                     <div style={{ display: 'flex', gap: '6px', flex: 1, flexWrap: 'wrap' }}>
-                      <span style={{ padding: '3px 9px', borderRadius: '99px', fontSize: '11px', fontWeight: 700, backgroundColor: typeInfo.bg, color: typeInfo.color }}>{typeInfo.icon} {typeInfo.label}</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 9px', borderRadius: '99px', fontSize: '11px', fontWeight: 700, backgroundColor: typeInfo.bg, color: typeInfo.color }}>
+                        {getDocTypeIcon(doc.documentType, 12)}
+                        <span>{typeInfo.label}</span>
+                      </span>
                       <span style={{ padding: '3px 9px', borderRadius: '99px', fontSize: '11px', fontWeight: 600, backgroundColor: statusInfo.bg, color: statusInfo.color }}>● {statusInfo.label}</span>
-                      {isNewDoc(doc) && <span style={{ padding: '3px 9px', borderRadius: '99px', fontSize: '11px', fontWeight: 700, backgroundColor: '#fef3c7', color: '#b45309' }}>🆕 Mới</span>}
-                      {doc.isNotificationSent && <span style={{ padding: '3px 9px', borderRadius: '99px', fontSize: '11px', fontWeight: 700, backgroundColor: '#ede9fe', color: '#7c3aed' }}>📢 Đã thông báo</span>}
+                      {isNewDoc(doc) && <span style={{ padding: '3px 9px', borderRadius: '99px', fontSize: '11px', fontWeight: 700, backgroundColor: '#fef3c7', color: '#b45309' }}>Mới</span>}
+                      {doc.isNotificationSent && <span style={{ padding: '3px 9px', borderRadius: '99px', fontSize: '11px', fontWeight: 700, backgroundColor: '#ede9fe', color: '#7c3aed' }}>Đã thông báo</span>}
                     </div>
-                    <button onClick={(e) => toggleFavorite(doc, e)} style={{ width: '32px', height: '32px', borderRadius: '8px', border: 'none', backgroundColor: doc.isFavorited ? '#fff1f2' : '#f8fafc', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginLeft: '8px' }}>
-                      {doc.isFavorited ? '❤️' : '🤍'}
+                    <button onClick={(e) => toggleFavorite(doc, e)} style={{ width: '32px', height: '32px', borderRadius: '8px', border: 'none', backgroundColor: doc.isFavorited ? '#fff1f2' : '#f8fafc', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginLeft: '8px' }}>
+                      <Heart style={{ width: 16, height: 16, fill: doc.isFavorited ? '#ef4444' : 'none', color: doc.isFavorited ? '#ef4444' : '#94a3b8' }} />
                     </button>
                   </div>
 
@@ -465,10 +546,23 @@ export default function DocumentsScreenMobile({ initialDocumentId, onDocumentOpe
 
                   {/* Footer */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: '1px solid #f8fafc' }}>
-                    <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#94a3b8' }}>
-                      {doc.issuedDate && <span>📅 {formatDate(doc.issuedDate)}</span>}
-                      <span>👁️ {doc.viewCount || 0}</span>
-                      {doc.fileUrl && <span style={{ color: typeInfo.color, fontWeight: 600 }}>📥 Có file</span>}
+                    <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#94a3b8', alignItems: 'center' }}>
+                      {doc.issuedDate && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <Calendar style={{ width: 12, height: 12 }} />
+                          <span>{formatDate(doc.issuedDate)}</span>
+                        </span>
+                      )}
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Eye style={{ width: 12, height: 12 }} />
+                        <span>{doc.viewCount || 0}</span>
+                      </span>
+                      {doc.fileUrl && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: typeInfo.color, fontWeight: 600 }}>
+                          <Download style={{ width: 12, height: 12 }} />
+                          <span>Có file</span>
+                        </span>
+                      )}
                     </div>
                     <span style={{ fontSize: '12px', color: typeInfo.color, fontWeight: 600 }}>Xem →</span>
                   </div>
@@ -498,3 +592,4 @@ export default function DocumentsScreenMobile({ initialDocumentId, onDocumentOpe
     </div>
   )
 }
+

@@ -452,6 +452,8 @@ const getBorrowingStats = async (req, res, next) => {
     const formattedBorrowings = borrowings.map((b, index) => ({
       stt: index + 1,
       id: b.id,
+      bookId: b.bookId,
+      userId: b.userId,
       borrower: b.user.fullName,
       borrowerUnit: b.user.unit?.name || '',
       bookTitle: b.book.title,
@@ -573,6 +575,186 @@ const getMyBorrowings = async (req, res, next) => {
   }
 };
 
+// @desc    Admin manually creates borrowing records (one or multiple readers)
+// @route   POST /api/books/admin/borrowings
+// @access  Private (Admin/Leader)
+const createManualBorrowings = async (req, res, next) => {
+  try {
+    const {
+      bookId,
+      userIds, // array of user IDs
+      borrowedAt,
+      expectedReturnDate,
+      returnedAt,
+      status // 'BORROWED' | 'RETURNED' | 'OVERDUE'
+    } = req.body;
+
+    if (!bookId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Vui lòng chọn cuốn sách'
+      });
+    }
+
+    if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Vui lòng chọn ít nhất một độc giả / đoàn viên'
+      });
+    }
+
+    const book = await prisma.book.findUnique({
+      where: { id: bookId }
+    });
+
+    if (!book) {
+      return res.status(404).json({
+        success: false,
+        error: 'Không tìm thấy sách'
+      });
+    }
+
+    const borrowDate = borrowedAt ? new Date(borrowedAt) : new Date();
+    const dueDate = expectedReturnDate ? new Date(expectedReturnDate) : null;
+    
+    // Determine returnedAt based on status or provided returnedAt
+    let actualReturnDate = null;
+    if (status === 'RETURNED' || status === 'Đã trả sách' || status === 'Đã trả') {
+      actualReturnDate = returnedAt ? new Date(returnedAt) : new Date();
+    } else if (returnedAt) {
+      actualReturnDate = new Date(returnedAt);
+    }
+
+    // Create records for all selected users
+    const createdBorrowings = [];
+    for (const userId of userIds) {
+      const borrowing = await prisma.bookBorrowing.create({
+        data: {
+          bookId,
+          userId,
+          borrowedAt: borrowDate,
+          expectedReturnDate: dueDate,
+          returnedAt: actualReturnDate
+        },
+        include: {
+          book: { select: { id: true, title: true, author: true, publisher: true } },
+          user: { select: { id: true, fullName: true, unit: { select: { name: true } } } }
+        }
+      });
+      createdBorrowings.push(borrowing);
+    }
+
+    res.status(201).json({
+      success: true,
+      data: createdBorrowings,
+      message: `Đã tạo thành công ${createdBorrowings.length} hồ sơ mượn trả sách`
+    });
+
+  } catch (error) {
+    console.error('Create manual borrowings error:', error);
+    next(error);
+  }
+};
+
+// @desc    Admin updates borrowing record
+// @route   PUT /api/books/admin/borrowings/:id
+// @access  Private (Admin/Leader)
+const updateBorrowing = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const {
+      bookId,
+      userId,
+      borrowedAt,
+      expectedReturnDate,
+      returnedAt,
+      status
+    } = req.body;
+
+    const existing = await prisma.bookBorrowing.findUnique({
+      where: { id }
+    });
+
+    if (!existing) {
+      return res.status(404).json({
+        success: false,
+        error: 'Không tìm thấy bản ghi mượn sách'
+      });
+    }
+
+    let actualReturnDate = null;
+    if (status === 'RETURNED' || status === 'Đã trả sách' || status === 'Đã trả') {
+      actualReturnDate = returnedAt ? new Date(returnedAt) : (existing.returnedAt || new Date());
+    } else if (status === 'BORROWED' || status === 'OVERDUE' || status === 'Đang mượn' || status === 'Quá hạn') {
+      actualReturnDate = null;
+    } else if (returnedAt !== undefined) {
+      actualReturnDate = returnedAt ? new Date(returnedAt) : null;
+    } else {
+      actualReturnDate = existing.returnedAt;
+    }
+
+    const updated = await prisma.bookBorrowing.update({
+      where: { id },
+      data: {
+        bookId: bookId || existing.bookId,
+        userId: userId || existing.userId,
+        borrowedAt: borrowedAt ? new Date(borrowedAt) : existing.borrowedAt,
+        expectedReturnDate: expectedReturnDate !== undefined 
+          ? (expectedReturnDate ? new Date(expectedReturnDate) : null) 
+          : existing.expectedReturnDate,
+        returnedAt: actualReturnDate
+      },
+      include: {
+        book: { select: { id: true, title: true, author: true, publisher: true } },
+        user: { select: { id: true, fullName: true, unit: { select: { name: true } } } }
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      data: updated,
+      message: 'Đã cập nhật hồ sơ mượn trả'
+    });
+
+  } catch (error) {
+    console.error('Update borrowing error:', error);
+    next(error);
+  }
+};
+
+// @desc    Admin deletes borrowing record
+// @route   DELETE /api/books/admin/borrowings/:id
+// @access  Private (Admin)
+const deleteBorrowing = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const existing = await prisma.bookBorrowing.findUnique({
+      where: { id }
+    });
+
+    if (!existing) {
+      return res.status(404).json({
+        success: false,
+        error: 'Không tìm thấy bản ghi mượn sách'
+      });
+    }
+
+    await prisma.bookBorrowing.delete({
+      where: { id }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Đã xóa bản ghi mượn sách'
+    });
+
+  } catch (error) {
+    console.error('Delete borrowing error:', error);
+    next(error);
+  }
+};
+
 module.exports = {
   getBooks,
   getBook,
@@ -583,5 +765,8 @@ module.exports = {
   returnBook,
   getBorrowingStats,
   getBookByQR,
-  getMyBorrowings
+  getMyBorrowings,
+  createManualBorrowings,
+  updateBorrowing,
+  deleteBorrowing
 };

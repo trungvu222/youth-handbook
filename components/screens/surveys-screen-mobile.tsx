@@ -3,6 +3,21 @@
 import { useState, useEffect } from "react"
 import { surveyApi } from "@/lib/api"
 import { useAutoRefresh } from "@/hooks/use-auto-refresh"
+import { 
+  Calendar, 
+  Clock, 
+  Star, 
+  FileText, 
+  ClipboardList, 
+  CheckCircle2, 
+  PartyPopper, 
+  ArrowLeft, 
+  AlertTriangle, 
+  Users, 
+  HelpCircle,
+  Sparkles,
+  Check
+} from "lucide-react"
 
 interface SurveyQuestion {
   id?: string
@@ -157,7 +172,9 @@ export default function SurveysScreenMobile({ onBack }: { onBack?: () => void })
             {/* Survey metadata */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16, paddingTop: 16, borderTop: '1px solid #e2e8f0' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 20 }}>📅</span>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Calendar style={{ width: 16, height: 16, color: '#2563eb' }} />
+                </div>
                 <div style={{ flex: 1 }}>
                   <p style={{ fontSize: 11, color: '#94a3b8', marginBottom: 2 }}>Thời gian bắt đầu</p>
                   <p style={{ fontSize: 13, color: '#475569', fontWeight: 600 }}>{formatDate(selectedSurvey.startDate)}</p>
@@ -165,7 +182,9 @@ export default function SurveysScreenMobile({ onBack }: { onBack?: () => void })
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 20 }}>⏰</span>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Clock style={{ width: 16, height: 16, color: '#ef4444' }} />
+                </div>
                 <div style={{ flex: 1 }}>
                   <p style={{ fontSize: 11, color: '#94a3b8', marginBottom: 2 }}>Thời gian kết thúc</p>
                   <p style={{ fontSize: 13, color: '#475569', fontWeight: 600 }}>{formatDate(selectedSurvey.endDate)}</p>
@@ -173,7 +192,9 @@ export default function SurveysScreenMobile({ onBack }: { onBack?: () => void })
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 20 }}>⭐</span>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: '#fef3c7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Star style={{ width: 16, height: 16, color: '#d97706' }} />
+                </div>
                 <div style={{ flex: 1 }}>
                   <p style={{ fontSize: 11, color: '#94a3b8', marginBottom: 2 }}>Điểm thưởng</p>
                   <p style={{ fontSize: 13, color: '#f59e0b', fontWeight: 700 }}>+{selectedSurvey.pointsReward} điểm</p>
@@ -181,7 +202,9 @@ export default function SurveysScreenMobile({ onBack }: { onBack?: () => void })
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 20 }}>📝</span>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <FileText style={{ width: 16, height: 16, color: '#7c3aed' }} />
+                </div>
                 <div style={{ flex: 1 }}>
                   <p style={{ fontSize: 11, color: '#94a3b8', marginBottom: 2 }}>Số câu hỏi</p>
                   <p style={{ fontSize: 13, color: '#475569', fontWeight: 600 }}>{selectedSurvey.questions?.length || 0} câu hỏi</p>
@@ -190,7 +213,9 @@ export default function SurveysScreenMobile({ onBack }: { onBack?: () => void })
 
               {selectedSurvey.creator && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 20 }}>👤</span>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Users style={{ width: 16, height: 16, color: '#475569' }} />
+                  </div>
                   <div style={{ flex: 1 }}>
                     <p style={{ fontSize: 11, color: '#94a3b8', marginBottom: 2 }}>Người tạo</p>
                     <p style={{ fontSize: 13, color: '#475569', fontWeight: 600 }}>{selectedSurvey.creator.fullName}</p>
@@ -202,7 +227,9 @@ export default function SurveysScreenMobile({ onBack }: { onBack?: () => void })
 
           {selectedSurvey.hasResponded ? (
             <div style={{ padding: 24, textAlign: 'center', background: '#fff', borderRadius: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-              <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'linear-gradient(135deg, #dcfce7, #bbf7d0)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: '32px' }}>✓</div>
+              <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'linear-gradient(135deg, #dcfce7, #bbf7d0)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <CheckCircle2 style={{ width: 32, height: 32, color: '#16a34a' }} />
+              </div>
               <h3 style={{ fontSize: 18, fontWeight: 700, color: '#16a34a', marginBottom: 8 }}>Bạn đã hoàn thành khảo sát này</h3>
               <p style={{ color: '#64748b', fontSize: 14 }}>Cảm ơn bạn đã tham gia!</p>
             </div>
@@ -210,7 +237,9 @@ export default function SurveysScreenMobile({ onBack }: { onBack?: () => void })
             <>
               {submitResult === 'success' ? (
                 <div style={{ padding: 24, textAlign: 'center', background: '#fff', borderRadius: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-                  <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'linear-gradient(135deg, #dcfce7, #bbf7d0)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: '32px' }}>🎉</div>
+                  <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'linear-gradient(135deg, #dcfce7, #bbf7d0)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                    <PartyPopper style={{ width: 32, height: 32, color: '#16a34a' }} />
+                  </div>
                   <h3 style={{ fontSize: 18, fontWeight: 700, color: '#16a34a', marginBottom: 8 }}>Gửi khảo sát thành công!</h3>
                   <p style={{ color: '#64748b', fontSize: 14 }}>+{selectedSurvey.pointsReward} điểm</p>
                 </div>
@@ -292,14 +321,16 @@ export default function SurveysScreenMobile({ onBack }: { onBack?: () => void })
                     })
                   ) : (
                     <div style={{ padding: 24, textAlign: 'center', background: '#fff', borderRadius: 14, border: '1px solid #f1f5f9' }}>
-                      <div style={{ fontSize: 48, marginBottom: 12 }}>📋</div>
+                      <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                        <ClipboardList style={{ width: 24, height: 24, color: '#7c3aed' }} />
+                      </div>
                       <p style={{ color: '#64748b', fontSize: 14 }}>Khảo sát này chưa có câu hỏi nào</p>
                     </div>
                   )}
 
                   {submitResult && submitResult !== 'success' && (
                     <div style={{ padding: 14, background: 'linear-gradient(135deg, #fef2f2, #fee2e2)', borderRadius: 12, color: '#dc2626', marginBottom: 16, fontSize: 14, border: '1px solid #fecaca', display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ fontSize: 20 }}>⚠️</span>
+                      <AlertTriangle style={{ width: 18, height: 18, color: '#dc2626', flexShrink: 0 }} />
                       <span>{submitResult}</span>
                     </div>
                   )}
@@ -329,11 +360,14 @@ export default function SurveysScreenMobile({ onBack }: { onBack?: () => void })
       <div style={{ background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #6366f1 100%)', padding: '24px 16px 20px', color: '#fff' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {onBack && (
-            <button onClick={onBack} style={{ width: 36, height: 36, background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', fontSize: 16, cursor: 'pointer', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              ←
+            <button onClick={onBack} style={{ width: 36, height: 36, background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', cursor: 'pointer', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <ArrowLeft style={{ width: 20, height: 20, color: '#fff' }} />
             </button>
           )}
-          <h1 style={{ fontSize: 20, fontWeight: 700, flex: 1 }}>Khảo sát</h1>
+          <h1 style={{ fontSize: 20, fontWeight: 700, flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <ClipboardList style={{ width: 22, height: 22 }} />
+            Khảo sát
+          </h1>
         </div>
         <p style={{ fontSize: 13, opacity: 0.8, marginTop: 4 }}>Tham gia khảo sát để nhận điểm thưởng</p>
       </div>
@@ -347,7 +381,9 @@ export default function SurveysScreenMobile({ onBack }: { onBack?: () => void })
           </div>
         ) : surveys.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 40 }}>
-            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'linear-gradient(135deg, #ede9fe, #f5f3ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', fontSize: '24px' }}>📋</div>
+            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'linear-gradient(135deg, #ede9fe, #f5f3ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+              <ClipboardList style={{ width: 28, height: 28, color: '#7c3aed' }} />
+            </div>
             <h3 style={{ fontSize: 15, fontWeight: 600, color: '#64748b', marginTop: 12 }}>Chưa có khảo sát nào</h3>
             <p style={{ color: '#94a3b8', fontSize: 13, marginTop: 4 }}>Các khảo sát mới sẽ hiển thị tại đây</p>
           </div>
@@ -359,7 +395,10 @@ export default function SurveysScreenMobile({ onBack }: { onBack?: () => void })
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <h3 style={{ fontSize: 15, fontWeight: 600, color: '#0f172a', flex: 1 }}>{survey.title}</h3>
                   {survey.hasResponded ? (
-                    <span style={{ fontSize: 12, padding: '4px 8px', background: '#dcfce7', color: '#16a34a', borderRadius: 6, fontWeight: 600, whiteSpace: 'nowrap' }}>Đã trả lời</span>
+                    <span style={{ fontSize: 12, padding: '4px 8px', background: '#dcfce7', color: '#16a34a', borderRadius: 6, fontWeight: 600, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <Check style={{ width: 12, height: 12 }} />
+                      Đã trả lời
+                    </span>
                   ) : (
                     <span style={{ fontSize: 12, padding: '4px 8px', background: '#ede9fe', color: '#7c3aed', borderRadius: 6, fontWeight: 600, whiteSpace: 'nowrap' }}>Chưa trả lời</span>
                   )}
@@ -367,15 +406,15 @@ export default function SurveysScreenMobile({ onBack }: { onBack?: () => void })
                 {survey.description && (
                   <p style={{ fontSize: 13, color: '#64748b', marginTop: 6, lineHeight: 1.5 }}>{survey.description}</p>
                 )}
-                <div style={{ display: 'flex', gap: 12, marginTop: 10, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 12, color: '#94a3b8' }}>
-                    📝 {survey._count?.questions || 0} câu hỏi
+                <div style={{ display: 'flex', gap: 12, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <span style={{ fontSize: 12, color: '#94a3b8', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    <FileText style={{ width: 12, height: 12 }} /> {survey._count?.questions || 0} câu hỏi
                   </span>
-                  <span style={{ fontSize: 12, color: '#94a3b8' }}>
-                    👥 {survey._count?.responses || 0} lượt trả lời
+                  <span style={{ fontSize: 12, color: '#94a3b8', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    <Users style={{ width: 12, height: 12 }} /> {survey._count?.responses || 0} lượt trả lời
                   </span>
-                  <span style={{ fontSize: 12, color: '#f59e0b' }}>
-                    ⭐ +{survey.pointsReward} điểm
+                  <span style={{ fontSize: 12, color: '#f59e0b', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    <Star style={{ width: 12, height: 12 }} /> +{survey.pointsReward} điểm
                   </span>
                 </div>
               </button>

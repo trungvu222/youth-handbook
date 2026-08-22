@@ -117,6 +117,7 @@ app.use('/api/documents', documentRoutes);
 app.use('/api/study', studyRoutes);
 app.use('/api/exams', examRoutes);
 app.use('/api/rating', ratingRoutes);
+app.use('/api/ratings', ratingRoutes);
 app.use('/api/suggestions', suggestionRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/chat', chatRoutes);
@@ -139,9 +140,8 @@ app.get('/api/dashboard/stats', async (req, res) => {
   res.set('Expires', '0');
   
   try {
-    // Fetch all active users
+    // Fetch all users (matching Member Management - 112 members)
     const users = await prisma.user.findMany({
-      where: { isActive: true },
       include: {
         unit: true,
         selfRatings: {
@@ -156,7 +156,7 @@ app.get('/api/dashboard/stats', async (req, res) => {
     const units = await prisma.unit.findMany({
       include: {
         _count: {
-          select: { members: { where: { isActive: true } } }
+          select: { members: true }
         }
       }
     });

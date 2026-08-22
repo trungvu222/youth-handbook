@@ -3,15 +3,36 @@
 import { useState, useEffect, useRef } from "react"
 import { postApi } from "@/lib/api"
 import { useAutoRefresh } from "@/hooks/use-auto-refresh"
+import { 
+  Megaphone, 
+  Newspaper, 
+  Lightbulb, 
+  Clock, 
+  Home, 
+  User, 
+  Search, 
+  X, 
+  PenSquare, 
+  Building, 
+  CheckCircle2, 
+  AlertCircle, 
+  Award, 
+  Send, 
+  Info, 
+  Sparkles, 
+  ArrowLeft,
+  FileText,
+  Hourglass
+} from "lucide-react"
 
 interface NewsScreenMobileProps {
   onShowPoints?: () => void
 }
 
 const POST_TYPES = {
-  ANNOUNCEMENT: { label: 'Thông báo', icon: '📢', color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
-  NEWS:         { label: 'Tin tức',   icon: '📰', color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
-  SUGGESTION:   { label: 'Kiến nghị', icon: '💡', color: '#059669', bg: '#f0fdf4', border: '#bbf7d0' },
+  ANNOUNCEMENT: { label: 'Thông báo', icon: Megaphone, color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+  NEWS:         { label: 'Tin tức',   icon: Newspaper, color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
+  SUGGESTION:   { label: 'Kiến nghị', icon: Lightbulb, color: '#059669', bg: '#f0fdf4', border: '#bbf7d0' },
 }
 
 function isNew(dateStr: string) {
@@ -51,7 +72,7 @@ export default function NewsScreenMobile({ onShowPoints }: NewsScreenMobileProps
   const [loading, setLoading] = useState(true)
   const [selectedPost, setSelectedPost] = useState<any>(null)
   const [searchText, setSearchText] = useState('')
-  const [activeFilter, setActiveFilter] = useState<'all' | 'ANNOUNCEMENT' | 'NEWS' | 'SUGGESTION' | 'mine'>('all')
+  const [activeFilter, setActiveFilter] = useState<'all' | 'ANNOUNCEMENT' | 'NEWS' | 'SUGGESTION' | 'pending' | 'mine'>('all')
   const [showCreate, setShowCreate] = useState(false)
   const [creating, setCreating] = useState(false)
   const [myPendingPosts, setMyPendingPosts] = useState<any[]>([])
@@ -115,7 +136,7 @@ export default function NewsScreenMobile({ onShowPoints }: NewsScreenMobileProps
           const pending = [res.data, ...myPendingPosts].slice(0, 20)
           setMyPendingPosts(pending)
           localStorage.setItem('myPendingPosts', JSON.stringify(pending))
-          showToast('Bài đã gửi — đang chờ Admin duyệt ⏳', 'info')
+          showToast('Bài đã gửi — đang chờ Admin duyệt', 'info')
         } else {
           showToast('Đã đăng bài viết thành công!', 'success')
           loadPosts(true)
@@ -160,15 +181,15 @@ export default function NewsScreenMobile({ onShowPoints }: NewsScreenMobileProps
   }
 
   const toastBg = toast.type === 'success' ? '#10b981' : toast.type === 'error' ? '#ef4444' : '#f59e0b'
-  const toastIcon = toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : '⏳'
+  const ToastIcon = toast.type === 'success' ? CheckCircle2 : toast.type === 'error' ? AlertCircle : Clock
 
   const FILTERS = [
-    { key: 'all',          label: 'Tất cả',    icon: '🏠', count: posts.length + pendingMine.length },
-    { key: 'ANNOUNCEMENT', label: 'Thông báo',  icon: '📢', count: counts.ANNOUNCEMENT },
-    { key: 'NEWS',         label: 'Tin tức',   icon: '📰', count: counts.NEWS },
-    { key: 'SUGGESTION',   label: 'Kiến nghị',  icon: '💡', count: counts.SUGGESTION },
-    { key: 'pending',      label: 'Chờ duyệt',  icon: '⏳', count: counts.pending },
-    { key: 'mine',         label: 'Của tôi',   icon: '👤', count: counts.pending },
+    { key: 'all',          label: 'Tất cả',    icon: Home, count: posts.length + pendingMine.length },
+    { key: 'ANNOUNCEMENT', label: 'Thông báo',  icon: Megaphone, count: counts.ANNOUNCEMENT },
+    { key: 'NEWS',         label: 'Tin tức',   icon: Newspaper, count: counts.NEWS },
+    { key: 'SUGGESTION',   label: 'Kiến nghị',  icon: Lightbulb, count: counts.SUGGESTION },
+    { key: 'pending',      label: 'Chờ duyệt',  icon: Clock, count: counts.pending },
+    { key: 'mine',         label: 'Của tôi',   icon: User, count: counts.pending },
   ]
 
   // ===== LOADING =====
@@ -183,6 +204,7 @@ export default function NewsScreenMobile({ onShowPoints }: NewsScreenMobileProps
   // ===== DETAIL VIEW =====
   if (selectedPost) {
     const t = POST_TYPES[selectedPost.postType as keyof typeof POST_TYPES] || POST_TYPES.NEWS
+    const TypeIcon = t.icon
     const dt = new Date(selectedPost.publishedAt || selectedPost.createdAt)
     const isPending = selectedPost.status === 'PENDING'
     return (
@@ -192,16 +214,20 @@ export default function NewsScreenMobile({ onShowPoints }: NewsScreenMobileProps
         {/* Toast */}
         {toast.show && (
           <div style={{ position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 9999, backgroundColor: toastBg, color: '#fff', padding: '11px 20px', borderRadius: 14, fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.2)', animation: 'slideDown 0.3s ease', minWidth: 220, justifyContent: 'center' }}>
-            <span>{toastIcon}</span><span>{toast.msg}</span>
+            <ToastIcon style={{ width: 16, height: 16 }} /><span>{toast.msg}</span>
           </div>
         )}
 
         {/* Detail header */}
         <div style={{ background: `linear-gradient(135deg, ${t.color} 0%, ${t.color}cc 100%)`, padding: '16px 16px 20px', color: 'white', position: 'sticky', top: 0, zIndex: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button onClick={() => setSelectedPost(null)} style={{ width: 36, height: 36, borderRadius: 10, border: '1.5px solid rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.15)', color: 'white', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>←</button>
+            <button onClick={() => setSelectedPost(null)} style={{ width: 36, height: 36, borderRadius: 10, border: '1.5px solid rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.15)', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <ArrowLeft style={{ width: 20, height: 20, color: '#fff' }} />
+            </button>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, opacity: 0.8 }}>{t.icon} {t.label}</div>
+              <div style={{ fontSize: 12, opacity: 0.9, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <TypeIcon style={{ width: 14, height: 14 }} /> {t.label}
+              </div>
               <div style={{ fontSize: 15, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedPost.title}</div>
             </div>
           </div>
@@ -209,7 +235,7 @@ export default function NewsScreenMobile({ onShowPoints }: NewsScreenMobileProps
 
         {isPending && (
           <div style={{ margin: '12px 16px 0', background: '#fef3c7', borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8, border: '1px solid #fde68a' }}>
-            <span style={{ fontSize: 18 }}>⏳</span>
+            <Clock style={{ width: 18, height: 18, color: '#92400e' }} />
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#92400e' }}>Đang chờ Admin duyệt</div>
               <div style={{ fontSize: 12, color: '#b45309' }}>Bài viết sẽ hiển thị sau khi được duyệt</div>
@@ -220,9 +246,15 @@ export default function NewsScreenMobile({ onShowPoints }: NewsScreenMobileProps
         <div style={{ margin: '12px 16px', backgroundColor: 'white', borderRadius: 20, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.08)', animation: 'fadeUp 0.3s ease' }}>
           <div style={{ height: 4, background: `linear-gradient(90deg, ${t.color}, ${t.color}80)` }} />
           <div style={{ padding: '20px 18px' }}>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
-              <span style={{ padding: '4px 12px', borderRadius: 99, fontSize: 12, fontWeight: 700, backgroundColor: t.bg, color: t.color, border: `1px solid ${t.border}` }}>{t.icon} {t.label}</span>
-              {isNew(selectedPost.createdAt) && <span style={{ padding: '4px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700, backgroundColor: '#fef3c7', color: '#b45309' }}>🆕 Mới</span>}
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14, alignItems: 'center' }}>
+              <span style={{ padding: '4px 12px', borderRadius: 99, fontSize: 12, fontWeight: 700, backgroundColor: t.bg, color: t.color, border: `1px solid ${t.border}`, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <TypeIcon style={{ width: 13, height: 13 }} /> {t.label}
+              </span>
+              {isNew(selectedPost.createdAt) && (
+                <span style={{ padding: '4px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700, backgroundColor: '#fef3c7', color: '#b45309', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <Sparkles style={{ width: 12, height: 12 }} /> Mới
+                </span>
+              )}
             </div>
             <h1 style={{ fontSize: 20, fontWeight: 800, color: '#0f172a', lineHeight: 1.5, marginBottom: 14 }}>{selectedPost.title}</h1>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 16, borderBottom: '1px solid #f1f5f9', marginBottom: 18 }}>
@@ -231,13 +263,14 @@ export default function NewsScreenMobile({ onShowPoints }: NewsScreenMobileProps
               </div>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#334155' }}>{selectedPost.author?.fullName || 'Ẩn danh'}</div>
-                <div style={{ fontSize: 11, color: '#94a3b8' }}>
-                  {dt.toLocaleDateString('vi-VN')} lúc {dt.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                <div style={{ fontSize: 11, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                  <Clock style={{ width: 11, height: 11 }} />
+                  {dt.toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })} lúc {dt.toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' })}
                 </div>
               </div>
               {selectedPost.unit && (
-                <span style={{ marginLeft: 'auto', fontSize: 11, color: '#64748b', backgroundColor: '#f1f5f9', padding: '3px 8px', borderRadius: 99 }}>
-                  🏢 {selectedPost.unit.name}
+                <span style={{ marginLeft: 'auto', fontSize: 11, color: '#64748b', backgroundColor: '#f1f5f9', padding: '3px 8px', borderRadius: 99, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <Building style={{ width: 12, height: 12 }} /> {selectedPost.unit.name}
                 </span>
               )}
             </div>
@@ -258,7 +291,7 @@ export default function NewsScreenMobile({ onShowPoints }: NewsScreenMobileProps
       {/* Toast */}
       {toast.show && (
         <div style={{ position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 9999, backgroundColor: toastBg, color: '#fff', padding: '11px 22px', borderRadius: 14, fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.22)', animation: 'slideDown 0.3s ease', whiteSpace: 'nowrap' }}>
-          <span>{toastIcon}</span><span>{toast.msg}</span>
+          <ToastIcon style={{ width: 16, height: 16 }} /><span>{toast.msg}</span>
         </div>
       )}
 
@@ -276,7 +309,7 @@ export default function NewsScreenMobile({ onShowPoints }: NewsScreenMobileProps
           </div>
           {onShowPoints && (
             <button onClick={onShowPoints} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 20, color: 'white', fontSize: 13, fontWeight: 600, cursor: 'pointer', backdropFilter: 'blur(8px)' }}>
-              🏆 Điểm
+              <Award style={{ width: 16, height: 16 }} /> Điểm
             </button>
           )}
         </div>
@@ -284,26 +317,32 @@ export default function NewsScreenMobile({ onShowPoints }: NewsScreenMobileProps
         {/* Stats row */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
           {[
-            { n: posts.length,        label: 'Bài viết',  icon: '📋' },
-            { n: counts.ANNOUNCEMENT, label: 'Thông báo', icon: '📢' },
-            { n: counts.NEWS,         label: 'Tin tức',   icon: '📰' },
-            { n: counts.SUGGESTION,   label: 'Kiến nghị', icon: '💡' },
-          ].map(stat => (
-            <div key={stat.label} style={{ flex: 1, textAlign: 'center', background: 'rgba(255,255,255,0.12)', borderRadius: 14, padding: '10px 4px', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <div style={{ fontSize: 18, marginBottom: 2 }}>{stat.icon}</div>
-              <div style={{ fontSize: 17, fontWeight: 800 }}>{stat.n}</div>
-              <div style={{ fontSize: 9, opacity: 0.7, fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.5 }}>{stat.label}</div>
-            </div>
-          ))}
+            { n: posts.length,        label: 'Bài viết',  icon: FileText },
+            { n: counts.ANNOUNCEMENT, label: 'Thông báo', icon: Megaphone },
+            { n: counts.NEWS,         label: 'Tin tức',   icon: Newspaper },
+            { n: counts.SUGGESTION,   label: 'Kiến nghị', icon: Lightbulb },
+          ].map(stat => {
+            const Icon = stat.icon
+            return (
+              <div key={stat.label} style={{ flex: 1, textAlign: 'center', background: 'rgba(255,255,255,0.12)', borderRadius: 14, padding: '10px 4px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
+                  <Icon style={{ width: 18, height: 18 }} />
+                </div>
+                <div style={{ fontSize: 17, fontWeight: 800 }}>{stat.n}</div>
+                <div style={{ fontSize: 9, opacity: 0.7, fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.5 }}>{stat.label}</div>
+              </div>
+            )
+          })}
         </div>
 
         {/* Filter tabs */}
         <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 14, scrollbarWidth: 'none' } as any}>
           {FILTERS.map(f => {
             const active = activeFilter === f.key
+            const Icon = f.icon
             return (
               <button key={f.key} onClick={() => setActiveFilter(f.key as any)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 99, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', fontSize: 13, fontWeight: active ? 700 : 500, background: active ? 'white' : 'rgba(255,255,255,0.15)', color: active ? '#dc2626' : 'rgba(255,255,255,0.9)', flexShrink: 0, transition: 'all 0.15s', boxShadow: active ? '0 2px 8px rgba(0,0,0,0.15)' : 'none' }}>
-                <span>{f.icon}</span>
+                <Icon style={{ width: 14, height: 14 }} />
                 <span>{f.label}</span>
                 {f.count > 0 && <span style={{ fontSize: 10, fontWeight: 700, background: active ? '#fecaca' : 'rgba(255,255,255,0.25)', color: active ? '#dc2626' : 'white', padding: '1px 6px', borderRadius: 99 }}>{f.count}</span>}
               </button>
@@ -315,7 +354,7 @@ export default function NewsScreenMobile({ onShowPoints }: NewsScreenMobileProps
       {/* Search bar */}
       <div style={{ background: 'white', padding: '10px 16px', borderBottom: '1px solid #f1f5f9' }}>
         <div style={{ position: 'relative' }}>
-          <span style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', fontSize: 14, color: '#94a3b8' }}>🔍</span>
+          <Search style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', width: 16, height: 16, color: '#94a3b8' }} />
           <input
             value={searchText}
             onChange={e => setSearchText(e.target.value)}
@@ -323,7 +362,9 @@ export default function NewsScreenMobile({ onShowPoints }: NewsScreenMobileProps
             style={{ width: '100%', padding: '10px 36px 10px 38px', border: '1.5px solid #e2e8f0', borderRadius: 12, fontSize: 14, outline: 'none', boxSizing: 'border-box', background: '#f8fafc', color: '#0f172a' }}
           />
           {searchText && (
-            <button onClick={() => setSearchText('')} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: '#e2e8f0', border: 'none', borderRadius: '50%', width: 20, height: 20, cursor: 'pointer', fontSize: 11, color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+            <button onClick={() => setSearchText('')} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: '#e2e8f0', border: 'none', borderRadius: '50%', width: 20, height: 20, cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <X style={{ width: 12, height: 12 }} />
+            </button>
           )}
         </div>
       </div>
@@ -331,18 +372,21 @@ export default function NewsScreenMobile({ onShowPoints }: NewsScreenMobileProps
       {/* ===== FEED ===== */}
       {filteredPosts.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '56px 24px' }}>
-          <div style={{ fontSize: 56, marginBottom: 12 }}>{activeFilter === 'mine' ? '✍️' : '📭'}</div>
+          <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+            <FileText style={{ width: 28, height: 28, color: '#94a3b8' }} />
+          </div>
           <div style={{ fontSize: 16, fontWeight: 600, color: '#64748b', marginBottom: 6 }}>
             {activeFilter === 'mine' ? 'Bạn chưa có bài viết nào' : 'Không có bài viết'}
           </div>
           <div style={{ fontSize: 13, color: '#94a3b8' }}>
-            {activeFilter === 'mine' ? 'Nhấn nút ✏️ bên dưới để đăng bài' : searchText ? 'Thử tìm kiếm với từ khóa khác' : 'Chưa có nội dung trong mục này'}
+            {activeFilter === 'mine' ? 'Nhấn nút đăng bài bên dưới để tạo bài viết' : searchText ? 'Thử tìm kiếm với từ khóa khác' : 'Chưa có nội dung trong mục này'}
           </div>
         </div>
       ) : (
         <div style={{ padding: '10px 0 16px' }}>
           {paginatedPosts.map((post, idx) => {
             const t = POST_TYPES[post.postType as keyof typeof POST_TYPES] || POST_TYPES.NEWS
+            const TypeIcon = t.icon
             const isPending = post.status === 'PENDING'
             const isAnnouncement = post.postType === 'ANNOUNCEMENT'
             const dateStr = post.publishedAt || post.createdAt
@@ -366,7 +410,7 @@ export default function NewsScreenMobile({ onShowPoints }: NewsScreenMobileProps
                 {/* Pending overlay — blocks interaction & blurs content */}
                 {isPending && (
                   <div style={{ position: 'absolute', inset: 0, zIndex: 3, background: 'rgba(255,255,255,0.55)', backdropFilter: 'blur(2.5px)', WebkitBackdropFilter: 'blur(2.5px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6 } as any}>
-                    <span style={{ fontSize: 28 }}>⏳</span>
+                    <Clock style={{ width: 28, height: 28, color: '#d97706' }} />
                     <span style={{ fontSize: 13, fontWeight: 700, color: '#92400e', background: '#fef3c7', padding: '4px 14px', borderRadius: 99, border: '1px solid #fde68a' }}>Đang chờ Admin duyệt</span>
                     <span style={{ fontSize: 11, color: '#94a3b8' }}>Bài viết sẽ hiển thị sau khi được duyệt</span>
                   </div>
@@ -375,14 +419,18 @@ export default function NewsScreenMobile({ onShowPoints }: NewsScreenMobileProps
                 <div style={{ padding: isAnnouncement ? '14px 16px' : '13px 14px' }}>
                   {/* Top row */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 9 }}>
-                    <span style={{ padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700, backgroundColor: t.bg, color: t.color, border: `1px solid ${t.border}` }}>
-                      {t.icon} {t.label}
+                    <span style={{ padding: '3px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700, backgroundColor: t.bg, color: t.color, border: `1px solid ${t.border}`, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <TypeIcon style={{ width: 12, height: 12 }} /> {t.label}
                     </span>
                     {isNew(post.createdAt) && (
-                      <span style={{ padding: '2px 8px', borderRadius: 99, fontSize: 10, fontWeight: 700, backgroundColor: '#fef3c7', color: '#b45309' }}>🆕</span>
+                      <span style={{ padding: '2px 8px', borderRadius: 99, fontSize: 10, fontWeight: 700, backgroundColor: '#fef3c7', color: '#b45309', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                        <Sparkles style={{ width: 10, height: 10 }} /> Mới
+                      </span>
                     )}
                     {isPending && (
-                      <span style={{ padding: '2px 8px', borderRadius: 99, fontSize: 10, fontWeight: 700, backgroundColor: '#fef3c7', color: '#d97706', animation: 'pulse 2s infinite' }}>⏳ Chờ duyệt</span>
+                      <span style={{ padding: '2px 8px', borderRadius: 99, fontSize: 10, fontWeight: 700, backgroundColor: '#fef3c7', color: '#d97706', animation: 'pulse 2s infinite', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <Clock style={{ width: 10, height: 10 }} /> Chờ duyệt
+                      </span>
                     )}
                     <span style={{ marginLeft: 'auto', fontSize: 11, color: '#94a3b8', whiteSpace: 'nowrap' }}>{timeAgo(dateStr)}</span>
                   </div>
@@ -403,7 +451,11 @@ export default function NewsScreenMobile({ onShowPoints }: NewsScreenMobileProps
                       {initials(post.author?.fullName)}
                     </div>
                     <span style={{ fontSize: 12, color: '#64748b', fontWeight: 500 }}>{post.author?.fullName || 'Ẩn danh'}</span>
-                    {post.unit && <span style={{ fontSize: 11, color: '#94a3b8', marginLeft: 'auto' }}>🏢 {post.unit.name}</span>}
+                    {post.unit && (
+                      <span style={{ fontSize: 11, color: '#94a3b8', marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                        <Building style={{ width: 11, height: 11 }} /> {post.unit.name}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -432,8 +484,8 @@ export default function NewsScreenMobile({ onShowPoints }: NewsScreenMobileProps
       {/* ===== FAB ===== */}
       <button
         onClick={() => setShowCreate(true)}
-        style={{ position: 'fixed', bottom: 86, right: 20, width: 54, height: 54, borderRadius: '50%', background: 'linear-gradient(135deg, #dc2626, #b91c1c)', border: 'none', color: 'white', fontSize: 22, cursor: 'pointer', boxShadow: '0 6px 20px rgba(220,38,38,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-        ✏️
+        style={{ position: 'fixed', bottom: 86, right: 20, width: 54, height: 54, borderRadius: '50%', background: 'linear-gradient(135deg, #dc2626, #b91c1c)', border: 'none', color: 'white', cursor: 'pointer', boxShadow: '0 6px 20px rgba(220,38,38,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+        <PenSquare style={{ width: 22, height: 22 }} />
       </button>
 
       {/* ===== CREATE POST MODAL ===== */}
@@ -446,10 +498,15 @@ export default function NewsScreenMobile({ onShowPoints }: NewsScreenMobileProps
             {/* Modal header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px 14px', borderBottom: '1px solid #f1f5f9', position: 'sticky', top: 0, background: 'white', zIndex: 1, borderRadius: '24px 24px 0 0' }}>
               <div>
-                <h2 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a' }}>✍️ Đăng bài viết</h2>
+                <h2 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <PenSquare style={{ width: 20, height: 20, color: '#dc2626' }} />
+                  Đăng bài viết
+                </h2>
                 <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>Bài viết sẽ được Admin xét duyệt trước khi hiển thị</p>
               </div>
-              <button onClick={() => setShowCreate(false)} style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: '#f1f5f9', cursor: 'pointer', fontSize: 16, color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>✕</button>
+              <button onClick={() => setShowCreate(false)} style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: '#f1f5f9', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <X style={{ width: 18, height: 18 }} />
+              </button>
             </div>
 
             <div style={{ padding: '16px 20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -459,10 +516,11 @@ export default function NewsScreenMobile({ onShowPoints }: NewsScreenMobileProps
                 <div style={{ display: 'flex', gap: 8 }}>
                   {(['NEWS', 'SUGGESTION'] as const).map(type => {
                     const info = POST_TYPES[type]
+                    const Icon = info.icon
                     const active = form.postType === type
                     return (
                       <button key={type} onClick={() => setForm(f => ({ ...f, postType: type }))} style={{ flex: 1, padding: '10px 8px', borderRadius: 14, border: `2px solid ${active ? info.color : '#e2e8f0'}`, background: active ? info.bg : 'white', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                        <span style={{ fontSize: 20 }}>{info.icon}</span>
+                        <Icon style={{ width: 22, height: 22, color: active ? info.color : '#64748b' }} />
                         <span style={{ fontSize: 12, fontWeight: 700, color: active ? info.color : '#64748b' }}>{info.label}</span>
                       </button>
                     )
@@ -499,7 +557,7 @@ export default function NewsScreenMobile({ onShowPoints }: NewsScreenMobileProps
 
               {/* Info notice */}
               <div style={{ background: '#eff6ff', borderRadius: 12, padding: '10px 14px', display: 'flex', gap: 8, border: '1px solid #bfdbfe' }}>
-                <span style={{ fontSize: 15, flexShrink: 0 }}>ℹ️</span>
+                <Info style={{ width: 16, height: 16, color: '#1d4ed8', flexShrink: 0, marginTop: 1 }} />
                 <div style={{ fontSize: 12, color: '#1d4ed8', lineHeight: 1.5 }}>
                   Bài viết loại <strong>Tin tức</strong> và <strong>Kiến nghị</strong> sẽ gửi Admin xét duyệt trước khi hiển thị.
                 </div>
@@ -509,8 +567,18 @@ export default function NewsScreenMobile({ onShowPoints }: NewsScreenMobileProps
               <button
                 onClick={handleCreatePost}
                 disabled={creating || !form.title.trim() || !form.content.trim()}
-                style={{ width: '100%', padding: '14px', borderRadius: 14, border: 'none', background: (creating || !form.title.trim() || !form.content.trim()) ? '#e2e8f0' : 'linear-gradient(135deg, #dc2626, #b91c1c)', color: (creating || !form.title.trim() || !form.content.trim()) ? '#94a3b8' : 'white', fontSize: 16, fontWeight: 700, cursor: (creating || !form.title.trim() || !form.content.trim()) ? 'not-allowed' : 'pointer', boxShadow: (creating || !form.title.trim() || !form.content.trim()) ? 'none' : '0 4px 14px rgba(220,38,38,0.3)' }}>
-                {creating ? '⏳ Đang gửi...' : '🚀 Gửi bài viết'}
+                style={{ width: '100%', padding: '14px', borderRadius: 14, border: 'none', background: (creating || !form.title.trim() || !form.content.trim()) ? '#e2e8f0' : 'linear-gradient(135deg, #dc2626, #b91c1c)', color: (creating || !form.title.trim() || !form.content.trim()) ? '#94a3b8' : 'white', fontSize: 16, fontWeight: 700, cursor: (creating || !form.title.trim() || !form.content.trim()) ? 'not-allowed' : 'pointer', boxShadow: (creating || !form.title.trim() || !form.content.trim()) ? 'none' : '0 4px 14px rgba(220,38,38,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                {creating ? (
+                  <>
+                    <span style={{ width: 16, height: 16, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }}></span>
+                    Đang gửi...
+                  </>
+                ) : (
+                  <>
+                    <Send style={{ width: 18, height: 18 }} />
+                    Gửi bài viết
+                  </>
+                )}
               </button>
             </div>
           </div>

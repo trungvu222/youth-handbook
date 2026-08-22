@@ -64,6 +64,31 @@ const sendNotification = async (req, res, next) => {
   }
 };
 
+// Normalize notification message timestamps to Vietnam Time (Asia/Ho_Chi_Minh - UTC+7)
+const normalizeNotificationMessage = (msg) => {
+  if (!msg || typeof msg !== 'string') return msg;
+  // Match patterns like "vào lúc 02:00:00 16/8/2026" or "vào lúc 00:00:00 25/8/2026"
+  return msg.replace(/vào lúc\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s+(\d{1,2})\/(\d{1,2})\/(\d{4})/gi, (match, hourStr, minStr, secStr, dayStr, monthStr, yearStr) => {
+    if (secStr !== undefined) {
+      // Server formatted with seconds in UTC without timezone offset -> Convert to Vietnam UTC+7
+      const h = parseInt(hourStr, 10);
+      const m = parseInt(minStr, 10);
+      const d = parseInt(dayStr, 10);
+      const mo = parseInt(monthStr, 10) - 1;
+      const y = parseInt(yearStr, 10);
+      const utcDate = new Date(Date.UTC(y, mo, d, h, m));
+      const vnDate = new Date(utcDate.getTime() + 7 * 60 * 60 * 1000);
+      const localH = String(vnDate.getUTCHours()).padStart(2, '0');
+      const localM = String(vnDate.getUTCMinutes()).padStart(2, '0');
+      const localD = String(vnDate.getUTCDate()).padStart(2, '0');
+      const localMo = String(vnDate.getUTCMonth() + 1).padStart(2, '0');
+      const localY = vnDate.getUTCFullYear();
+      return `vào lúc ${localH}:${localM} ${localD}/${localMo}/${localY}`;
+    }
+    return `vào lúc ${hourStr.padStart(2, '0')}:${minStr} ${dayStr.padStart(2, '0')}/${monthStr.padStart(2, '0')}/${yearStr}`;
+  });
+};
+
 // @desc    Get user notifications
 // @route   GET /api/notifications
 // @access  Private
@@ -79,9 +104,14 @@ const getNotifications = async (req, res, next) => {
       take: 50 // Limit to 50 most recent
     });
 
+    const formattedNotifications = notifications.map(n => ({
+      ...n,
+      message: normalizeNotificationMessage(n.message)
+    }));
+
     res.status(200).json({
       success: true,
-      data: notifications
+      data: formattedNotifications
     });
 
   } catch (error) {

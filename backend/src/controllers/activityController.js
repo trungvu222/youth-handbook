@@ -2,6 +2,22 @@ const prisma = require('../lib/prisma');
 const { broadcastCheckin } = require('../utils/attendanceEvents');
 const crypto = require('crypto');
 
+// Format date/time strictly in Vietnam Timezone (Asia/Ho_Chi_Minh - UTC+7)
+const formatVietnamDateTime = (dateInput) => {
+  if (!dateInput) return '';
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleString('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    hour: '2-digit',
+    minute: '2-digit',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour12: false
+  });
+};
+
 // @desc    Get all activities
 // @route   GET /api/activities
 // @access  Private
@@ -13,8 +29,10 @@ const getActivities = async (req, res, next) => {
       type,
       startDate,
       endDate,
+      sortBy = 'startTime',
+      sortOrder = 'desc',
       page = 1, 
-      limit = 20 
+      limit = 100 
     } = req.query;
 
     const currentUser = req.user;
@@ -70,6 +88,9 @@ const getActivities = async (req, res, next) => {
     }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
+    const validSortFields = ['startTime', 'endTime', 'createdAt', 'title'];
+    const orderField = validSortFields.includes(sortBy) ? sortBy : 'startTime';
+    const orderDirection = sortOrder === 'asc' ? 'asc' : 'desc';
 
     const [activities, total] = await Promise.all([
       prisma.activity.findMany({
@@ -97,15 +118,15 @@ const getActivities = async (req, res, next) => {
         },
         skip,
         take: parseInt(limit),
-        orderBy: { createdAt: 'desc' }
+        orderBy: { [orderField]: orderDirection }
       }),
       prisma.activity.count({ where: whereClause })
     ]);
 
-    // Auto-expire: update ACTIVE activities whose endTime has passed → COMPLETED
+    // Auto-expire: update ACTIVE/DRAFT activities whose endTime has passed → COMPLETED
     const now = new Date();
     const expiredIds = activities
-      .filter(a => a.status === 'ACTIVE' && a.endTime && new Date(a.endTime) < now)
+      .filter(a => (a.status === 'ACTIVE' || a.status === 'DRAFT') && a.endTime && new Date(a.endTime) < now)
       .map(a => a.id);
     if (expiredIds.length > 0) {
       await prisma.activity.updateMany({
@@ -117,11 +138,14 @@ const getActivities = async (req, res, next) => {
       });
     }
 
-    // Add userParticipation field for current user (so mobile knows if user is registered)
+    // Add userParticipation and viewCount fields
     const activitiesWithUserParticipation = activities.map(activity => {
       const userParticipation = activity.participants.find(p => p.userId === currentUser.id) || null;
+      const tasksObj = (activity.tasks && typeof activity.tasks === 'object' && !Array.isArray(activity.tasks)) ? activity.tasks : {};
+      const viewCount = tasksObj.viewCount !== undefined ? Number(tasksObj.viewCount) : (activity.maxParticipants || 150);
       return {
         ...activity,
+        viewCount,
         userParticipation
       };
     });
@@ -260,6 +284,21 @@ const createActivity = async (req, res, next) => {
       notifyUserIds
     } = req.body;
 
+    // Validate time
+    if (!startTime) {
+      return res.status(400).json({
+        success: false,
+        error: 'Thời gian bắt đầu không được để trống'
+      });
+    }
+
+    if (endTime && new Date(endTime) < new Date(startTime)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Thời gian kết thúc không thể trước thời gian bắt đầu'
+      });
+    }
+
     // Validate permissions
     if (currentUser.role === 'LEADER' && unitId !== currentUser.unitId) {
       return res.status(403).json({
@@ -270,6 +309,30 @@ const createActivity = async (req, res, next) => {
 
     // Generate QR code for check-in
     const qrCode = crypto.randomUUID();
+
+    // Determine initial status
+    let initialStatus = 'ACTIVE';
+    const now = new Date();
+    const start = new Date(startTime);
+    const end = endTime ? new Date(endTime) : null;
+    if (req.body.status && ['DRAFT', 'ACTIVE', 'COMPLETED', 'CANCELLED'].includes(req.body.status)) {
+      initialStatus = req.body.status;
+    } else {
+      if (end && now > end) {
+        initialStatus = 'COMPLETED';
+      } else if (now < start) {
+        initialStatus = 'DRAFT';
+      } else {
+        initialStatus = 'ACTIVE';
+      }
+    }
+
+    const tasksData = (req.body.tasks && typeof req.body.tasks === 'object') ? req.body.tasks : {};
+    if (req.body.viewCount !== undefined) {
+      tasksData.viewCount = parseInt(req.body.viewCount) || 150;
+    } else {
+      tasksData.viewCount = 150;
+    }
 
     const activity = await prisma.activity.create({
       data: {
@@ -292,7 +355,8 @@ const createActivity = async (req, res, next) => {
         feedbackPoints: feedbackPoints || 5,
         pointsReward: pointsReward || 10,
         qrCode,
-        status: 'ACTIVE',
+        status: initialStatus,
+        tasks: tasksData,
         // New fields
         hostUnit: hostUnit || null,
         managerId: managerId || null,
@@ -312,13 +376,16 @@ const createActivity = async (req, res, next) => {
       }
     });
 
-    // Auto-register attendees if provided
+    // Auto-checkin attendees if provided
     if (attendeeIds && attendeeIds.length > 0) {
       await prisma.activityParticipant.createMany({
         data: attendeeIds.map(userId => ({
           activityId: activity.id,
           userId,
-          status: 'REGISTERED'
+          status: 'CHECKED_IN',
+          checkInTime: new Date(startTime),
+          pointsEarned: pointsReward || 10,
+          qrData: 'ADMIN_CHECKIN'
         })),
         skipDuplicates: true
       });
@@ -340,11 +407,12 @@ const createActivity = async (req, res, next) => {
 
       // Create notifications
       if (usersToNotify.length > 0) {
+        const timeFormatted = formatVietnamDateTime(startTime);
         await prisma.notification.createMany({
           data: usersToNotify.map(user => ({
             userId: user.id,
             title: `Thông báo mời họp: ${title}`,
-            message: `Bạn được mời tham dự hoạt động "${title}" vào lúc ${new Date(startTime).toLocaleString('vi-VN')}${location ? ` tại ${location}` : ''}.`,
+            message: `Bạn được mời tham dự hoạt động "${title}" vào lúc ${timeFormatted}${location ? ` tại ${location}` : ''}.`,
             type: 'ACTIVITY'
           })),
           skipDuplicates: true
@@ -434,7 +502,7 @@ const joinActivity = async (req, res, next) => {
         userId: currentUser.id,
         type: 'REMINDER',
         title: 'Nhắc lịch sinh hoạt',
-        message: `Bạn có lịch sinh hoạt "${activity.title}" vào ngày mai lúc ${activity.startTime.toLocaleString('vi-VN')}`,
+        message: `Bạn có lịch sinh hoạt "${activity.title}" vào ngày mai lúc ${formatVietnamDateTime(activity.startTime)}`,
         scheduledAt: reminderTime
       }
     });
@@ -1227,6 +1295,16 @@ const updateActivity = async (req, res, next) => {
       });
     }
 
+    // Validate start and end time if updated
+    const finalStartTime = startTime !== undefined ? new Date(startTime) : new Date(activity.startTime);
+    const finalEndTime = endTime !== undefined ? (endTime ? new Date(endTime) : null) : (activity.endTime ? new Date(activity.endTime) : null);
+    if (finalEndTime && finalStartTime && finalEndTime < finalStartTime) {
+      return res.status(400).json({
+        success: false,
+        error: 'Thời gian kết thúc không thể trước thời gian bắt đầu'
+      });
+    }
+
     const validStatuses = ['DRAFT', 'ACTIVE', 'COMPLETED', 'CANCELLED'];
     
     const updateData = {};
@@ -1237,7 +1315,20 @@ const updateActivity = async (req, res, next) => {
     if (endTime !== undefined) updateData.endTime = new Date(endTime);
     if (location !== undefined) updateData.location = location;
     if (pointsReward !== undefined) updateData.pointsReward = parseInt(pointsReward);
-    if (status !== undefined && validStatuses.includes(status)) updateData.status = status;
+    
+    if (status === 'AUTO') {
+      const now = new Date();
+      if (finalEndTime && now > finalEndTime) {
+        updateData.status = 'COMPLETED';
+      } else if (now < finalStartTime) {
+        updateData.status = 'DRAFT';
+      } else {
+        updateData.status = 'ACTIVE';
+      }
+    } else if (status !== undefined && validStatuses.includes(status)) {
+      updateData.status = status;
+    }
+
     if (conclusion !== undefined) updateData.conclusion = conclusion;
     if (hostUnit !== undefined) updateData.hostUnit = hostUnit;
     // managerId: empty string means unset, null means unset, only set if valid ID
@@ -1247,6 +1338,67 @@ const updateActivity = async (req, res, next) => {
     if (attachments !== undefined) updateData.attachments = attachments; // JSON array of files
     if (req.body.lateThresholdMinutes !== undefined) {
       updateData.lateThresholdMinutes = parseInt(req.body.lateThresholdMinutes) || 15;
+    }
+
+    if (req.body.viewCount !== undefined) {
+      const currentTasks = (activity.tasks && typeof activity.tasks === 'object' && !Array.isArray(activity.tasks)) ? activity.tasks : {};
+      updateData.tasks = { ...currentTasks, viewCount: parseInt(req.body.viewCount) || 0 };
+    }
+
+    // Update attendees / participants if attendeeIds array is provided
+    const { attendeeIds } = req.body;
+    if (attendeeIds !== undefined && Array.isArray(attendeeIds)) {
+      const actStartTime = startTime ? new Date(startTime) : activity.startTime;
+      const ptsReward = pointsReward !== undefined ? parseInt(pointsReward) : (activity.pointsReward || 10);
+
+      // Upsert selected users as CHECKED_IN
+      for (const userId of attendeeIds) {
+        const existing = await prisma.activityParticipant.findUnique({
+          where: {
+            activityId_userId: {
+              activityId: id,
+              userId
+            }
+          }
+        });
+
+        if (existing) {
+          if (existing.status !== 'CHECKED_IN') {
+            await prisma.activityParticipant.update({
+              where: {
+                activityId_userId: {
+                  activityId: id,
+                  userId
+                }
+              },
+              data: {
+                status: 'CHECKED_IN',
+                checkInTime: existing.checkInTime || actStartTime || new Date(),
+                pointsEarned: existing.pointsEarned || ptsReward
+              }
+            });
+          }
+        } else {
+          await prisma.activityParticipant.create({
+            data: {
+              activityId: id,
+              userId,
+              status: 'CHECKED_IN',
+              checkInTime: actStartTime || new Date(),
+              pointsEarned: ptsReward,
+              qrData: 'ADMIN_CHECKIN'
+            }
+          });
+        }
+      }
+
+      // Remove unselected participants
+      await prisma.activityParticipant.deleteMany({
+        where: {
+          activityId: id,
+          userId: { notIn: attendeeIds }
+        }
+      });
     }
 
     const updatedActivity = await prisma.activity.update({

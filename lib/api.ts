@@ -296,13 +296,18 @@ async function apiCall<T>(
     console.log("[API] Method:", options.method || "GET");
 
     // Add Content-Type header for JSON requests and force no-cache
-    const headers = {
+    const authToken = getAuthToken();
+    const headers: Record<string, string> = {
       "Content-Type": "application/json",
       "Cache-Control": "no-cache, no-store, must-revalidate",
       Pragma: "no-cache",
       Expires: "0",
-      ...options.headers,
+      ...(options.headers as Record<string, string>),
     };
+
+    if (authToken && !headers["Authorization"] && !headers["authorization"]) {
+      headers["Authorization"] = `Bearer ${authToken}`;
+    }
 
     const response = await fetch(url, {
       ...options,
@@ -617,9 +622,31 @@ async function mockApiCall<T>(
 // Get stored auth token
 export function getAuthToken(): string | null {
   if (typeof window === "undefined") return null;
-  return (
-    localStorage.getItem("accessToken") || localStorage.getItem("auth_token")
-  );
+  const token =
+    localStorage.getItem("accessToken") ||
+    localStorage.getItem("auth_token") ||
+    localStorage.getItem("token") ||
+    sessionStorage.getItem("accessToken") ||
+    sessionStorage.getItem("auth_token") ||
+    sessionStorage.getItem("token");
+
+  if (token) return token;
+
+  // Check document.cookie
+  if (typeof document !== "undefined" && document.cookie) {
+    const cookies = document.cookie.split("; ");
+    for (const cookie of cookies) {
+      const [name, value] = cookie.split("=");
+      if (
+        (name === "accessToken" || name === "auth_token" || name === "token") &&
+        value
+      ) {
+        return decodeURIComponent(value);
+      }
+    }
+  }
+
+  return null;
 }
 
 // Get stored user
@@ -1801,14 +1828,7 @@ export const ratingApi = {
   },
 
   // Admin methods
-  async createRatingPeriod(periodData: {
-    title: string;
-    description: string;
-    startDate: string;
-    endDate: string;
-    criteria: RatingCriteria[];
-    scope?: string;
-  }): Promise<ApiResponse<RatingPeriod>> {
+  async createRatingPeriod(periodData: any): Promise<ApiResponse<RatingPeriod>> {
     const token = getAuthToken();
     if (!token) {
       return { success: false, error: "Không có token" };
@@ -1840,6 +1860,25 @@ export const ratingApi = {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(periodData),
+    });
+  },
+
+  async updateRatingLevel(
+    id: string,
+    rating: "EXCELLENT" | "GOOD" | "AVERAGE" | "POOR" | string,
+  ): Promise<ApiResponse<any>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: "Không có token" };
+    }
+
+    return apiCall(`/rating/ratings/${id}/level`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ rating }),
     });
   },
 
@@ -2492,6 +2531,25 @@ export const documentApi = {
     });
   },
 
+  async updateDocumentStats(
+    id: string,
+    stats: { viewCount?: number; downloadCount?: number },
+  ): Promise<ApiResponse<Document>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: "Không có token" };
+    }
+
+    return apiCall(`/documents/${id}/stats`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(stats),
+    });
+  },
+
   async deleteDocument(id: string): Promise<ApiResponse<void>> {
     const token = getAuthToken();
     if (!token) {
@@ -2568,6 +2626,14 @@ interface Exam {
   updatedAt: string;
 }
 
+interface StartExamResponse {
+  attemptId: string;
+  exam?: Partial<Exam>;
+  questions: any[];
+  startedAt?: string;
+  [key: string]: any;
+}
+
 interface ExamQuestion {
   id: string;
   examId: string;
@@ -2617,13 +2683,12 @@ export const examApi = {
     }
 
     const searchParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          searchParams.append(key, value.toString());
-        }
-      });
-    }
+    if (params?.status) searchParams.append("status", params.status);
+    if (params?.category) searchParams.append("category", params.category);
+    if (params?.search) searchParams.append("search", params.search);
+    if (params?.unitId) searchParams.append("unitId", params.unitId);
+    if (params?.limit) searchParams.append("limit", params.limit.toString());
+    if (params?.offset) searchParams.append("offset", params.offset.toString());
 
     return apiCall(`/exams?${searchParams.toString()}`, {
       headers: {
@@ -2645,7 +2710,7 @@ export const examApi = {
     });
   },
 
-  async startExam(id: string): Promise<ApiResponse<ExamAttempt>> {
+  async startExam(id: string): Promise<ApiResponse<StartExamResponse>> {
     const token = getAuthToken();
     if (!token) {
       return { success: false, error: "Không có token" };
@@ -2712,8 +2777,46 @@ export const examApi = {
       return { success: false, error: "Không có token" };
     }
 
-    const params = examId ? `?examId=${examId}` : "";
+    if (examId) {
+      return apiCall(`/exams/${examId}/leaderboard`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+    }
+
+    return apiCall(`/exams/leaderboard`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+
+  async getExamLeaderboard(examId: string): Promise<ApiResponse<any>> {
+    return this.getLeaderboard(examId);
+  },
+
+  async getGeneralLeaderboard(timeRange?: string): Promise<ApiResponse<any>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: "Không có token" };
+    }
+
+    const params = timeRange ? `?timeRange=${timeRange}` : "";
     return apiCall(`/exams/leaderboard${params}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  },
+
+  async getExamAttempt(attemptId: string): Promise<ApiResponse<any>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: "Không có token" };
+    }
+
+    return apiCall(`/exams/attempts/${attemptId}`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -3345,6 +3448,74 @@ export const bookApi = {
     return apiCall('/books/my-borrows', {
       headers: {
         'Authorization': `Bearer ${token}`,
+      },
+    });
+  },
+
+  // Create manual borrowing records (Admin)
+  async createManualBorrowings(data: {
+    bookId: string;
+    userIds: string[];
+    borrowedAt?: string;
+    expectedReturnDate?: string;
+    returnedAt?: string | null;
+    status?: string;
+    note?: string;
+  }): Promise<ApiResponse<any>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: "Không có token" };
+    }
+
+    return apiCall("/books/admin/borrowings", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Update borrowing record (Admin)
+  async updateBorrowing(
+    id: string,
+    data: {
+      bookId?: string;
+      userId?: string;
+      borrowedAt?: string;
+      expectedReturnDate?: string;
+      returnedAt?: string | null;
+      status?: string;
+      note?: string;
+    },
+  ): Promise<ApiResponse<any>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: "Không có token" };
+    }
+
+    return apiCall(`/books/admin/borrowings/${id}`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Delete borrowing record (Admin)
+  async deleteBorrowing(id: string): Promise<ApiResponse<void>> {
+    const token = getAuthToken();
+    if (!token) {
+      return { success: false, error: "Không có token" };
+    }
+
+    return apiCall(`/books/admin/borrowings/${id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
       },
     });
   },
