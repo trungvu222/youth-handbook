@@ -101,7 +101,7 @@ export function AdminShell({ children }: AdminShellProps) {
     { id: 'points', label: 'Điểm rèn luyện', icon: Trophy, path: '/admin/points', roles: ['ADMIN', 'LEADER'] },
     { id: 'documents', label: 'Văn bản số', icon: FileText, path: '/admin/documents', roles: ['ADMIN'] },
     { id: 'exams', label: 'Kiểm tra tìm hiểu', icon: BookOpen, path: '/admin/exams', roles: ['ADMIN'] },
-    { id: 'suggestions', label: 'Giải quyết khiếu nại, kiến nghị, phản ánh, tố cáo', icon: MessageSquare, path: '/admin/suggestions', roles: ['ADMIN', 'LEADER'] },
+    { id: 'suggestions', label: 'Giải quyết khiếu nại, kiến nghị', icon: MessageSquare, path: '/admin/suggestions', roles: ['ADMIN', 'LEADER'] },
     { id: 'news', label: 'Bảng tin', icon: Newspaper, path: '/admin/news', badge: pendingPostsCount, roles: ['ADMIN'] },
     { id: 'surveys', label: 'Khảo sát ý kiến', icon: ClipboardList, path: '/admin/surveys', roles: ['ADMIN'] },
     { id: 'reports', label: 'Báo cáo thống kê', icon: BarChart3, path: '/admin/reports', roles: ['ADMIN'] },

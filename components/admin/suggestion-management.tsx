@@ -394,10 +394,10 @@ export default function SuggestionManagement() {
             <div className="p-2.5 bg-white/20 rounded-xl backdrop-blur-sm">
               <MessageSquare className="h-6 w-6 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-white">Giải quyết khiếu nại, kiến nghị, phản ánh, tố cáo</h1>
+            <h1 className="text-2xl font-bold text-white">Giải quyết khiếu nại, kiến nghị</h1>
           </div>
           <p className="text-blue-100 sm:ml-14">
-            Xem, phản hồi và theo dõi tiến độ giải quyết khiếu nại, kiến nghị, phản ánh, tố cáo từ đoàn viên
+            Xem, phản hồi và theo dõi tiến độ giải quyết khiếu nại, kiến nghị từ đoàn viên
           </p>
         </div>
       </div>

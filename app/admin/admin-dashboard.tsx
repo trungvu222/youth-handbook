@@ -387,7 +387,7 @@ export default function AdminDashboard() {
     },
     {
       id: "suggestions",
-      label: "Giải quyết khiếu nại, kiến nghị, phản ánh, tố cáo",
+      label: "Giải quyết khiếu nại, kiến nghị",
       icon: MessageSquare,
       path: "/admin/suggestions",
     },
