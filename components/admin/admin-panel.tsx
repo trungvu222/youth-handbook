@@ -38,7 +38,7 @@ export function AdminPanel({ onBack }: AdminPanelProps) {
           <TabsTrigger value="posts">Bài viết</TabsTrigger>
           <TabsTrigger value="surveys">Khảo sát</TabsTrigger>
           <TabsTrigger value="rating">Xếp loại</TabsTrigger>
-          <TabsTrigger value="suggestions">Giải quyết khiếu nại, kiến nghị</TabsTrigger>
+          <TabsTrigger value="suggestions">Giải quyết khiếu nại, kiến nghị, phản ánh, tố cáo</TabsTrigger>
           <TabsTrigger value="qr">QR Code</TabsTrigger>
         </TabsList>
 
