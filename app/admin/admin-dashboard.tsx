@@ -369,7 +369,7 @@ export default function AdminDashboard() {
     },
     {
       id: "documents",
-      label: "Tài liệu đoàn",
+      label: "Văn bản số",
       icon: FileText,
       path: "/admin/documents",
     },
@@ -387,7 +387,7 @@ export default function AdminDashboard() {
     },
     {
       id: "suggestions",
-      label: "Kiến nghị",
+      label: "Giải quyết khiếu nại, kiến nghị",
       icon: MessageSquare,
       path: "/admin/suggestions",
     },

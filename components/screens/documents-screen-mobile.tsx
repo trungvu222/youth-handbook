@@ -417,7 +417,7 @@ export default function DocumentsScreenMobile({ initialDocumentId, onDocumentOpe
           <div>
             <h1 style={{ fontSize: '22px', fontWeight: 800, letterSpacing: '0.2px', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
               <FileText style={{ width: 22, height: 22 }} />
-              <span>Tài liệu</span>
+              <span>Văn bản số</span>
             </h1>
             <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.75)', margin: '3px 0 0' }}>Kho văn bản, quy định & hướng dẫn</p>
           </div>
