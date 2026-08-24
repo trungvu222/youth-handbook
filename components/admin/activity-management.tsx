@@ -2346,7 +2346,7 @@ export default function ActivityManagement() {
               }}
             >
               <UserCheck className="h-4 w-4 mr-1.5" />
-              Điểm danh hộ / Sửa danh sách ({activityStats?.checkedIn || selectedAttendees.length || 0}/{users.length})
+              Sửa danh sách ({activityStats?.checkedIn || selectedAttendees.length || 0}/{users.length})
             </Button>
             <Button 
               variant="default" 
