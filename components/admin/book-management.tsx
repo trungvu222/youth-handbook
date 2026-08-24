@@ -731,6 +731,22 @@ export function BookManagement() {
     return `${time} ${date}`
   }
 
+  const formatDateOnly = (dateString: string | null) => {
+    if (!dateString) return '-'
+    const d = new Date(dateString)
+    if (isNaN(d.getTime())) return '-'
+    const pad = (n: number) => n.toString().padStart(2, '0')
+    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`
+  }
+
+  const formatShortTime = (dateString: string | null) => {
+    if (!dateString) return ''
+    const d = new Date(dateString)
+    if (isNaN(d.getTime())) return ''
+    const pad = (n: number) => n.toString().padStart(2, '0')
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+
   const isOverdue = (expectedReturnDate: string | null, returnedAt: string | null) => {
     if (!expectedReturnDate || returnedAt) return false
     return new Date(expectedReturnDate) < new Date()
@@ -1198,87 +1214,95 @@ export function BookManagement() {
 
           {/* Borrowings Table */}
           <Card className="border shadow-sm overflow-hidden rounded-xl w-full max-w-full">
-            <CardHeader className="bg-slate-50/80 border-b py-3 px-4">
-              <CardTitle className="text-base font-bold text-gray-900">Thống kê mượn/trả sách</CardTitle>
-            </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto w-full">
-                <table className="w-full min-w-[850px]">
-                  <thead className="bg-gray-50/70 border-b">
+                <table className="w-full min-w-[700px]">
+                  <thead className="bg-gray-50 border-b">
                     <tr>
-                      <th className="px-3.5 py-3 text-center text-xs font-bold text-gray-500 uppercase w-12">STT</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase min-w-[170px]">Người mượn</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase min-w-[240px]">Tên sách</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase min-w-[140px]">Tác giả</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase min-w-[140px]">Nhà xuất bản</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase min-w-[140px]">Thời gian mượn</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase min-w-[140px]">Dự kiến trả</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase min-w-[140px]">Thời gian trả</th>
-                      <th className="px-3 py-3 text-right text-xs font-bold text-gray-500 uppercase">Thao tác</th>
+                      <th className="px-4 py-3.5 text-left text-xs font-bold text-gray-500 uppercase w-12">STT</th>
+                      <th className="px-4 py-3.5 text-left text-xs font-bold text-gray-500 uppercase">Người mượn</th>
+                      <th className="px-4 py-3.5 text-left text-xs font-bold text-gray-500 uppercase">Tên sách</th>
+                      <th className="px-4 py-3.5 text-left text-xs font-bold text-gray-500 uppercase">Thời gian mượn</th>
+                      <th className="px-4 py-3.5 text-left text-xs font-bold text-gray-500 uppercase">Hạn trả / Đã trả</th>
+                      <th className="px-4 py-3.5 text-left text-xs font-bold text-gray-500 uppercase">Trạng thái</th>
+                      <th className="px-4 py-3.5 text-right text-xs font-bold text-gray-500 uppercase">Thao tác</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 text-sm">
+                  <tbody className="divide-y divide-gray-100">
                     {paginatedBorrowings.map((b, index) => {
                       const overdue = isOverdue(b.expectedReturnDate, b.returnedAt)
                       return (
-                        <tr key={b.id} className="hover:bg-blue-50/20 transition-colors">
-                          <td className="px-3.5 py-3.5 text-center font-bold text-gray-700">
+                        <tr key={b.id} className="hover:bg-blue-50/30 transition-colors">
+                          <td className="px-4 py-3 text-sm font-semibold text-gray-700">
                             {(currentBorrowPage - 1) * ITEMS_PER_PAGE + index + 1}
                           </td>
-                          <td className="px-4 py-3.5">
-                            <p className="font-bold text-gray-900">{b.borrower}</p>
+                          <td className="px-4 py-3">
+                            <p className="font-bold text-sm text-gray-900">{b.borrower}</p>
                             <p className="text-xs text-gray-500">{b.borrowerUnit || 'Chi đoàn Cơ sở'}</p>
                           </td>
-                          <td className="px-4 py-3.5">
-                            <p className="font-semibold text-gray-900 leading-snug">{b.bookTitle}</p>
-                          </td>
-                          <td className="px-4 py-3.5 text-gray-600">{b.author || '-'}</td>
-                          <td className="px-4 py-3.5 text-gray-600">{b.publisher || '-'}</td>
-                          <td className="px-4 py-3.5 text-gray-700 whitespace-nowrap font-medium text-xs font-mono">
-                            {formatDateTime(b.borrowedAt)}
-                          </td>
-                          <td className="px-4 py-3.5 whitespace-nowrap font-medium text-xs font-mono">
-                            {b.expectedReturnDate ? (
-                              <span className={overdue ? "text-red-600 font-bold" : "text-blue-600 font-semibold"}>
-                                {formatDateTime(b.expectedReturnDate)}
-                              </span>
-                            ) : (
-                              <span className="text-gray-400">-</span>
+                          <td className="px-4 py-3">
+                            <p className="font-bold text-sm text-gray-900">{b.bookTitle}</p>
+                            {(b.author || b.publisher) && (
+                              <p className="text-xs text-gray-500">
+                                {[b.author, b.publisher].filter(Boolean).join(' • ')}
+                              </p>
                             )}
                           </td>
-                          <td className="px-4 py-3.5 whitespace-nowrap">
+                          <td className="px-4 py-3">
+                            <p className="text-sm font-medium text-gray-900">{formatDateOnly(b.borrowedAt)}</p>
+                            <p className="text-xs text-gray-400">{formatShortTime(b.borrowedAt)}</p>
+                          </td>
+                          <td className="px-4 py-3">
                             {b.returnedAt ? (
-                              <span className="text-gray-800 font-medium text-xs font-mono">
-                                {formatDateTime(b.returnedAt)}
-                              </span>
+                              <div>
+                                <p className="text-sm font-medium text-emerald-700">{formatDateOnly(b.returnedAt)}</p>
+                                <p className="text-xs text-emerald-600">{formatShortTime(b.returnedAt)}</p>
+                              </div>
                             ) : (
-                              <Badge 
-                                variant="outline" 
-                                className="text-amber-600 bg-amber-50/90 border-amber-300 font-semibold rounded-full px-2.5 py-0.5 text-xs"
-                              >
-                                Chưa trả
+                              <div>
+                                <p className={`text-sm font-medium ${overdue ? 'text-red-600 font-bold' : 'text-gray-900'}`}>
+                                  {formatDateOnly(b.expectedReturnDate)}
+                                </p>
+                                <p className={`text-xs ${overdue ? 'text-red-500 font-semibold' : 'text-gray-400'}`}>
+                                  {overdue ? 'Quá hạn' : formatShortTime(b.expectedReturnDate)}
+                                </p>
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {b.returnedAt ? (
+                              <Badge variant="secondary" className="font-semibold bg-emerald-50 text-emerald-700 border-emerald-200">
+                                Đã trả
+                              </Badge>
+                            ) : overdue ? (
+                              <Badge variant="destructive" className="font-semibold">
+                                Quá hạn
+                              </Badge>
+                            ) : (
+                              <Badge variant="destructive" className="font-semibold">
+                                Đang mượn
                               </Badge>
                             )}
                           </td>
-                          <td className="px-3 py-3.5 text-right whitespace-nowrap">
+                          <td className="px-4 py-3 text-right">
                             <div className="flex items-center justify-end gap-1">
                               {!b.returnedAt && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleQuickReturn(b)}
-                                  className="h-8 px-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/80 rounded-lg text-xs font-bold shadow-2xs"
+                                  className="h-8 px-2 text-emerald-600 hover:bg-emerald-50 text-xs font-semibold"
                                   title="Đánh dấu đã trả sách"
                                 >
-                                  <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Trả sách
+                                  <CheckCircle2 className="h-4 w-4 mr-1" /> Trả sách
                                 </Button>
                               )}
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => openEditBorrowDialog(b)}
-                                className="h-8 w-8 text-blue-600 hover:bg-blue-50 rounded-lg"
-                                title="Chỉnh sửa hồ sơ mượn trả"
+                                className="text-blue-600 hover:bg-blue-50"
+                                title="Chỉnh sửa hồ sơ"
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
@@ -1286,7 +1310,7 @@ export function BookManagement() {
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => openDeleteBorrowDialog(b)}
-                                className="h-8 w-8 text-red-500 hover:bg-red-50 rounded-lg"
+                                className="text-red-500 hover:bg-red-50"
                                 title="Xóa bản ghi"
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -1298,7 +1322,7 @@ export function BookManagement() {
                     })}
                     {paginatedBorrowings.length === 0 && (
                       <tr>
-                        <td colSpan={9} className="px-4 py-12 text-center text-gray-500">
+                        <td colSpan={7} className="px-4 py-12 text-center text-gray-500">
                           <Users className="h-10 w-10 mx-auto mb-2 opacity-30" />
                           <p>Chưa có dữ liệu mượn trả sách nào</p>
                         </td>
