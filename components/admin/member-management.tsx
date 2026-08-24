@@ -53,12 +53,27 @@ interface Member {
 import { BACKEND_URL } from "@/lib/config"
 const API_URL = BACKEND_URL;
 
+const STANDARD_MILITARY_RANKS = [
+  "Thiếu úy",
+  "Trung úy",
+  "Thượng úy",
+  "Đại úy",
+  "Thiếu tá",
+  "Trung tá",
+  "Thiếu úy CN",
+  "Trung úy CN",
+  "Đại úy CN",
+  "Thiếu tá CN",
+  "Trung tá CN"
+]
+
 interface MemberManagementProps {
   initialUnitFilter?: string | null;
 }
 
 export function MemberManagement({ initialUnitFilter }: MemberManagementProps = {}) {
   const { toast } = useToast()
+  const [isCustomMilitaryRank, setIsCustomMilitaryRank] = useState(false)
   const [members, setMembers] = useState<Member[]>([])
   const [allMembersStats, setAllMembersStats] = useState({ total: 0, active: 0, inactive: 0 })
   const [units, setUnits] = useState<Unit[]>([])
@@ -675,6 +690,7 @@ export function MemberManagement({ initialUnitFilter }: MemberManagementProps = 
   }
 
   const resetForm = () => {
+    setIsCustomMilitaryRank(false)
     setFormData({
       fullName: "",
       email: "",
@@ -705,6 +721,8 @@ export function MemberManagement({ initialUnitFilter }: MemberManagementProps = 
 
   const openEditDialog = (member: Member) => {
     setSelectedMember(member)
+    const rank = member.militaryRank || ""
+    setIsCustomMilitaryRank(Boolean(rank && !STANDARD_MILITARY_RANKS.includes(rank)))
     setFormData({
       fullName: member.fullName,
       email: member.email,
@@ -718,7 +736,7 @@ export function MemberManagement({ initialUnitFilter }: MemberManagementProps = 
       gender: member.gender || "",
       birthPlace: member.birthPlace || "",
       permanentAddress: member.permanentAddress || "",
-      militaryRank: member.militaryRank || "",
+      militaryRank: rank,
       governmentPosition: member.governmentPosition || "",
       youthPosition: member.youthPosition || "Đoàn viên",
       dateJoined: member.dateJoined ? member.dateJoined.split('T')[0] : "",
@@ -1300,25 +1318,45 @@ export function MemberManagement({ initialUnitFilter }: MemberManagementProps = 
             </div>
             <div>
               <Label htmlFor="militaryRank">Cấp bậc</Label>
-              <Select value={formData.militaryRank} onValueChange={(v) => setFormData({...formData, militaryRank: v})}>
-                <SelectTrigger>
+              <Select 
+                value={
+                  isCustomMilitaryRank 
+                    ? "Khác" 
+                    : (STANDARD_MILITARY_RANKS.includes(formData.militaryRank) ? formData.militaryRank : (formData.militaryRank ? "Khác" : undefined))
+                } 
+                onValueChange={(v) => {
+                  if (v === "Khác") {
+                    setIsCustomMilitaryRank(true)
+                    if (STANDARD_MILITARY_RANKS.includes(formData.militaryRank)) {
+                      setFormData({ ...formData, militaryRank: "" })
+                    }
+                  } else {
+                    setIsCustomMilitaryRank(false)
+                    setFormData({ ...formData, militaryRank: v })
+                  }
+                }}
+              >
+                <SelectTrigger id="militaryRank">
                   <SelectValue placeholder="Chọn cấp bậc" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Thiếu úy">Thiếu úy</SelectItem>
-                  <SelectItem value="Trung úy">Trung úy</SelectItem>
-                  <SelectItem value="Thượng úy">Thượng úy</SelectItem>
-                  <SelectItem value="Đại úy">Đại úy</SelectItem>
-                  <SelectItem value="Thiếu tá">Thiếu tá</SelectItem>
-                  <SelectItem value="Trung tá">Trung tá</SelectItem>
-                  <SelectItem value="Thiếu úy CN">Thiếu úy CN</SelectItem>
-                  <SelectItem value="Trung úy CN">Trung úy CN</SelectItem>
-                  <SelectItem value="Đại úy CN">Đại úy CN</SelectItem>
-                  <SelectItem value="Thiếu tá CN">Thiếu tá CN</SelectItem>
-                  <SelectItem value="Trung tá CN">Trung tá CN</SelectItem>
+                  {STANDARD_MILITARY_RANKS.map((rank) => (
+                    <SelectItem key={rank} value={rank}>{rank}</SelectItem>
+                  ))}
                   <SelectItem value="Khác">Khác</SelectItem>
                 </SelectContent>
               </Select>
+              {isCustomMilitaryRank && (
+                <div className="mt-2">
+                  <Input
+                    id="customMilitaryRank"
+                    value={formData.militaryRank}
+                    onChange={(e) => setFormData({ ...formData, militaryRank: e.target.value })}
+                    placeholder="Nhập cấp bậc khác (VD: Hạ sĩ, Binh nhất, Thượng tá...)"
+                    autoFocus
+                  />
+                </div>
+              )}
             </div>
             <div>
               <Label htmlFor="governmentPosition">Chức vụ chính quyền</Label>
@@ -1609,25 +1647,45 @@ export function MemberManagement({ initialUnitFilter }: MemberManagementProps = 
             </div>
             <div>
               <Label htmlFor="edit-militaryRank">Cấp bậc</Label>
-              <Select value={formData.militaryRank} onValueChange={(v) => setFormData({...formData, militaryRank: v})}>
-                <SelectTrigger>
+              <Select 
+                value={
+                  isCustomMilitaryRank 
+                    ? "Khác" 
+                    : (STANDARD_MILITARY_RANKS.includes(formData.militaryRank) ? formData.militaryRank : (formData.militaryRank ? "Khác" : undefined))
+                } 
+                onValueChange={(v) => {
+                  if (v === "Khác") {
+                    setIsCustomMilitaryRank(true)
+                    if (STANDARD_MILITARY_RANKS.includes(formData.militaryRank)) {
+                      setFormData({ ...formData, militaryRank: "" })
+                    }
+                  } else {
+                    setIsCustomMilitaryRank(false)
+                    setFormData({ ...formData, militaryRank: v })
+                  }
+                }}
+              >
+                <SelectTrigger id="edit-militaryRank">
                   <SelectValue placeholder="Chọn cấp bậc" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Thiếu úy">Thiếu úy</SelectItem>
-                  <SelectItem value="Trung úy">Trung úy</SelectItem>
-                  <SelectItem value="Thượng úy">Thượng úy</SelectItem>
-                  <SelectItem value="Đại úy">Đại úy</SelectItem>
-                  <SelectItem value="Thiếu tá">Thiếu tá</SelectItem>
-                  <SelectItem value="Trung tá">Trung tá</SelectItem>
-                  <SelectItem value="Thiếu úy CN">Thiếu úy CN</SelectItem>
-                  <SelectItem value="Trung úy CN">Trung úy CN</SelectItem>
-                  <SelectItem value="Đại úy CN">Đại úy CN</SelectItem>
-                  <SelectItem value="Thiếu tá CN">Thiếu tá CN</SelectItem>
-                  <SelectItem value="Trung tá CN">Trung tá CN</SelectItem>
+                  {STANDARD_MILITARY_RANKS.map((rank) => (
+                    <SelectItem key={rank} value={rank}>{rank}</SelectItem>
+                  ))}
                   <SelectItem value="Khác">Khác</SelectItem>
                 </SelectContent>
               </Select>
+              {isCustomMilitaryRank && (
+                <div className="mt-2">
+                  <Input
+                    id="edit-customMilitaryRank"
+                    value={formData.militaryRank}
+                    onChange={(e) => setFormData({ ...formData, militaryRank: e.target.value })}
+                    placeholder="Nhập cấp bậc khác (VD: Hạ sĩ, Binh nhất, Thượng tá...)"
+                    autoFocus
+                  />
+                </div>
+              )}
             </div>
             <div>
               <Label htmlFor="edit-governmentPosition">Chức vụ chính quyền</Label>
