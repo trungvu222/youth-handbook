@@ -953,14 +953,14 @@ export function BookManagement() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full min-w-0 max-w-full">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Phòng HCM</h1>
           <p className="text-gray-500 text-sm">Quản lý sách và theo dõi thống kê mượn/trả tài liệu</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {activeTab === 'stats' ? (
             <Button 
               onClick={openCreateBorrowDialog}
@@ -977,15 +977,15 @@ export function BookManagement() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 w-full">
         <Card className="border shadow-sm hover:shadow-md transition-shadow rounded-xl">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-blue-100 rounded-xl">
+              <div className="p-2.5 bg-blue-100 rounded-xl shrink-0">
                 <BookOpen className="h-5 w-5 text-blue-600" />
               </div>
-              <div>
-                <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Tổng sách</p>
+              <div className="min-w-0">
+                <p className="text-xs text-gray-500 font-medium uppercase tracking-wide truncate">Tổng sách</p>
                 <p className="text-2xl font-extrabold text-gray-900">{stats?.totalBooks || books.length}</p>
               </div>
             </div>
@@ -994,11 +994,11 @@ export function BookManagement() {
         <Card className="border shadow-sm hover:shadow-md transition-shadow rounded-xl">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-orange-100 rounded-xl">
+              <div className="p-2.5 bg-orange-100 rounded-xl shrink-0">
                 <Clock className="h-5 w-5 text-orange-600" />
               </div>
-              <div>
-                <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Đang mượn</p>
+              <div className="min-w-0">
+                <p className="text-xs text-gray-500 font-medium uppercase tracking-wide truncate">Đang mượn</p>
                 <p className="text-2xl font-extrabold text-orange-600">{stats?.currentlyBorrowed || 0}</p>
               </div>
             </div>
@@ -1007,11 +1007,11 @@ export function BookManagement() {
         <Card className="border shadow-sm hover:shadow-md transition-shadow rounded-xl">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-green-100 rounded-xl">
+              <div className="p-2.5 bg-green-100 rounded-xl shrink-0">
                 <CheckCircle2 className="h-5 w-5 text-green-600" />
               </div>
-              <div>
-                <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Đã trả</p>
+              <div className="min-w-0">
+                <p className="text-xs text-gray-500 font-medium uppercase tracking-wide truncate">Đã trả</p>
                 <p className="text-2xl font-extrabold text-green-600">{stats?.returned || 0}</p>
               </div>
             </div>
@@ -1020,11 +1020,11 @@ export function BookManagement() {
         <Card className="border shadow-sm hover:shadow-md transition-shadow rounded-xl">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-purple-100 rounded-xl">
+              <div className="p-2.5 bg-purple-100 rounded-xl shrink-0">
                 <Users className="h-5 w-5 text-purple-600" />
               </div>
-              <div>
-                <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">Tổng lượt mượn</p>
+              <div className="min-w-0">
+                <p className="text-xs text-gray-500 font-medium uppercase tracking-wide truncate">Tổng lượt mượn</p>
                 <p className="text-2xl font-extrabold text-purple-600">{stats?.totalBorrowings || borrowings.length}</p>
               </div>
             </div>
@@ -1060,29 +1060,29 @@ export function BookManagement() {
       {activeTab === 'books' ? (
         <>
           {/* Search & Actions */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
+          <div className="flex flex-col sm:flex-row gap-3 w-full">
+            <div className="relative flex-1 min-w-0">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 placeholder="Tìm kiếm theo tên sách, tác giả, NXB..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-10 rounded-xl"
+                className="pl-10 h-10 rounded-xl w-full"
               />
             </div>
-            <Button variant="outline" onClick={loadBooks} className="h-10 rounded-xl">
+            <Button variant="outline" onClick={loadBooks} className="h-10 rounded-xl shrink-0">
               <RefreshCw className="h-4 w-4 mr-2" /> Làm mới
             </Button>
           </div>
 
           {/* Books Table */}
-          <Card className="border shadow-sm overflow-hidden rounded-xl">
+          <Card className="border shadow-sm overflow-hidden rounded-xl w-full max-w-full">
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full">
+              <div className="overflow-x-auto w-full">
+                <table className="w-full min-w-[700px]">
                   <thead className="bg-gray-50 border-b">
                     <tr>
-                      <th className="px-4 py-3.5 text-left text-xs font-bold text-gray-500 uppercase">STT</th>
+                      <th className="px-4 py-3.5 text-left text-xs font-bold text-gray-500 uppercase w-12">STT</th>
                       <th className="px-4 py-3.5 text-left text-xs font-bold text-gray-500 uppercase">Tên sách</th>
                       <th className="px-4 py-3.5 text-left text-xs font-bold text-gray-500 uppercase">Tác giả</th>
                       <th className="px-4 py-3.5 text-left text-xs font-bold text-gray-500 uppercase">Nhà xuất bản</th>
@@ -1159,10 +1159,10 @@ export function BookManagement() {
       ) : (
         <>
           {/* Borrowing Filter & Actions Bar */}
-          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-2 flex-1">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
+            <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
               <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); loadStats(v === 'all' ? undefined : v as any) }}>
-                <SelectTrigger className="w-[160px] h-10 bg-white rounded-xl">
+                <SelectTrigger className="w-[130px] sm:w-[150px] h-10 bg-white rounded-xl shrink-0">
                   <SelectValue placeholder="Trạng thái" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1173,37 +1173,37 @@ export function BookManagement() {
                 </SelectContent>
               </Select>
 
-              <div className="relative flex-1 min-w-[220px]">
+              <div className="relative flex-1 min-w-[180px]">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   placeholder="Tìm người mượn, tên sách, tác giả..."
                   value={borrowSearchTerm}
                   onChange={(e) => setBorrowSearchTerm(e.target.value)}
-                  className="pl-9 h-10 bg-white rounded-xl"
+                  className="pl-9 h-10 bg-white rounded-xl w-full"
                 />
               </div>
 
-              <Button variant="outline" onClick={() => loadStats()} className="h-10 bg-white rounded-xl">
-                <RefreshCw className="h-4 w-4 mr-2" /> Làm mới
+              <Button variant="outline" onClick={() => loadStats()} className="h-10 bg-white rounded-xl shrink-0">
+                <RefreshCw className="h-4 w-4 mr-1.5" /> Làm mới
               </Button>
             </div>
 
             <Button 
               onClick={openCreateBorrowDialog}
-              className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold h-10 px-5 shadow-sm rounded-xl transition-all"
+              className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold h-10 px-4 shadow-sm rounded-xl transition-all shrink-0"
             >
               <BookPlus className="h-4 w-4 mr-2" /> Tạo hồ sơ mượn trả
             </Button>
           </div>
 
           {/* Borrowings Table */}
-          <Card className="border shadow-sm overflow-hidden rounded-xl">
+          <Card className="border shadow-sm overflow-hidden rounded-xl w-full max-w-full">
             <CardHeader className="bg-slate-50/80 border-b py-3 px-4">
               <CardTitle className="text-base font-bold text-gray-900">Thống kê mượn/trả sách</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full">
+              <div className="overflow-x-auto w-full">
+                <table className="w-full min-w-[850px]">
                   <thead className="bg-gray-50/70 border-b">
                     <tr>
                       <th className="px-3.5 py-3 text-center text-xs font-bold text-gray-500 uppercase w-12">STT</th>

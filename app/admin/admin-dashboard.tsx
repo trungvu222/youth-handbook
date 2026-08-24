@@ -1031,8 +1031,8 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-red-50">
-      <div className="flex h-screen relative">
+    <div className="min-h-screen bg-red-50 overflow-hidden w-full">
+      <div className="flex h-screen relative w-full overflow-hidden">
         {/* Mobile backdrop overlay */}
         {isMobile && sidebarOpen && (
           <div
@@ -1112,24 +1112,24 @@ export default function AdminDashboard() {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col" style={{ background: "#f8fafc" }}>
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden w-full" style={{ background: "#f8fafc" }}>
           {/* Header */}
-          <header className="bg-white border-b border-gray-200 px-6 py-4">
+          <header className="bg-white border-b border-gray-200 px-4 md:px-6 py-4 flex-shrink-0 w-full">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-4 min-w-0">
                 <button
                   onClick={() => setSidebarOpen(!sidebarOpen)}
-                  className="p-2 rounded-lg hover:bg-gray-100"
+                  className="p-2 rounded-lg hover:bg-gray-100 flex-shrink-0"
                 >
                   <Menu className="h-5 w-5 text-gray-600" />
                 </button>
-                <h1 className="text-xl font-semibold text-gray-900">
+                <h1 className="text-xl font-semibold text-gray-900 truncate">
                   {menuItems.find((item) => item.id === activeTab)?.label ||
                     "Tổng quan"}
                 </h1>
               </div>
 
-              <div className="flex items-center space-x-2 md:space-x-4">
+              <div className="flex items-center space-x-2 md:space-x-4 flex-shrink-0">
                 <div
                   className="hidden md:block text-right cursor-pointer hover:opacity-80"
                   onClick={() => changeTab("profile")}
@@ -1142,7 +1142,7 @@ export default function AdminDashboard() {
                   </p>
                 </div>
                 <div
-                  className="w-9 h-9 md:w-10 md:h-10 rounded-full overflow-hidden cursor-pointer hover:ring-2 hover:ring-red-300 transition-all"
+                  className="w-9 h-9 md:w-10 md:h-10 rounded-full overflow-hidden cursor-pointer hover:ring-2 hover:ring-red-300 transition-all flex-shrink-0"
                   onClick={() => changeTab("profile")}
                 >
                   <img
@@ -1157,10 +1157,10 @@ export default function AdminDashboard() {
 
           {/* Page Content */}
           <main
-            className="flex-1 overflow-auto p-3 md:p-6 flex flex-col"
+            className="flex-1 overflow-y-auto overflow-x-hidden p-3 md:p-6 flex flex-col min-w-0 w-full"
             style={{ background: "#f8fafc", minHeight: 0 }}
           >
-            <div className="flex-1">{renderContent()}</div>
+            <div className="flex-1 min-w-0 w-full">{renderContent()}</div>
           </main>
         </div>
       </div>

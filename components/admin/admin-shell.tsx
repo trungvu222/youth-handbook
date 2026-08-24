@@ -212,14 +212,14 @@ export function AdminShell({ children }: AdminShellProps) {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen overflow-hidden w-full">
         {/* Header */}
-        <header className="bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-4 sticky top-0 z-30 flex-shrink-0">
+        <header className="bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-4 sticky top-0 z-30 flex-shrink-0 w-full">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-4 min-w-0">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2 rounded-lg hover:bg-gray-100"
+                className="p-2 rounded-lg hover:bg-gray-100 flex-shrink-0"
               >
                 <Menu className="h-5 w-5 text-gray-600" />
               </button>
@@ -231,8 +231,10 @@ export function AdminShell({ children }: AdminShellProps) {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-4 md:p-6 bg-gray-50">
-          {children}
+        <main className="flex-1 p-4 md:p-6 bg-gray-50 min-w-0 overflow-y-auto overflow-x-hidden w-full">
+          <div className="w-full min-w-0">
+            {children}
+          </div>
         </main>
       </div>
     </div>
